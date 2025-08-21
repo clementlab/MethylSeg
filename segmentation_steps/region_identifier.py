@@ -3,8 +3,8 @@ from typing import Union
 
 import joblib
 import pandas as pd
-from data_prep import DataPrep
-from meth_seg import MethSeg, MethSegMethod
+from .data_prep import DataPrep
+from .meth_seg import MethSeg, MethSegMethod
 
 # # %%
 # FILTER_SAMPLES = False

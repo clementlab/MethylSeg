@@ -1,10 +1,10 @@
 from enum import Enum
 import logging
 import sys
-from data_prep import DataPrep
-from meth_seg import MethSegMethod
-from region_identifier import GenerateMethylationRegions
-from preprocess_window_data import WindowPreprocessor
+from .segmentation_steps.data_prep import DataPrep
+from .segmentation_steps.meth_seg import MethSegMethod
+from .segmentation_steps.region_identifier import GenerateMethylationRegions
+from .segmentation_steps.preprocess_window_data import WindowPreprocessor
 
 
 logger = logging.getLogger(__name__)

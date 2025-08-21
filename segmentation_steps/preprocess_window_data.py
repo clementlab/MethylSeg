@@ -4,10 +4,10 @@ import pandas as pd
 import matplotlib.pyplot as plt
 from tqdm.auto import tqdm
 
-from data_preprocessor import (
+from .data_preprocessor import (
     DataPreprocessor,
 )
-from windowed_methylation_preprocessor import (
+from .windowed_methylation_preprocessor import (
     WindowedMethylationPreProcessor,
 )
 
