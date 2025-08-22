@@ -171,7 +171,7 @@ class MethSeg:
             if model_args is None:
                 model_args = {
                     "n_states": n_components,
-                    "n_emmissions": -1,
+                    "n_emissions": len(self.methylation_data),
                     "holding_time": 1,
                 }
             if self.random_state is not None:

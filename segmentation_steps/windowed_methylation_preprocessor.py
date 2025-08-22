@@ -6,8 +6,6 @@ from matplotlib.ticker import MaxNLocator
 import pandas as pd
 from pybedtools import BedTool
 import pybedtools
-import pyarrow.feather as feather
-from pybedtools import BedTool
 import numpy as np
 from tqdm import tqdm
 
@@ -212,8 +210,8 @@ class WindowedMethylationPreProcessor:
         window_size,
         step_size,
         genome_file,
-        low_cut_off=20,
-        high_cut_off=70,
+        low_cut_off=0.20,
+        high_cut_off=0.70,
         tmp_dir="/tmp",
         out_dir=".",
         n_jobs=1,
@@ -261,8 +259,8 @@ class WindowedMethylationPreProcessor:
                 self.samples_file,
                 self.meth_ref_file,
                 self.out_dir,
-                20,
-                70,
+                0.20,
+                0.70,
             ]
         )
 

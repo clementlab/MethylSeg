@@ -26,6 +26,8 @@ class WindowPreprocessor(DataPreprocessor):
         out_dir=".",
         disable_loading_from_cache=False,
         n_jobs=1,
+        low_cut_off=0.20,
+        high_cut_off=0.70,
     ):
         self.windowed_methylation_preprocessor = WindowedMethylationPreProcessor(
             meth_ref_file=meth_ref_file,
@@ -36,6 +38,8 @@ class WindowPreprocessor(DataPreprocessor):
             tmp_dir=tmp_dir,
             out_dir=out_dir,
             n_jobs=n_jobs,
+            low_cut_off=low_cut_off,
+            high_cut_off=high_cut_off,
         )
         self.selected_samples_file = selected_samples_file
         self.out_dir = out_dir

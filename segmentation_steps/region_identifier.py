@@ -49,29 +49,27 @@ class GenerateMethylationRegions:
         self.prepped_methylation_data = self.data_prep.test_data
         self.samples_info = pd.read_csv(self.selected_samples_path, sep="\t")
 
-        self.cancer_samples = self.samples_info[
-            self.samples_info["sample_type"] != "Solid Tissue Normal"
-        ]["sample"].values
+        self.chosen_samples = self.samples_info["sample"].values
 
         self.samples = self.all_methylation_data.columns[3:]
 
         if self.filter_samples:
             if isinstance(self.filter_samples, list):
-                self.cancer_samples = [
+                self.chosen_samples = [
                     sample
-                    for sample in self.cancer_samples
+                    for sample in self.chosen_samples
                     if sample in self.filter_samples
                 ]
             elif isinstance(self.filter_samples, bool) and self.filter_samples:
-                self.cancer_samples = self.cancer_samples[: self.num_filter]
+                self.chosen_samples = self.chosen_samples[: self.num_filter]
         self.all_methylation_data_filtered = self.all_methylation_data[
-            list(self.all_methylation_data.columns[:3]) + list(self.cancer_samples)
+            list(self.all_methylation_data.columns[:3]) + list(self.chosen_samples)
         ]
         self.all_methylation_count_filtered = self.all_methylation_count[
-            list(self.all_methylation_count.columns[:3]) + list(self.cancer_samples)
+            list(self.all_methylation_count.columns[:3]) + list(self.chosen_samples)
         ]
         self.prepped_methylation_data_filtered = self.prepped_methylation_data[
-            list(self.prepped_methylation_data.columns[:3]) + list(self.cancer_samples)
+            list(self.prepped_methylation_data.columns[:3]) + list(self.chosen_samples)
         ]
 
     def prep_segmentors(self, summary_measurement="pct"):

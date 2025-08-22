@@ -1,5 +1,6 @@
 from enum import Enum
 import logging
+import os
 import sys
 from .segmentation_steps.data_prep import DataPrep
 from .segmentation_steps.meth_seg import MethSegMethod
@@ -28,39 +29,32 @@ class MethylSegConfig:
         self,
         window_size=100000,
         step_size=50000,
-        filter_chroms=[],
-        filter_regions=[],
-        filter_samples=[],
         out_dir="",
         tmp_folder="/tmp",
         disable_tqdm=False,
         disable_loading_from_cache=False,
-        non_null_cutoff=0.9,
-        int_count_cutoff=3,
-        avg_cpg_cutoff=8,
         n_jobs=1,
         window_summary_metric="pct",
         show_plots=False,
+        seg_method: MethSegMethod = MethSegMethod.GAUSSIAN_HMM,
+        low_cut_off=0.20,
+        high_cut_off=0.70,
+        filter_chrom=None,
     ):
         self.window_summary_metric = window_summary_metric
         self.window_size = window_size
         self.step_size = step_size
-        self.filter_chroms = filter_chroms
-        self.filter_regions = filter_regions
-        self.filter_samples = filter_samples
-        if self.filter_samples and len(self.filter_samples) < 10:
-            logger.warning(
-                "Filter samples list is less than 10. This may lead to insufficient data for analysis and downstream errors."
-            )
+
         self.out_dir = out_dir
         self.tmp_folder = tmp_folder
         self.disable_tqdm = disable_tqdm
         self.disable_loading_from_cache = disable_loading_from_cache
-        self.non_null_cutoff = non_null_cutoff
-        self.int_count_cutoff = int_count_cutoff
-        self.avg_cpg_cutoff = avg_cpg_cutoff
         self.n_jobs = n_jobs
         self.show_plots = show_plots
+        self.seg_method = seg_method
+        self.low_cut_off = low_cut_off
+        self.high_cut_off = high_cut_off
+        self.filter_chrom = filter_chrom if filter_chrom is not None else []
 
 
 class MethylSeg:
@@ -77,44 +71,53 @@ class MethylSeg:
         step_size = config.step_size
         tmp_folder = config.tmp_folder
         disable_tqdm = config.disable_tqdm
-        disable_loading_from_cache = config.disable_loading_from_cache
+        self.disable_loading_from_cache = config.disable_loading_from_cache
         self.show_plots = config.show_plots
         self.out_dir = config.out_dir
+        self.filter_chrom = config.filter_chrom
+        if not os.path.exists(self.out_dir):
+            os.makedirs(self.out_dir)
+
+        for step in MethylSegSteps:
+            if not os.path.exists(f"{self.out_dir}/{step.value}"):
+                os.makedirs(f"{self.out_dir}/{step.value}")
 
         self.data_preprocessor = WindowPreprocessor(
             meth_ref_file=meth_ref_path,
             samples_file=samples_info_path,
-            selected_samples_file=selected_samples_path,
+            selected_samples_file=selected_samples_path,  # TODO remember purpose of this file
             window_size=window_size,
             step_size=step_size,
             genome_file=genome_file,
             tmp_dir=tmp_folder,
             out_dir=f"{self.out_dir}/{MethylSegSteps.PREPROCESS.value}",
-            disable_loading_from_cache=disable_loading_from_cache,
+            disable_loading_from_cache=self.disable_loading_from_cache,
             n_jobs=config.n_jobs,
+            low_cut_off=config.low_cut_off,
+            high_cut_off=config.high_cut_off,
         )
         self.data_prep = DataPrep(
             preprocessor=self.data_preprocessor,
             use_window_averaging=True,
             out_dir=f"{self.out_dir}/{MethylSegSteps.DATA_PREP.value}",
-            disable_loading_from_cache=disable_loading_from_cache,
+            disable_loading_from_cache=self.disable_loading_from_cache,
         )
         self.generate_methylation_regions = GenerateMethylationRegions(
             data_prep=self.data_prep,
-            seg_method=MethSegMethod.GAUSSIAN_HMM,
+            seg_method=config.seg_method,
             selected_samples_path=selected_samples_path,
             num_filter=20,
             n_jobs=50,
             out_dir=f"{self.out_dir}/{MethylSegSteps.GENERATE_METHYLATION_REGIONS.value}",
-            disable_loading_from_cache=disable_loading_from_cache,
+            disable_loading_from_cache=self.disable_loading_from_cache,
         )
         self.data_processed = False
         self.processed_samples = {}
         self.aggregated_regions = {}
 
     def preprocess_data(self):
-        self.data_preprocessor.run(self.show_plots)
-        self.data_prep.run(self.show_plots)
+        self.data_preprocessor.run(show_plots=self.show_plots)
+        self.data_prep.run(show_plots=self.show_plots, filter_chroms=self.filter_chrom)
         self.generate_methylation_regions.init()
         self.data_processed = True
 
@@ -133,7 +136,7 @@ class MethylSeg:
             if region_type in regions:
                 return regions[region_type]
         regions = self.generate_methylation_regions.segmentor.generate_genomic_regions(
-            sample=sample_id, region_type=region_type
+            sample=sample_id, region_type=region_type, fit=True
         )
         if sample_id not in self.processed_samples:
             self.processed_samples[sample_id] = {}
