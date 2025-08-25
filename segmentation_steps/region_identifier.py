@@ -75,29 +75,7 @@ class GenerateMethylationRegions:
     def prep_segmentors(self, summary_measurement="pct"):
         n_components = 2 if summary_measurement == "pct" else 3
 
-        if self.seg_method == MethSegMethod.CT_HMM:
-            holding_time_guess = 100000
-
-            n_emissions = len(self.prepped_methylation_data_filtered)
-            ct_segmentor = MethSeg(
-                segmentation_method=MethSegMethod.CT_HMM,
-                aggregation_method=MethSegMethod.GAUSSIAN_HMM,
-                methylation_data=self.prepped_methylation_data_filtered,
-                cpg_count_data=self.all_methylation_count_filtered,
-                random_state=14,
-                model_args={
-                    "holding_time": holding_time_guess,
-                    "n_emissions": n_emissions,
-                    "n_states": n_components,
-                },
-            )
-            ct_fit_args = {
-                "fit_startprob": True,
-                "verbose": False,
-                "max_iter": 10,
-            }
-            self.segmentor, self.segmentor_args = ct_segmentor, ct_fit_args
-        elif self.seg_method == MethSegMethod.GAUSSIAN_HMM:
+        if self.seg_method == MethSegMethod.GAUSSIAN_HMM:
 
             dt_segmentor = MethSeg(
                 segmentation_method=MethSegMethod.GAUSSIAN_HMM,
@@ -142,18 +120,6 @@ class GenerateMethylationRegions:
                 },
             )
             self.segmentor, self.segmentor_args = poisson_segmentor, None
-
-        elif self.seg_method == MethSegMethod.WINDOW:
-
-            window_segmentor = MethSeg(
-                segmentation_method=MethSegMethod.WINDOW,
-                aggregation_method=MethSegMethod.GAUSSIAN_HMM,
-                methylation_data=self.prepped_methylation_data_filtered,
-                cpg_count_data=self.all_methylation_count_filtered,
-                random_state=3,
-            )
-
-            self.segmentor, self.segmentor_args = window_segmentor, None
 
     def init(self):
         self.load_data()

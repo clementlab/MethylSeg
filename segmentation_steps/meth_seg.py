@@ -2,7 +2,8 @@ import multiprocessing
 from collections import Counter, OrderedDict
 from enum import Enum
 
-import cthmm
+import copy
+import multiprocessing as mp
 import numpy as np
 import pandas as pd
 from hmmlearn import hmm
@@ -45,12 +46,27 @@ def logit_z_score_transform(x):
     return z_score_transform(transformed_x)
 
 
+def _fit_single(args):
+    self, sample, chrom, fit_args = args
+    print("Fitting model for sample:", sample, "chromosome:", chrom)
+    if chrom not in self.models[sample]:
+        self.models[sample][chrom] = self.get_model(aggregation=False)
+    model = copy.deepcopy(self.models[sample][chrom])
+    self._fit_dt_hmm(model, chrom, sample, fit_args)
+    return chrom, model
+
+
+def _predict_single(args):
+    self, sample, chrom = args
+    model = self.models[sample][chrom]
+    preds = self._predict_dt_hmm(model, chrom, sample)
+    return preds
+
+
 class MethSegMethod(Enum):
     POISSON_HMM = 0
     GAUSSIAN_HMM = 1
-    CT_HMM = 2
-    GMM_HMM = 3
-    WINDOW = 4
+    GMM_HMM = 2
 
     def __eq__(self, value: object) -> bool:
         if isinstance(value, MethSegMethod):
@@ -99,6 +115,7 @@ class MethSeg:
         random_state=None,
         model_args: dict | None = None,
         summary_measurement="pct",
+        n_jobs=1,
     ):
         """
         Args:
@@ -133,18 +150,24 @@ class MethSeg:
         self._last_method_run = None
         self.summary_measurement = summary_measurement
         self.transform_method = None
+        self.n_jobs = 1
 
-        self.model = self.get_model()
+        self.models = {}
+        for sample in self.methylation_data.columns[3:]:
+            self.models[sample] = {}
+
+        n_components = 2 if self.summary_measurement == "pct" else 3
+        self.n_components = n_components
 
     def get_model(self, aggregation=False):
         method = self.aggregation_method if aggregation else self.segmentation_method
         model_args = self.model_args if not aggregation is not None else None
         # TODO: Add Beta HMM
-        n_components = 2 if self.summary_measurement == "pct" else 3
+
         if method == MethSegMethod.GAUSSIAN_HMM:
             if model_args is None:
                 model_args = {
-                    "n_components": n_components,
+                    "n_components": self.n_components,
                     "covariance_type": "full",
                 }
             if self.random_state is not None:
@@ -153,7 +176,7 @@ class MethSeg:
         elif method == MethSegMethod.POISSON_HMM:
             if model_args is None:
                 model_args = {
-                    "n_components": n_components,
+                    "n_components": self.n_components,
                 }
             if self.random_state is not None:
                 model_args["random_state"] = self.random_state
@@ -161,59 +184,47 @@ class MethSeg:
         elif method == MethSegMethod.GMM_HMM:
             if model_args is None:
                 model_args = {
-                    "n_components": n_components,
+                    "n_components": self.n_components,
                     "n_mix": 1,
                 }
             if self.random_state is not None:
                 model_args["random_state"] = self.random_state
             model = hmm.GMMHMM(**model_args)
-        elif method == MethSegMethod.CT_HMM:
-            if model_args is None:
-                model_args = {
-                    "n_states": n_components,
-                    "n_emissions": len(self.methylation_data),
-                    "holding_time": 1,
-                }
-            if self.random_state is not None:
-                model_args["seed"] = self.random_state
-            model = cthmm.MultinomialCTHMM(**model_args)
-
-        elif method == MethSegMethod.WINDOW:
-            if model_args is None:
-                model_args = {}
-            model = WindowSeg(**model_args)
 
         return model
 
-    ## Public methods
     def fit(self, sample, fit_args: dict | None = None):
-        self.fitted_sample = sample
-        if self.segmentation_method == MethSegMethod.GAUSSIAN_HMM:
-            return self.__fit_dt_hmm(sample, fit_args)
-        elif self.segmentation_method == MethSegMethod.GMM_HMM:
-            return self.__fit_dt_hmm(sample, fit_args)
-        elif self.segmentation_method == MethSegMethod.POISSON_HMM:
-            return self.__fit_dt_hmm(sample, fit_args)
-        elif self.segmentation_method == MethSegMethod.CT_HMM:
-            if fit_args is None:
-                fit_args = {"fit_startprob": True, "verbose": False, "max_iter": 10}
-            return self.__fit_ct_hmm(sample, fit_args)
-        elif self.segmentation_method == MethSegMethod.WINDOW:
-            return self.__fit_window(sample, fit_args)
+        if fit_args is None:
+            fit_args = {}
+
+        chroms = self.methylation_data["chr"].unique()
+        args_list = [(self, sample, chrom, fit_args) for chrom in chroms]
+
+        if self.n_jobs == 1:
+            results = [_fit_single(args) for args in args_list]
+        else:
+            with multiprocessing.Pool(processes=self.n_jobs) as pool:
+                results = pool.map(_fit_single, args_list)
+
+        # collect fitted models back
+        for chrom, model in results:
+            self.models[sample][chrom] = model
 
     def predict(self, sample):
-        if self.fitted_sample != sample:
+        if not self.models[sample]:
             raise ValueError("Sample must be fitted before predicting")
-        if self.segmentation_method == MethSegMethod.GAUSSIAN_HMM:
-            return self.__predict_dt_hmm(sample)
-        elif self.segmentation_method == MethSegMethod.POISSON_HMM:
-            return self.__predict_dt_hmm(sample)
-        elif self.segmentation_method == MethSegMethod.GMM_HMM:
-            return self.__predict_dt_hmm(sample)
-        elif self.segmentation_method == MethSegMethod.CT_HMM:
-            return self.__predict_ct_hmm(sample)
-        elif self.segmentation_method == MethSegMethod.WINDOW:
-            return self.__predict_window(sample)
+
+        chroms = self.methylation_data["chr"].unique()
+        args_list = [(self, sample, chrom) for chrom in chroms]
+
+        if self.n_jobs == 1:
+            results = [_predict_single(args) for args in args_list]
+        else:
+            with multiprocessing.Pool(processes=self.n_jobs) as pool:
+                results = pool.map(_predict_single, args_list)
+
+        predicted_states = np.concatenate(results)
+        return predicted_states
 
     def fit_predict(self, sample, fit_args: dict | None = None, reset=False):
         # if reset:
@@ -253,19 +264,7 @@ class MethSeg:
         self._last_method_run = f"Aggregate all samples"
         samples = self.methylation_data.columns[3:]
 
-        if self.segmentation_method == MethSegMethod.WINDOW:
-            regions = self.model.aggregate_genomic_regions(self.methylation_data)
-            regions_df = self._translate_state(
-                self._regions_list_to_df(
-                    regions, samples, ["count_commonly_methylated"]
-                ),
-                region_type=region_type,
-            )
-            self.regions_df = regions_df
-            return regions_df
-        elif self.segmentation_method == MethSegMethod.CT_HMM:
-            states_df = self._aggregate_hmm(n_jobs, fit_args=fit_args)
-        elif self.segmentation_method == MethSegMethod.GAUSSIAN_HMM:
+        if self.segmentation_method == MethSegMethod.GAUSSIAN_HMM:
             states_df = self._aggregate_hmm(n_jobs, fit_args=fit_args)
         elif self.segmentation_method == MethSegMethod.POISSON_HMM:
             states_df = self._aggregate_hmm(n_jobs, fit_args=fit_args)
@@ -361,9 +360,9 @@ class MethSeg:
     # TODO remember how this works??
     def _translate_state(self, regions_df, region_type="intermediate"):
         regions_df_copy = regions_df.copy()
-        if self.model.n_components == 3:
+        if self.n_components == 3:
             translations = [MethState.LOW, MethState.MEDIUM, MethState.HIGH]
-        elif self.model.n_components == 2:
+        elif self.n_components == 2:
             target = (
                 MethState.MEDIUM
                 if region_type == "intermediate"
@@ -427,32 +426,17 @@ class MethSeg:
             plt.show()
         plt.close()
 
-    def _prep_fit_data(self, sample=None):
-        meth_data = self.methylation_data[sample].astype(int)
-        return self.__prep_fit_data(meth_data)
+    def _prep_fit_data(self, sample=None, chrom=None):
+        chrom_data = self.methylation_data[self.methylation_data["chr"] == chrom]
+        pos = chrom_data["median"].values
+        meth_data = chrom_data[sample].astype(int)
+        return self.__prep_fit_data(meth_data), pos
 
     ## Private methods
 
     def __prep_fit_data(self, data):
-        # self.transform_method = boxcox_transform
-        # self.segmentation_method = MethSegMethod.GAUSSIAN_HMM
-        # self.model_args = {
-        #     "n_components": 2,
-        #     # "n_mix": 3,
-        #     "n_iter": 100,
-        # }
-        # self.model = self.get_model()
 
-        # print("here", self.segmentation_method, self.transform_method)
-
-        if self.segmentation_method == MethSegMethod.CT_HMM:
-            return [
-                (
-                    data.values,
-                    self.methylation_data["median"].values,
-                )
-            ]
-        elif (
+        if (
             self.segmentation_method == MethSegMethod.GAUSSIAN_HMM
             or self.segmentation_method == MethSegMethod.GMM_HMM
             or self.segmentation_method == MethSegMethod.POISSON_HMM
@@ -461,63 +445,77 @@ class MethSeg:
                 data = self.transform_method(data)
                 data = pd.Series(data)
             return data.values.reshape(-1, 1)
-        elif self.segmentation_method == MethSegMethod.WINDOW:
-            return data
 
-    def __prep_predict_data(self, sample=None):
-        if self.segmentation_method == MethSegMethod.CT_HMM:
-            return [
-                self.methylation_data[sample].astype(int).values,
-                self.methylation_data["median"].values,
-            ]
-        elif (
+    def __prep_predict_data(self, sample=None, chrom=None):
+        chrom_data = self.methylation_data[self.methylation_data["chr"] == chrom]
+        pos = chrom_data["median"].values
+        if (
             self.segmentation_method == MethSegMethod.GAUSSIAN_HMM
             or self.segmentation_method == MethSegMethod.GMM_HMM
             or self.segmentation_method == MethSegMethod.POISSON_HMM
         ):
-            return self.methylation_data[sample].values.reshape(-1, 1)
-        elif self.segmentation_method == MethSegMethod.WINDOW:
-            return self.methylation_data[sample]
+            return chrom_data[sample].values.reshape(-1, 1), pos
 
-    def __fit_dt_hmm(self, sample, fit_args: dict | None = None):
+    def _distance_scaled_transmat(self, A_base, delta, tau):
+        f = 1 - np.exp(-delta / tau)
+        A = (1 - f) * np.eye(A_base.shape[0]) + f * A_base
+        return A
+
+    def _viterbi_with_distance(self, model, X, positions, tau=1000):
+        n_samples, n_states = len(X), model.n_components
+        logprob = np.full((n_samples, n_states), -np.inf)
+        backpointer = np.zeros((n_samples, n_states), dtype=int)
+
+        framelogprob = model._compute_log_likelihood(X)
+
+        # init
+        logprob[0] = np.log(model.startprob_ + 0.001) + framelogprob[0]
+
+        # recursion
+        for t in range(1, n_samples):
+            delta = positions[t] - positions[t - 1]
+            A = self._distance_scaled_transmat(model.transmat_, delta, tau)
+            for j in range(n_states):
+                trans_scores = logprob[t - 1] + np.log(A[:, j])
+                backpointer[t, j] = np.argmax(trans_scores)
+                logprob[t, j] = np.max(trans_scores) + framelogprob[t, j]
+
+        # traceback
+        states = np.zeros(n_samples, dtype=int)
+        states[-1] = np.argmax(logprob[-1])
+        for t in range(n_samples - 2, -1, -1):
+            states[t] = backpointer[t + 1, states[t + 1]]
+
+        return states
+
+    def _fit_dt_hmm(
+        self, model, chrom, sample, fit_args: dict | None = None, tau: int = 1000
+    ):
         if fit_args is None:
             fit_args = {}
-        data = self._prep_fit_data(sample)
-        if hasattr(self.model, "transmat_"):
-            del self.model.transmat_
-        if hasattr(self.model, "lambdas_"):
-            del self.model.lambdas_
-        if hasattr(self.model, "startprob_"):
-            del self.model.startprob_
-        if hasattr(self.model, "means_"):
-            del self.model.means_
-        if hasattr(self.model, "_covars_"):
-            del self.model._covars_
-        return self.model.fit(data, **fit_args)
 
-    def __fit_ct_hmm(self, sample, fit_args: dict | None = None):
-        if fit_args is None:
-            fit_args = {}
-        data = self._prep_fit_data(sample)
-        return self.model.fit_observation_params(data, **fit_args)
+        # Get both data (meth values) and positions
+        data, positions = self._prep_fit_data(sample, chrom)
 
-    def __fit_window(self, sample, fit_args: dict | None = None):
-        if fit_args is None:
-            fit_args = {}
-        data = self._prep_fit_data(sample)
-        return self.model.fit(data, **fit_args)
+        # Stage 1: vanilla hmmlearn fit (learn emissions + base transitions)
+        model.fit(data, **fit_args)
 
-    def __predict_dt_hmm(self, sample):
-        data = self.__prep_predict_data(sample)
-        return self.model.predict(data)
+        # Stage 2: adjust transitions based on genomic distances
+        A_base = model.transmat_
+        dist = np.diff(positions)
+        transmats = [self._distance_scaled_transmat(A_base, d, tau) for d in dist]
 
-    def __predict_ct_hmm(self, sample):
-        data = self.__prep_predict_data(sample)
-        return self.model.predict(data[0], data[1])
+        # Replace transition matrix with an averaged distance-aware version
+        model.transmat_ = np.mean(transmats, axis=0)
 
-    def __predict_window(self, sample):
-        data = self.__prep_predict_data(sample)
-        return self.model.predict(data)
+        return model
+
+    def _predict_dt_hmm(self, model, chrom, sample, tau: int = 1000):
+        # Get both data and positions
+        data, positions = self.__prep_predict_data(sample, chrom)
+
+        # Use custom Viterbi with distance-scaled transitions
+        return self._viterbi_with_distance(model, data, positions, tau)
 
     def __prep_genomic_input(self, predicted_states):
         states_df = self.methylation_data[["chr", "median"]][["chr", "median"]].copy()
@@ -589,18 +587,10 @@ class MethSeg:
                 percentages.append(state_counts.get(i, 0) / total_states * 100)
             state_percentages.append(percentages)
         aggregation_model = self.get_model(aggregation=True)
-        if self.aggregation_method == MethSegMethod.CT_HMM:
-            fit_data = self.__prep_fit_data(pd.Series(state_percentages))
-            observations = fit_data[0][0]
-            times = fit_data[0][1]
-            observations = [np.argmax(obs) for obs in observations]
-            fit_data = [(observations, times)]
-            aggregation_model.fit_observation_params(fit_data, **fit_args)
-            predicted_states = aggregation_model.predict(observations, times)
-        else:
-            fit_data = state_percentages
-            aggregation_model.fit(fit_data, **fit_args)
-            predicted_states = aggregation_model.predict(state_percentages)
+
+        fit_data = state_percentages
+        aggregation_model.fit(fit_data, **fit_args)
+        predicted_states = aggregation_model.predict(state_percentages)
 
         states_df = self.__prep_genomic_input(predicted_states)
         return states_df
@@ -613,7 +603,7 @@ class MethSeg:
         for states in transposed_states:
             state_counts = Counter(states)
             percentages = []
-            for i in range(self.model.n_components):
+            for i in range(self.n_components):
                 percentages.append(state_counts.get(i, 0) / total_states * 100)
             state_percentages.append(percentages)
 
@@ -651,268 +641,3 @@ class MethSeg:
             return self.__use_hmm_aggregation(predicted_states, fit_args)
         elif use_simple_aggregation:
             return self.__use_simple_aggregation(predicted_states, fit_args)
-
-
-class WindowSeg:
-    def __init__(
-        self,
-        meth_low=20,
-        meth_high=70,
-        interpercentile_low=20,
-        interpercentile_high=70,
-        lower_percent_cutoff=0.3,
-        higher_percent_cutoff=0.6,
-        percent_per_region=0.8,
-        use_majority_criteria=False,
-    ):
-        self.meth_low = meth_low
-        self.meth_high = meth_high
-        self.interpercentile_low = interpercentile_low
-        self.interpercentile_high = interpercentile_high
-        self.lower_percent_cutoff = lower_percent_cutoff
-        self.higher_percent_cutoff = higher_percent_cutoff
-        self.percent_per_region = percent_per_region
-        self.use_majority_criteria = use_majority_criteria
-
-    def __fit_definition(self, data):
-        def state(c):
-            if c < self.meth_low:
-                return MethState.LOW.value
-            elif c > self.meth_high:
-                return MethState.HIGH.value
-            else:
-                return MethState.MEDIUM.value
-
-        return [state(x) for x in data]
-
-    def fit(self, sample: pd.Series):
-        return self.__fit_definition(sample)
-
-    def predict(self, sample: pd.Series):
-        return self.__fit_definition(sample)
-
-    def aggregate_genomic_regions(self, data: pd.DataFrame):
-        num_samples = len(data.columns[3:-1])
-
-        criteria_df = self.__generate_criteria_df(data)
-
-        criteria_fct = (
-            self.__majority_criteria_fct
-            if self.use_majority_criteria
-            else self.__subset_criteria_fct
-        )
-
-        regions = {}
-        for region_type in ["intermediate_count", "low_count", "high_count"]:
-            regions[region_type] = self.__create_regions(
-                criteria_df,
-                region_type,
-                num_samples,
-                criteria_fct,
-            )
-        full_regions_data = []
-        for region_type in regions:
-            for region in regions[region_type]:
-                state = (
-                    MethState.LOW.value
-                    if region_type == "low_count"
-                    else (
-                        MethState.HIGH.value
-                        if region_type == "high_count"
-                        else MethState.MEDIUM.value
-                    )
-                )
-                full_regions_data.append(
-                    [
-                        region[0],
-                        region[1],
-                        region[2],
-                        state,
-                        region[3],
-                    ]
-                )
-        return full_regions_data
-
-    def __generate_criteria_df(self, data: pd.DataFrame):
-        intermediate_count = data[data.columns[3:-1]].apply(
-            lambda x: x[(x >= self.meth_low) & (x <= self.meth_high)].count(),
-            axis=1,
-        )
-        low_count = data[data.columns[3:-1]].apply(
-            lambda x: x[(x < self.meth_low)].count(), axis=1
-        )
-        high_count = data[data.columns[3:-1]].apply(
-            lambda x: x[(x > self.meth_high)].count(), axis=1
-        )
-
-        percentile_5th = data[data.columns[3:-1]].quantile(0.05, axis=1)
-        percentile_95th = data[data.columns[3:-1]].quantile(0.95, axis=1)
-        interpercentile_range = percentile_95th - percentile_5th
-
-        criteria_df = data[["chr", "median"]].copy()
-        criteria_df["intermediate_count"] = intermediate_count
-        criteria_df["low_count"] = low_count
-        criteria_df["high_count"] = high_count
-        criteria_df["interpercentile_range"] = interpercentile_range
-
-        return criteria_df
-
-    def __majority_criteria_fct(self, percent):
-        return percent > 0.5
-
-    def __subset_criteria_fct(self, percent):
-        return (
-            percent >= self.lower_percent_cutoff
-            and percent <= self.higher_percent_cutoff
-        )
-
-    def __is_commonly_methylated_similar(
-        self,
-        window_count,
-        total_samples,
-        interpercentile_range,
-        criteria_fct,
-    ):
-        percent_intermedate = window_count / total_samples
-        return criteria_fct(percent_intermedate) and (
-            interpercentile_range >= self.interpercentile_low
-            and interpercentile_range <= self.interpercentile_high
-        )
-
-    def __begin_or_update_region(
-        self,
-        current_chr,
-        current_start,
-        current_common_count,
-        current_count_in_window,
-        row,
-    ):
-        if current_start is None:
-            current_chr = row[1]["chr"]
-            current_start = row[1]["median"]
-        current_common_count += 1
-        current_count_in_window += 1
-        current_end = row[1]["median"]
-        return (
-            current_chr,
-            current_start,
-            current_end,
-            current_common_count,
-            current_count_in_window,
-        )
-
-    def __close_current_region(
-        self,
-        regions,
-        current_chr,
-        current_start,
-        current_end,
-        current_common_count,
-    ):
-        regions.append((current_chr, current_start, current_end, current_common_count))
-        current_chr = None
-        current_start = None
-        current_end = None
-        current_count_in_window = 0
-        current_common_count = 0
-        return (
-            current_chr,
-            current_start,
-            current_end,
-            current_common_count,
-            current_count_in_window,
-        )
-
-    def __should_keep_window_open(self, current_common_count, current_count_in_window):
-        if (
-            current_count_in_window
-            and (current_common_count / current_count_in_window)
-            >= self.percent_per_region
-        ):
-            return True
-        return False
-
-    def __create_regions(
-        self,
-        criteria_df: pd.DataFrame,
-        region_type,
-        num_samples,
-        criteria_fct,
-    ):
-        regions = []
-        current_chr = None
-        current_start = None
-        current_end = None
-        current_count_in_window = 0
-        current_common_count = 0
-        for row in criteria_df.iterrows():
-            # Set initial chromosome
-            if current_chr is None:
-                current_chr = row[1]["chr"]
-            # If we change chromosomes, close current region
-            if current_chr != row[1]["chr"]:
-                if current_end is not None:
-                    (
-                        current_chr,
-                        current_start,
-                        current_end,
-                        current_common_count,
-                        current_count_in_window,
-                    ) = self.__close_current_region(
-                        regions,
-                        current_chr,
-                        current_start,
-                        current_end,
-                        current_common_count,
-                    )
-
-            if self.__is_commonly_methylated_similar(
-                row[1][region_type],
-                num_samples,
-                row[1]["interpercentile_range"],
-                criteria_fct,
-            ):
-                (
-                    current_chr,
-                    current_start,
-                    current_end,
-                    current_common_count,
-                    current_count_in_window,
-                ) = self.__begin_or_update_region(
-                    current_chr,
-                    current_start,
-                    current_common_count,
-                    current_count_in_window,
-                    row,
-                )
-            else:
-                if self.__should_keep_window_open(
-                    current_common_count,
-                    current_count_in_window,
-                ):
-                    current_count_in_window += 1
-                    continue
-                else:
-                    if current_end is not None:
-                        (
-                            current_chr,
-                            current_start,
-                            current_end,
-                            current_common_count,
-                            current_count_in_window,
-                        ) = self.__close_current_region(
-                            regions,
-                            current_chr,
-                            current_start,
-                            current_end,
-                            current_common_count,
-                        )
-        if current_end is not None:
-            self.__close_current_region(
-                regions,
-                current_chr,
-                current_start,
-                current_end,
-                current_common_count,
-            )
-        return regions
