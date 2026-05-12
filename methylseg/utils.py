@@ -16,7 +16,7 @@ from .helper_classes import MethylationStates, SampleInfo
 def get_biological_state_colors(cmap_name: str = "viridis"):
     """
     Return a fixed color mapping for the biological methylation states
-    keyed by their canonical enum values (LOW=0, PMR=1, INTERMEDIATE=2, HIGH=3).
+    keyed by their canonical enum values (LOW=0, PMD=1, INTERMEDIATE=2, HIGH=3).
     """
     state_values = [state.value for state in MethylationStates]
     base_cmap = plt.get_cmap(cmap_name, len(state_values))
@@ -77,23 +77,23 @@ def _annotate_plot_df_with_regions(
     *,
     chrom_col: str,
     pos_col: str,
-    color_pmr_only: bool,
+    color_pmd_only: bool,
     region_label_col: str = "state",
 ) -> tuple[pd.DataFrame, str, dict[str, str], dict[str, list[str]], str, str]:
     plot_df = df_plot.copy()
     outside_region_color = "#7E7E7E"
-    plot_df["__region_color__"] = "non-PMR" if color_pmr_only else "Outside regions"
+    plot_df["__region_color__"] = "non-PMD" if color_pmd_only else "Outside regions"
 
     if regions_df is None or regions_df.empty:
-        if color_pmr_only:
-            plot_df["__region_color__"] = "non-PMR"
+        if color_pmd_only:
+            plot_df["__region_color__"] = "non-PMD"
             return (
                 plot_df,
                 "__region_color__",
-                {"PMR": "#d62728", "non-PMR": "#1f77b4"},
-                {"__region_color__": ["PMR", "non-PMR"]},
-                "PMR status",
-                "PMR status",
+                {"PMD": "#d62728", "non-PMD": "#1f77b4"},
+                {"__region_color__": ["PMD", "non-PMD"]},
+                "PMD status",
+                "PMD status",
             )
         return (
             plot_df,
@@ -140,12 +140,12 @@ def _annotate_plot_df_with_regions(
             )
             if not region_mask.any():
                 continue
-            if color_pmr_only:
+            if color_pmd_only:
                 color_label = (
-                    "PMR"
+                    "PMD"
                     if _normalize_state_label(getattr(region, region_label_col))
-                    == "PMR"
-                    else "non-PMR"
+                    == "PMD"
+                    else "non-PMD"
                 )
             else:
                 color_label = _normalize_state_label(getattr(region, region_label_col))
@@ -153,14 +153,14 @@ def _annotate_plot_df_with_regions(
                     color_label = "Region"
             plot_df.loc[chrom_indices[region_mask], "__region_color__"] = color_label
 
-    if color_pmr_only:
+    if color_pmd_only:
         return (
             plot_df,
             "__region_color__",
-            {"PMR": "#d62728", "non-PMR": "#1f77b4"},
-            {"__region_color__": ["PMR", "non-PMR"]},
-            "PMR status",
-            "PMR status",
+            {"PMD": "#d62728", "non-PMD": "#1f77b4"},
+            {"__region_color__": ["PMD", "non-PMD"]},
+            "PMD status",
+            "PMD status",
         )
 
     present_labels = plot_df["__region_color__"].dropna().astype(str).unique().tolist()
@@ -200,7 +200,7 @@ def _plot_interactive_beta_scatter(
     label_title: str | None = None,
     show_plot: bool = True,
     max_points: int = 120_000,
-    color_pmr_only: bool = False,
+    color_pmd_only: bool = False,
     color_regions_df: pd.DataFrame | None = None,
     region_label_col: str = "state",
 ) -> object | None:
@@ -285,7 +285,7 @@ def _plot_interactive_beta_scatter(
             regions_df=color_regions_df,
             chrom_col="CpG_chrm",
             pos_col=x_col,
-            color_pmr_only=color_pmr_only,
+            color_pmd_only=color_pmd_only,
             region_label_col=region_label_col,
         )
     else:
@@ -297,17 +297,17 @@ def _plot_interactive_beta_scatter(
             df_plot[label_col] = df_plot[label_col].apply(lambda x: x.value)
         df_plot[label_col] = df_plot[label_col].astype(int)
 
-        if color_pmr_only:
-            plot_color_col = f"{label_col}_pmr_status"
+        if color_pmd_only:
+            plot_color_col = f"{label_col}_pmd_status"
             df_plot[plot_color_col] = np.where(
-                df_plot[label_col] == MethylationStates.PMR.value,
-                "PMR",
-                "non-PMR",
+                df_plot[label_col] == MethylationStates.PMD.value,
+                "PMD",
+                "non-PMD",
             )
-            color_map = {"PMR": "#d62728", "non-PMR": "#1f77b4"}
-            category_orders = {plot_color_col: ["PMR", "non-PMR"]}
-            color_label = "PMR status"
-            legend_title = "PMR status"
+            color_map = {"PMD": "#d62728", "non-PMD": "#1f77b4"}
+            category_orders = {plot_color_col: ["PMD", "non-PMD"]}
+            color_label = "PMD status"
+            legend_title = "PMD status"
         else:
             df_plot[label_col] = df_plot[label_col].astype(str)
             plot_color_col = label_col
@@ -380,7 +380,7 @@ def _plot_interactive_beta_scatter(
         paper_bgcolor="white",
     )
 
-    if color_regions_df is None and not color_pmr_only:
+    if color_regions_df is None and not color_pmd_only:
         state_names = {str(s.value): s.name for s in MethylationStates}
         fig.for_each_trace(lambda t: t.update(name=state_names.get(t.name, t.name)))
 
@@ -388,7 +388,7 @@ def _plot_interactive_beta_scatter(
         fig.show(renderer="notebook")
 
     if out_dir is not None:
-        suffix = "_pmr_only" if color_pmr_only else ""
+        suffix = "_pmd_only" if color_pmd_only else ""
         if color_regions_df is not None:
             suffix += "_region_coloring"
         fig.write_html(f"{out_dir}/interactive_beta_by_{label_col}{suffix}.html")
