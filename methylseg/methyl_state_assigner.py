@@ -41,13 +41,13 @@ class MethylStateAssigner:
     def __init__(
         self,
         window_specs: List[Tuple[int, str]] = [
-            (500_000, "500kb"),
-            (1_000_000, "1Mb"),
+            (40_000, "40kb"),
+            (450_000, "450kb"),
         ],
         n_states: int = 4,
         int_low_cutoff: float = 0.2,
         int_high_cutoff: float = 0.7,
-        high_cutoff: float = 0.8,
+        high_cutoff: float = 0.7,
         out_dir=".",
         random_state: Optional[int] = 42,
         cluster_space: str = "pca",
@@ -56,7 +56,7 @@ class MethylStateAssigner:
         """
         window_specs : list of (window_size, label).
         n_states : int
-            Number of states for the HMM.
+            Number of states for the clustering.
         """
         self.window_specs = window_specs
         self.n_states = n_states

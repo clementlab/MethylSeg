@@ -97,8 +97,8 @@ class MultinomialSegHMM(MethylSegHMM):
 
 
 class StickyCategoricalMethylSegHMM(MethylSegHMM):
-    DEFAULT_STAY_PROB = 0.995
-    EMISSION_MISMATCH_PROB = 0.01
+    DEFAULT_STAY_PROB = 0.99995
+    EMISSION_MISMATCH_PROB = 0.45
     TRANSITION_PRIOR_STRENGTH = 50.0
 
     def __init__(
@@ -389,14 +389,15 @@ class GaussianMethylSegHMM(MethylSegHMM):
 
 
 class CTMethylSegHMM(MethylSegHMM):
+
     def __init__(
         self,
         n_states,
-        n_emissions,
-        holding_time_guess,
+        n_emissions: int = 4,
+        holding_time_guess: int = 1_500_000,
         time_scale: float = 1,
-        max_iter: int = 20,
-        tol: float = 1e-4,
+        max_iter: int = 25,
+        tol: float = 1e-2,
         random_state: int = 42,
         algorithm="forward-backward",
     ):
