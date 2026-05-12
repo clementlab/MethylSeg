@@ -288,6 +288,7 @@ class MethylDataPrep:
             sep="\t",
             header=None,
             low_memory=False,
+            compression="gzip" if self.meth_file.suffix in {".gz", ".gzip"} else None,
         )
         df = self._promote_header_row(df)
         if df.shape[1] < 5:
@@ -325,6 +326,7 @@ class MethylDataPrep:
             sep="\t",
             header=None,
             low_memory=False,
+            compression="gzip" if self.meth_file.suffix in {".gz", ".gzip"} else "infer",
         )
         if df.empty:
             return pd.DataFrame(
