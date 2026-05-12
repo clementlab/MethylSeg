@@ -567,7 +567,7 @@ class MethylStateAssigner:
             feature_matrix[col] = np.log1p(col_values.astype(np.float64))
         return feature_matrix
 
-    def _preprocess_emission_features(
+    def preprocess_emission_features(
         self,
         emission_df: pd.DataFrame,
         feature_cols: List[str],
@@ -635,7 +635,7 @@ class MethylStateAssigner:
             )
         return scaled_values
 
-    def _resolve_feature_cols(
+    def resolve_feature_cols(
         self,
         emission_df: pd.DataFrame,
         feature_cols: Optional[List[str]] = None,
@@ -664,12 +664,12 @@ class MethylStateAssigner:
         Fit KMeans on emission features using the assigner's configured cluster space.
         Also returns PCA scores for PCA-backed clustering and relabeled assignments.
         """
-        feature_cols = self._resolve_feature_cols(
+        feature_cols = self.resolve_feature_cols(
             emission_df=emission_df,
             feature_cols=feature_cols,
         )
 
-        X_scaled, imputer, scaler = self._preprocess_emission_features(
+        X_scaled, imputer, scaler = self.preprocess_emission_features(
             emission_df=emission_df,
             feature_cols=feature_cols,
             fit=True,
@@ -721,7 +721,7 @@ class MethylStateAssigner:
         """
         if not hasattr(self, "model"):
             raise ValueError("No trained model found. Please train a model first.")
-        X_scaled = self._preprocess_emission_features(
+        X_scaled = self.preprocess_emission_features(
             emission_df=emission_df,
             feature_cols=self.model.feature_cols,
             fit=False,
@@ -744,7 +744,7 @@ class MethylStateAssigner:
         if not hasattr(self, "model"):
             raise ValueError("No trained model found. Please train a model first.")
 
-        X_scaled = self._preprocess_emission_features(
+        X_scaled = self.preprocess_emission_features(
             emission_df=emission_df,
             feature_cols=self.model.feature_cols,
             fit=False,
@@ -820,7 +820,7 @@ class MethylStateAssigner:
         if n_pca_plot not in (2, 3):
             raise ValueError("n_pca_plot must be either 2 or 3.")
 
-        X_scaled = self._preprocess_emission_features(
+        X_scaled = self.preprocess_emission_features(
             emission_df=emission_df,
             feature_cols=self.model.feature_cols,
             fit=False,
@@ -864,7 +864,7 @@ class MethylStateAssigner:
                 "UMAP parralellisation cannot work with random seed, setting random_state to None for UMAP."
             )
 
-        X_scaled = self._preprocess_emission_features(
+        X_scaled = self.preprocess_emission_features(
             emission_df=emission_df,
             feature_cols=self.model.feature_cols,
             fit=False,

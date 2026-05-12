@@ -126,15 +126,15 @@ class MethylSegmentor:
         self,
         emission_df: pd.DataFrame,
     ) -> np.ndarray:
-        feature_cols = self.analyzer.assigner._resolve_feature_cols(emission_df)
-        X_scaled, _imputer, _scaler = (
-            self.analyzer.assigner._preprocess_emission_features(
+        feature_cols = self.analyzer.assigner.resolve_feature_cols(emission_df)
+        x_scaled, _imputer, _scaler = (
+            self.analyzer.assigner.preprocess_emission_features(
                 emission_df=emission_df,
                 feature_cols=feature_cols,
                 fit=True,
             )
         )
-        return X_scaled
+        return x_scaled
 
     def _get_gaussian_init_labels(
         self,
@@ -161,11 +161,11 @@ class MethylSegmentor:
         emission_df: pd.DataFrame,
     ) -> np.ndarray:
         assigner = self.analyzer.assigner
-        feature_cols = assigner._resolve_feature_cols(emission_df)
+        feature_cols = assigner.resolve_feature_cols(emission_df)
 
         if hasattr(assigner, "model") and getattr(assigner, "model", None) is not None:
             model = assigner.model
-            X_scaled = assigner._preprocess_emission_features(
+            X_scaled = assigner.preprocess_emission_features(
                 emission_df=emission_df,
                 feature_cols=model.feature_cols,
                 fit=False,
