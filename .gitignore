@@ -1,0 +1,13 @@
+data/*
+wgbs_test_data/*
+anti_grav_test/*
+codex_test/*
+__pycache__/*
+*.pyc
+*.pyo
+*.bak
+reference_files/*
+test_data/*
+cutoff_output/*
+test_hyperparameter_runs/
+test_hyperparameter_runs_dnmtools/
