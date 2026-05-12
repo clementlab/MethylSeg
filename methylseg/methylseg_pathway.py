@@ -325,7 +325,7 @@ class MethylSegPathway:
     def get_clean_regions(
         self,
         regions_df: pd.DataFrame | None = None,
-        state: MethylationStates | str = MethylationStates.PMR,
+        state: MethylationStates | str = MethylationStates.PMD,
         merge_gap_bp: int | None = None,
         min_region_length: int | None = None,
         min_cpgs: int | None = None,

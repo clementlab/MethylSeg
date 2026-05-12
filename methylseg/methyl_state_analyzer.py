@@ -70,12 +70,12 @@ class MethylStateAnalyzer:
         meth_emissions: pd.DataFrame,
         beta_low_max: float,
         beta_high_min: float,
-        pmr_cutoffs: Dict[str, Dict[str, float]],
+        pmd_cutoffs: Dict[str, Dict[str, float]],
     ) -> np.ndarray:
         """
         Rule-based state definition with tunable, per-window cutoffs.
 
-        PMR is defined as:
+        PMD is defined as:
 
           beta_low_max <= beta <= beta_high_min
           AND OR over regional windows of:
@@ -93,7 +93,7 @@ class MethylStateAnalyzer:
             for each window label in self.assigner.window_specs.
         beta_low_max : float
         beta_high_min : float
-        pmr_cutoffs : dict
+        pmd_cutoffs : dict
             {
               label: {
                 'int_min': ...,
@@ -106,10 +106,10 @@ class MethylStateAnalyzer:
 
         States
         ------
-        0 = low methylation outside PMRs
-        1 = PMR
-        2 = intermediate / other outside PMRs
-        3 = high methylation outside PMRs
+        0 = low methylation outside PMDs
+        1 = PMD
+        2 = intermediate / other outside PMDs
+        3 = high methylation outside PMDs
         """
         beta = meth_emissions["beta"].values
         n = len(meth_emissions)
@@ -123,18 +123,18 @@ class MethylStateAnalyzer:
         window_labels = [label for _, label in self.assigner.window_specs]
         if not window_labels:
             raise ValueError("No window_specs found on assigner.")
-        regional_window_labels = self.assigner._get_regional_window_labels()
+        regional_window_labels = self.assigner.get_regional_window_labels()
 
-        pmr_window_masks = []
+        pmd_window_masks = []
 
         for label in regional_window_labels:
-            if label not in pmr_cutoffs:
+            if label not in pmd_cutoffs:
                 raise KeyError(
-                    f"No PMR cutoffs provided for window '{label}'. "
-                    f"Expected a key in pmr_cutoffs for each label in window_specs."
+                    f"No PMD cutoffs provided for window '{label}'. "
+                    f"Expected a key in pmd_cutoffs for each label in window_specs."
                 )
 
-            cfg = pmr_cutoffs[label]
+            cfg = pmd_cutoffs[label]
             try:
                 int_min = cfg["int_min"]
                 std_max = cfg["std_max"]
@@ -142,7 +142,7 @@ class MethylStateAnalyzer:
                 low_max = cfg.get("low_max", high_max)
             except KeyError as e:
                 raise KeyError(
-                    f"PMR cutoff for window '{label}' must contain "
+                    f"PMD cutoff for window '{label}' must contain "
                     f"keys 'int_min', 'std_max', 'high_max'. Missing: {e}"
                 )
 
@@ -165,22 +165,22 @@ class MethylStateAnalyzer:
             high_vals = meth_emissions[high_col].values
             low_vals = meth_emissions[low_col].values
 
-            pmr_window_masks.append(
+            pmd_window_masks.append(
                 (int_vals >= int_min)
                 & (std_vals <= std_max)
                 & (high_vals <= high_max)
                 & (low_vals <= low_max)
             )
 
-        regional_any = np.logical_or.reduce(pmr_window_masks)
-        pmr_mask = regional_any & (beta >= beta_low_max) & (beta <= beta_high_min)
+        regional_any = np.logical_or.reduce(pmd_window_masks)
+        pmd_mask = regional_any & (beta >= beta_low_max) & (beta <= beta_high_min)
 
-        low_mask = (beta <= beta_low_max) & ~pmr_mask
-        high_mask = (beta >= beta_high_min) & ~pmr_mask
-        interm_mask = ~(pmr_mask | low_mask | high_mask)
+        low_mask = (beta <= beta_low_max) & ~pmd_mask
+        high_mask = (beta >= beta_high_min) & ~pmd_mask
+        interm_mask = ~(pmd_mask | low_mask | high_mask)
 
         labels[low_mask] = MethylationStates.LOW
-        labels[pmr_mask] = MethylationStates.PMR
+        labels[pmd_mask] = MethylationStates.PMD
         labels[interm_mask] = MethylationStates.INTERMEDIATE
         labels[high_mask] = MethylationStates.HIGH
 
@@ -199,7 +199,7 @@ class MethylStateAnalyzer:
         rule_params must contain:
           - beta_low_max
           - beta_high_min
-          - pmr_cutoffs (dict[label -> {'int_min','std_max','high_max','low_max'}])
+          - pmd_cutoffs (dict[label -> {'int_min','std_max','high_max','low_max'}])
         """
         y_true = np.asarray(kmeans_labels)
         y_pred = self.define_states_by_rules_param(meth_emissions, **rule_params)
@@ -248,7 +248,7 @@ class MethylStateAnalyzer:
         {
           "beta_low_max": (low, high),
           "beta_high_min": (low, high),
-          "pmr": {
+          "pmd": {
             "<label>": {
               "int_min": (low, high),
               "std_max": (low, high),
@@ -268,7 +268,7 @@ class MethylStateAnalyzer:
         # Build default distributions if none provided
         if param_distributions is None:
             window_labels = [label for _, label in self.assigner.window_specs]
-            pmr_dist = {
+            pmd_dist = {
                 label: {
                     "int_min": (0.40, 0.90),
                     "std_max": (0.10, 0.40),
@@ -280,7 +280,7 @@ class MethylStateAnalyzer:
             param_distributions = {
                 "beta_low_max": (0.05, 0.35),
                 "beta_high_min": (0.60, 0.95),
-                "pmr": pmr_dist,
+                "pmd": pmd_dist,
             }
 
         # Helper: sample a valid param set
@@ -293,9 +293,9 @@ class MethylStateAnalyzer:
                 if beta_low_max >= beta_high_min:
                     continue
 
-                pmr_cutoffs = {}
-                for label, ranges in param_distributions["pmr"].items():
-                    pmr_cutoffs[label] = {
+                pmd_cutoffs = {}
+                for label, ranges in param_distributions["pmd"].items():
+                    pmd_cutoffs[label] = {
                         "int_min": float(rng.uniform(*ranges["int_min"])),
                         "std_max": float(rng.uniform(*ranges["std_max"])),
                         "high_max": float(rng.uniform(*ranges["high_max"])),
@@ -305,7 +305,7 @@ class MethylStateAnalyzer:
                 return {
                     "beta_low_max": beta_low_max,
                     "beta_high_min": beta_high_min,
-                    "pmr_cutoffs": pmr_cutoffs,
+                    "pmd_cutoffs": pmd_cutoffs,
                 }
 
         def flatten_rule_params(params: dict) -> dict:
@@ -313,7 +313,7 @@ class MethylStateAnalyzer:
                 "beta_low_max": params["beta_low_max"],
                 "beta_high_min": params["beta_high_min"],
             }
-            for label, cfg in params["pmr_cutoffs"].items():
+            for label, cfg in params["pmd_cutoffs"].items():
                 out[f"{label}_int_min"] = cfg["int_min"]
                 out[f"{label}_std_max"] = cfg["std_max"]
                 out[f"{label}_high_max"] = cfg["high_max"]
@@ -393,7 +393,7 @@ class MethylStateAnalyzer:
             self.set_state_cutoffs(
                 beta_low_max=cutoffs.get("beta_low_max"),
                 beta_high_min=cutoffs.get("beta_high_min"),
-                pmr_cutoffs=cutoffs.get("pmr_cutoffs"),
+                pmd_cutoffs=cutoffs.get("pmd_cutoffs"),
             )
             self.cutoffs_set_manually = bool(state_cfg.get("set_manually", False))
 
@@ -404,7 +404,7 @@ class MethylStateAnalyzer:
         Expected YAML structure:
         beta_low_max: float
         beta_high_min: float
-        pmr_cutoffs:
+        pmd_cutoffs:
           <label>:
             int_min: float
             std_max: float
@@ -419,12 +419,12 @@ class MethylStateAnalyzer:
         self,
         beta_low_max: float | None = None,
         beta_high_min: float | None = None,
-        pmr_cutoffs: dict | None = None,
+        pmd_cutoffs: dict | None = None,
     ):
         """
         Simple manual state cutoff setter with clean pythonic defaults.
 
-        - If user does not provide pmr_cutoffs, defaults are used:
+        - If user does not provide pmd_cutoffs, defaults are used:
             int_min = 0.56
             std_max = 0.264
             high_max = 0.246
@@ -442,11 +442,11 @@ class MethylStateAnalyzer:
         if beta_high_min is None:
             beta_high_min = beta_high_max_default
 
-        final_pmr_cutoffs = {}
+        final_pmd_cutoffs = {}
 
         for _, label in self.assigner.window_specs:
-            cfg = (pmr_cutoffs or {}).get(label, {})
-            final_pmr_cutoffs[label] = {
+            cfg = (pmd_cutoffs or {}).get(label, {})
+            final_pmd_cutoffs[label] = {
                 "int_min": cfg.get("int_min", int_min_default),
                 "std_max": cfg.get("std_max", std_max_default),
                 "high_max": cfg.get("high_max", high_max_default),
@@ -457,7 +457,7 @@ class MethylStateAnalyzer:
         self.state_cutoffs = {
             "beta_low_max": float(beta_low_max),
             "beta_high_min": float(beta_high_min),
-            "pmr_cutoffs": final_pmr_cutoffs,
+            "pmd_cutoffs": final_pmd_cutoffs,
         }
 
         self.cutoffs_set_manually = True
@@ -466,7 +466,7 @@ class MethylStateAnalyzer:
         """
         Print the current rule-based state definitions in a concise, human-readable format.
 
-        PMR:
+        PMD:
           beta_low_cutoff <= beta <= beta_high_cutoff
           AND OR over regional windows of:
             {label}_int_pct >= label.int_min
@@ -475,13 +475,13 @@ class MethylStateAnalyzer:
             AND {label}_low_pct <= label.low_max
 
         Low methylation:
-          beta <= low_cutoff AND NOT PMR
+          beta <= low_cutoff AND NOT PMD
 
         Intermediate:
-          low_cutoff < beta < high_cutoff AND NOT PMR
+          low_cutoff < beta < high_cutoff AND NOT PMD
 
         High methylation:
-          beta >= high_cutoff AND NOT PMR
+          beta >= high_cutoff AND NOT PMD
         """
         if not hasattr(self, "state_cutoffs"):
             raise ValueError(
@@ -491,15 +491,15 @@ class MethylStateAnalyzer:
         c = self.state_cutoffs
         beta_low_max = c["beta_low_max"]
         beta_high_min = c["beta_high_min"]
-        pmr_cutoffs = c["pmr_cutoffs"]
-        regional_window_labels = self.assigner._get_regional_window_labels()
+        pmd_cutoffs = c["pmd_cutoffs"]
+        regional_window_labels = self.assigner.get_regional_window_labels()
 
-        print("PMR:")
+        print("PMD:")
         print(f"{beta_low_max:.3f} <= beta <= {beta_high_min:.3f}")
 
         regional_parts = []
         for label in regional_window_labels:
-            cfg = pmr_cutoffs[label]
+            cfg = pmd_cutoffs[label]
             low_max = cfg.get("low_max", cfg["high_max"])
             regional_parts.append(
                 "("
@@ -512,13 +512,13 @@ class MethylStateAnalyzer:
         print("AND " + " OR ".join(regional_parts) + "\n")
 
         print("Low methylation:")
-        print(f"beta <= {beta_low_max:.3f} AND NOT PMR\n")
+        print(f"beta <= {beta_low_max:.3f} AND NOT PMD\n")
 
         print("Intermediate methylation:")
-        print(f"{beta_low_max:.3f} < beta < {beta_high_min:.3f} AND NOT PMR\n")
+        print(f"{beta_low_max:.3f} < beta < {beta_high_min:.3f} AND NOT PMD\n")
 
         print("High methylation:")
-        print(f"beta >= {beta_high_min:.3f} AND NOT PMR\n")
+        print(f"beta >= {beta_high_min:.3f} AND NOT PMD\n")
 
     def evaluate_clustering_concordance(
         self,
@@ -594,7 +594,7 @@ class MethylStateAnalyzer:
         label_title: str | None = None,
         show_plot: bool = True,
         max_points: int = 120_000,  # ← added
-        color_pmr_only: bool = False,
+        color_pmd_only: bool = False,
         color_regions_df: pd.DataFrame | None = None,
     ):
         """
@@ -642,6 +642,6 @@ class MethylStateAnalyzer:
             label_title=label_title,
             show_plot=show_plot,
             max_points=max_points,
-            color_pmr_only=color_pmr_only,
+            color_pmd_only=color_pmd_only,
             color_regions_df=color_regions_df,
         )

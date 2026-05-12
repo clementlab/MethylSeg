@@ -380,7 +380,7 @@ class MethylDataPrep:
 
 class MethylationStates(Enum):
     LOW = 0
-    PMR = 1
+    PMD = 1
     INTERMEDIATE = 2
     HIGH = 3
 

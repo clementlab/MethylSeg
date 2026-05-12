@@ -571,7 +571,7 @@ class MethylSegmentor:
         label_title: str | None = None,
         show_plot: bool = True,
         max_points: int = 120_000,
-        color_pmr_only: bool = False,
+        color_pmd_only: bool = False,
         color_regions_df: pd.DataFrame | None = None,
     ):
         """
@@ -595,6 +595,6 @@ class MethylSegmentor:
             label_title=label_title,
             show_plot=show_plot,
             max_points=max_points,
-            color_pmr_only=color_pmr_only,
+            color_pmd_only=color_pmd_only,
             color_regions_df=color_regions_df,
         )

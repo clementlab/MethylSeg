@@ -78,7 +78,7 @@ class MethylStateAssigner:
             )
         return normalized_cluster_space
 
-    def _get_regional_window_labels(self) -> List[str]:
+    def get_regional_window_labels(self) -> List[str]:
         sorted_window_specs = sorted(self.window_specs, key=lambda item: item[0])
         if len(sorted_window_specs) <= 2:
             return [label for _, label in sorted_window_specs]
@@ -433,7 +433,7 @@ class MethylStateAssigner:
             else state_cutoffs.get("beta_high_min", self.int_high_cutoff)
         )
 
-        regional_window_labels = self._get_regional_window_labels()
+        regional_window_labels = self.get_regional_window_labels()
 
         def regional_mean(cluster, suffix):
             mask = labels == cluster
@@ -487,7 +487,7 @@ class MethylStateAssigner:
                 - (0.75 * s["low"])
             )
 
-        def pmr_score(cluster) -> float:
+        def pmd_score(cluster) -> float:
             s = stats[cluster]
             return (
                 (3.0 * s["intermediate"])
@@ -508,8 +508,8 @@ class MethylStateAssigner:
         def state_score(cluster, state):
             if state == MethylationStates.LOW:
                 return low_score(cluster)
-            if state == MethylationStates.PMR:
-                return pmr_score(cluster)
+            if state == MethylationStates.PMD:
+                return pmd_score(cluster)
             if state == MethylationStates.INTERMEDIATE:
                 return intermediate_score(cluster)
             if state == MethylationStates.HIGH:
@@ -518,7 +518,7 @@ class MethylStateAssigner:
 
         candidate_states = [
             MethylationStates.LOW,
-            MethylationStates.PMR,
+            MethylationStates.PMD,
             MethylationStates.INTERMEDIATE,
             MethylationStates.HIGH,
         ]

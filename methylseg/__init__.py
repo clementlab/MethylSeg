@@ -5,6 +5,7 @@ from .helper_classes import (
     MethylDataPrep,
     MethylStateAssignmentMethod,
     MethylationStates,
+    SampleInfo,
 )
 from .methylseg_hmm import MethylSegHMM, DAMethylSegHMM
 from .methyl_state_assigner import MethylStateAssigner
