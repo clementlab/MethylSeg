@@ -420,12 +420,12 @@ class MethylSegPathway:
 
         if current_region is not None:
             merged_regions.append(current_region)
-
-        merged_df = pd.DataFrame(merged_regions)
+        # pylint: disable=unsubscriptable-object,unsupported-assignment-operation
+        merged_df: pd.DataFrame = pd.DataFrame(merged_regions)
         merged_df["avg_beta"] = (
             merged_df["beta_weighted_sum"] / merged_df["probe_count"]
         )
-        merged_df = merged_df.drop(columns=["beta_weighted_sum"])
+        merged_df: pd.DataFrame = merged_df.drop(columns=["beta_weighted_sum"])
         merged_df["length"] = merged_df["end"] - merged_df["start"]
         merged_df = merged_df.loc[
             (merged_df["length"] >= int(min_region_length))

@@ -965,7 +965,7 @@ class MethylStateAssigner:
 
             if show_table:
                 fig = plt.figure(figsize=(18, 6))
-                gs = GridSpec(1, 2, width_ratios=[4, 1], figure=fig)
+                gs = GridSpec(nrows=1, ncols=2, width_ratios=[4, 1], figure=fig)
                 ax_scatter = fig.add_subplot(gs[0])
                 ax_table = fig.add_subplot(gs[1])
             else:
