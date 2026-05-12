@@ -1,0 +1,2221 @@
+from enum import Enum
+from itertools import permutations
+import textwrap
+import warnings
+
+from matplotlib import pyplot as plt
+from panel import GridSpec
+import plotly.express as px
+import matplotlib.colors as mcolors
+from matplotlib.lines import Line2D
+import numpy as np
+import pandas as pd
+from typing import Dict, List, Optional, Tuple
+
+from sklearn.cluster import KMeans
+from sklearn.decomposition import PCA
+from sklearn.impute import SimpleImputer
+from sklearn.metrics import (
+    davies_bouldin_score,
+    silhouette_score,
+)
+from sklearn.preprocessing import StandardScaler
+import umap
+
+
+from .helper_classes import (
+    KMeansMethylationModel,
+    MethylationStates,
+    SampleInfo,
+    CANONICAL_AUTOSOMES,
+)
+from .utils import (
+    _build_emission_matrix_numba,
+    get_biological_state_colors,
+    get_present_biological_states,
+)
+
+
+class MethylStateAssigner:
+
+    def __init__(
+        self,
+        window_specs: List[Tuple[int, str]] = [
+            (500_000, "500kb"),
+            (1_000_000, "1Mb"),
+        ],
+        n_states: int = 4,
+        int_low_cutoff: float = 0.2,
+        int_high_cutoff: float = 0.7,
+        high_cutoff: float = 0.8,
+        out_dir=".",
+        random_state: Optional[int] = 42,
+        cluster_space: str = "pca",
+        n_pca: Optional[int] = 5,
+    ):
+        """
+        window_specs : list of (window_size, label).
+        n_states : int
+            Number of states for the HMM.
+        """
+        self.window_specs = window_specs
+        self.n_states = n_states
+        self.int_low_cutoff = int_low_cutoff
+        self.int_high_cutoff = int_high_cutoff
+        self.high_cutoff = high_cutoff
+        self.out_dir = out_dir
+        self.random_state = random_state
+        self.cluster_space = self._validate_cluster_space(cluster_space)
+        self.n_pca = n_pca
+
+    @staticmethod
+    def _validate_cluster_space(cluster_space: str) -> str:
+        normalized_cluster_space = str(cluster_space).lower()
+        if normalized_cluster_space not in {"pca", "raw"}:
+            raise ValueError(
+                "cluster_space must be either 'pca' or 'raw'. "
+                f"Received: {cluster_space!r}"
+            )
+        return normalized_cluster_space
+
+    def _get_regional_window_labels(self) -> List[str]:
+        sorted_window_specs = sorted(self.window_specs, key=lambda item: item[0])
+        if len(sorted_window_specs) <= 2:
+            return [label for _, label in sorted_window_specs]
+        return [label for _, label in sorted_window_specs[-2:]]
+
+    def generate_multi_window_summary_centered(
+        self,
+        meth_data: pd.DataFrame,
+        chrom: Optional[str] = None,
+    ) -> pd.DataFrame:
+        """
+        Compute per-CpG multi-window summary statistics using windows centered on each CpG.
+
+        Parameters
+        ----------
+        meth_data : DataFrame
+        Must contain columns ['CpG_chrm', 'CpG_beg', 'CpG_end', 'beta'].
+        chrom : optional chromosome filter.
+
+        Returns
+        -------
+        DataFrame : one row per CpG with a 'summaries' dict per row.
+        """
+        df = meth_data.copy()
+
+        if chrom is not None:
+            df = df[df["CpG_chrm"] == chrom]
+
+        df["CpG_mid"] = ((df["CpG_beg"].values + df["CpG_end"].values) // 2).astype(
+            np.int64
+        )
+        df["summaries"] = [{} for _ in range(len(df))]
+
+        def prefix_interval_sum(cumsum_array, start_idx, end_idx):
+            if start_idx > end_idx:
+                return 0.0
+            if start_idx == 0:
+                return float(cumsum_array[end_idx])
+            return float(cumsum_array[end_idx] - cumsum_array[start_idx - 1])
+
+        for chrom_name, chrom_df in df.groupby("CpG_chrm", sort=False):
+            global_row_indices = chrom_df.index.to_numpy()
+            positions = chrom_df["CpG_mid"].to_numpy()
+            betas = chrom_df["beta"].to_numpy().astype(float)
+            n_cpgs = len(chrom_df)
+            if n_cpgs == 0:
+                continue
+
+            beta_cumsum = np.cumsum(betas)
+            beta_squared_cumsum = np.cumsum(betas**2)
+
+            int_cpgs = (
+                (betas >= self.int_low_cutoff) & (betas <= self.int_high_cutoff)
+            ).astype(np.int64)
+            high_cpgs = (betas > self.high_cutoff).astype(np.int64)
+            low_cpgs = (betas < self.int_low_cutoff).astype(np.int64)
+
+            intermediate_cumsum = np.cumsum(int_cpgs)
+            high_cumsum = np.cumsum(high_cpgs)
+            low_cumsum = np.cumsum(low_cpgs)
+
+            for window_size, label in self.window_specs:
+                window_start_idx = 0
+                window_end_idx = 0
+
+                for cpg_idx in range(n_cpgs):
+                    cpg_center = positions[cpg_idx]
+                    window_start_pos = cpg_center - window_size // 2
+                    window_end_pos = cpg_center + window_size // 2
+
+                    while (
+                        window_start_idx < n_cpgs
+                        and positions[window_start_idx] < window_start_pos
+                    ):
+                        window_start_idx += 1
+
+                    while (
+                        window_end_idx + 1 < n_cpgs
+                        and positions[window_end_idx + 1] <= window_end_pos
+                    ):
+                        window_end_idx += 1
+
+                    cpg_count = window_end_idx - window_start_idx + 1
+                    if cpg_count <= 0:
+                        continue
+
+                    sum_beta = prefix_interval_sum(
+                        beta_cumsum, window_start_idx, window_end_idx
+                    )
+                    sum_beta_squared = prefix_interval_sum(
+                        beta_squared_cumsum, window_start_idx, window_end_idx
+                    )
+
+                    mean_beta = sum_beta / cpg_count
+                    variance = (sum_beta_squared / cpg_count) - (mean_beta**2)
+                    variance = max(variance, 0.0)
+                    stddev_beta = float(np.sqrt(variance))
+
+                    intermediate_count = prefix_interval_sum(
+                        intermediate_cumsum, window_start_idx, window_end_idx
+                    )
+                    high_count = prefix_interval_sum(
+                        high_cumsum, window_start_idx, window_end_idx
+                    )
+                    low_count = prefix_interval_sum(
+                        low_cumsum, window_start_idx, window_end_idx
+                    )
+
+                    intermediate_fraction = intermediate_count / cpg_count
+                    high_fraction = high_count / cpg_count
+                    low_fraction = low_count / cpg_count
+
+                    median_beta = float(
+                        np.median(betas[window_start_idx : window_end_idx + 1])
+                    )
+
+                    summary = {
+                        "window_info": {
+                            "window_size": window_size,
+                            "window_start": int(window_start_pos),
+                            "window_end": int(window_end_pos),
+                            "CpG_count": int(cpg_count),
+                        },
+                        "avg_meth": float(mean_beta),
+                        "median_meth": median_beta,
+                        "std": float(stddev_beta),
+                        "high_pct": float(high_fraction),
+                        "int_pct": float(intermediate_fraction),
+                        "low_pct": float(low_fraction),
+                    }
+
+                    global_row = global_row_indices[cpg_idx]
+                    df.at[global_row, "summaries"][label] = summary
+
+        df = df.drop(columns=["CpG_mid"])
+        return df
+
+    def create_emission_df(
+        self,
+        summary_stats: pd.DataFrame,
+        windows_to_use: Optional[List[str]] = None,
+    ) -> pd.DataFrame:
+        """
+        Convert the `summaries` column into a flat emission feature matrix.
+
+        Parameters
+        ----------
+        windows_to_use : list of window labels to include (subset of summary keys).
+            If None, use all available windows.
+
+        Returns
+        -------
+        DataFrame with columns:
+        'beta' +
+        '{label}_avg_meth', '{label}_std', '{label}_high_pct', '{label}_int_pct',
+        '{label}_low_pct',
+        '{label}_n_cpg'
+        """
+        if "summaries" not in summary_stats.columns:
+            raise ValueError("summary_stats must have a 'summaries' column.")
+
+        first_non_empty = None
+        for idx, val in summary_stats["summaries"].items():
+            if isinstance(val, dict) and len(val) > 0:
+                first_non_empty = val
+                break
+
+        if first_non_empty is None:
+            # helpful debugging info
+            n_rows = len(summary_stats)
+            raise ValueError(
+                "create_emission_df: 'summaries' column contains no non-empty entries. "
+                f"summary_stats has {n_rows} rows. "
+                "This likely means load_sample_methylation returned zero CpGs for this sample/chrom. "
+                "Check that the sample exists and the methylation file contains entries for the requested chromosome."
+            )
+        all_labels = list(first_non_empty.keys())
+        if windows_to_use is None:
+            windows = all_labels
+        else:
+            missing = [w for w in windows_to_use if w not in all_labels]
+            if missing:
+                raise ValueError(f"Requested windows not found in summaries: {missing}")
+            windows = windows_to_use
+
+        emission_data: Dict[int, Dict[str, float]] = {}
+
+        for idx, row in summary_stats.iterrows():
+            emission_data[idx] = {}
+            emission_data[idx]["beta"] = float(row["beta"])
+            summaries = row["summaries"]
+            for label in windows:
+                window_summary = summaries[label]
+                emission_data[idx][f"{label}_avg_meth"] = window_summary["avg_meth"]
+                emission_data[idx][f"{label}_std"] = window_summary["std"]
+                emission_data[idx][f"{label}_high_pct"] = window_summary["high_pct"]
+                emission_data[idx][f"{label}_int_pct"] = window_summary["int_pct"]
+                emission_data[idx][f"{label}_low_pct"] = window_summary["low_pct"]
+                emission_data[idx][f"{label}_n_cpg"] = float(
+                    window_summary["window_info"]["CpG_count"]
+                )
+
+        emission_df = pd.DataFrame.from_dict(emission_data, orient="index")
+        emission_df.index = summary_stats.index
+        return emission_df
+
+    def _append_derived_emission_features(
+        self,
+        emission_df: pd.DataFrame,
+    ) -> pd.DataFrame:
+        emission_df = emission_df.copy()
+        sorted_window_specs = sorted(self.window_specs, key=lambda item: item[0])
+        active_window_labels = [
+            label
+            for _, label in sorted_window_specs
+            if f"{label}_avg_meth" in emission_df.columns
+        ]
+
+        if not active_window_labels:
+            emission_df["beta_vs_largest_window_avg_meth_abs_diff"] = 0.0
+            emission_df["smallest_vs_largest_window_avg_meth_abs_diff"] = 0.0
+            return emission_df
+
+        beta_values = pd.to_numeric(emission_df["beta"], errors="raise")
+        largest_window_label = active_window_labels[-1]
+        largest_window_avg = pd.to_numeric(
+            emission_df[f"{largest_window_label}_avg_meth"],
+            errors="raise",
+        )
+        emission_df["beta_vs_largest_window_avg_meth_abs_diff"] = (
+            beta_values - largest_window_avg
+        ).abs()
+
+        if len(active_window_labels) == 1:
+            emission_df["smallest_vs_largest_window_avg_meth_abs_diff"] = 0.0
+        else:
+            smallest_window_label = active_window_labels[0]
+            smallest_window_avg = pd.to_numeric(
+                emission_df[f"{smallest_window_label}_avg_meth"],
+                errors="raise",
+            )
+            emission_df["smallest_vs_largest_window_avg_meth_abs_diff"] = (
+                smallest_window_avg - largest_window_avg
+            ).abs()
+
+        return emission_df
+
+    def build_emission_matrix(
+        self,
+        positions,
+        betas,
+        window_specs,
+        int_low_cutoff,
+        int_high_cutoff,
+        high_cutoff,
+    ):
+
+        window_sizes = np.array([w[0] for w in window_specs], dtype=np.int64)
+
+        X = _build_emission_matrix_numba(
+            positions,
+            betas,
+            window_sizes,
+            int_low_cutoff,
+            int_high_cutoff,
+            high_cutoff,
+        )
+
+        # Feature names (Python side)
+        feature_names = ["beta"]
+        for _, label in window_specs:
+            feature_names.extend(
+                [
+                    f"{label}_avg_meth",
+                    f"{label}_std",
+                    f"{label}_high_pct",
+                    f"{label}_int_pct",
+                    f"{label}_low_pct",
+                    f"{label}_n_cpg",
+                ]
+            )
+
+        return X, feature_names
+
+    def absorb_small_clusters(
+        self,
+        raw_labels: np.ndarray,
+        emission_df: pd.DataFrame,
+        min_frac: float = 0.001,
+    ) -> np.ndarray:
+        """
+        Absorb clusters smaller than min_frac of total CpGs
+        into nearest larger cluster (by mean beta).
+        """
+
+        labels = np.asarray(raw_labels).copy()
+        unique = np.unique(labels)
+
+        total = len(labels)
+        cluster_sizes = {c: np.sum(labels == c) for c in unique}
+
+        # Identify large clusters
+        large_clusters = [c for c in unique if cluster_sizes[c] / total >= min_frac]
+
+        # If all clusters are large, return unchanged
+        if len(large_clusters) == len(unique):
+            return labels
+
+        beta_vals = emission_df["beta"].to_numpy()
+
+        # Compute mean beta for each cluster
+        cluster_means = {c: beta_vals[labels == c].mean() for c in unique}
+
+        # Absorb small clusters
+        for c in unique:
+            if c in large_clusters:
+                continue
+
+            # Find nearest large cluster in beta space
+            small_mean = cluster_means[c]
+
+            nearest = min(
+                large_clusters,
+                key=lambda lc: abs(cluster_means[lc] - small_mean),
+            )
+
+            labels[labels == c] = nearest
+
+        return labels
+
+    # TODO : move to utils to share with MethylStateAnalyzer and MethylSegmenter
+    def relabel_by_mean_emission(
+        self,
+        raw_labels: np.ndarray,
+        emission_df: pd.DataFrame,
+        state_cutoffs: Optional[Dict[str, object]] = None,
+    ) -> np.ndarray:
+        labels = np.asarray(self.absorb_small_clusters(raw_labels, emission_df))
+        clusters = np.unique(labels)
+
+        if len(clusters) == 0:
+            return np.asarray(labels, dtype=object)
+
+        beta_min = (
+            self.int_low_cutoff
+            if state_cutoffs is None
+            else state_cutoffs.get("beta_low_max", self.int_low_cutoff)
+        )
+        beta_max = (
+            self.int_high_cutoff
+            if state_cutoffs is None
+            else state_cutoffs.get("beta_high_min", self.int_high_cutoff)
+        )
+
+        regional_window_labels = self._get_regional_window_labels()
+
+        def regional_mean(cluster, suffix):
+            mask = labels == cluster
+            return float(
+                np.mean(
+                    [
+                        emission_df[f"{w}_{suffix}"].to_numpy()[mask].mean()
+                        for w in regional_window_labels
+                    ]
+                )
+            )
+
+        def cluster_mean(cluster, col):
+            mask = labels == cluster
+            return float(emission_df[col].to_numpy()[mask].mean())
+
+        # -----------------------------
+        # Compute stats
+        # -----------------------------
+        stats = {
+            c: {
+                "beta": cluster_mean(c, "beta"),
+                "intermediate": regional_mean(c, "int_pct"),
+                "high": regional_mean(c, "high_pct"),
+                "low": regional_mean(c, "low_pct"),
+            }
+            for c in clusters
+        }
+
+        beta_mid = (beta_min + beta_max) / 2.0
+        beta_span = max(beta_max - beta_min, 1e-6)
+
+        def beta_mid_score(beta: float) -> float:
+            return max(0.0, 1.0 - (abs(beta - beta_mid) / beta_span))
+
+        def low_score(cluster) -> float:
+            s = stats[cluster]
+            return (
+                (2.0 * s["low"])
+                + (1.0 - s["beta"])
+                - (0.5 * s["intermediate"])
+                - (0.75 * s["high"])
+            )
+
+        def high_score(cluster) -> float:
+            s = stats[cluster]
+            return (
+                (2.0 * s["high"])
+                + s["beta"]
+                - (0.5 * s["intermediate"])
+                - (0.75 * s["low"])
+            )
+
+        def pmr_score(cluster) -> float:
+            s = stats[cluster]
+            return (
+                (3.0 * s["intermediate"])
+                + (1.0 * s["low"])
+                - (1.5 * s["high"])
+                + beta_mid_score(s["beta"])
+            )
+
+        def intermediate_score(cluster) -> float:
+            s = stats[cluster]
+            return (
+                (2.0 * s["intermediate"])
+                + (1.0 * s["high"])
+                - (1.0 * s["low"])
+                + beta_mid_score(s["beta"])
+            )
+
+        def state_score(cluster, state):
+            if state == MethylationStates.LOW:
+                return low_score(cluster)
+            if state == MethylationStates.PMR:
+                return pmr_score(cluster)
+            if state == MethylationStates.INTERMEDIATE:
+                return intermediate_score(cluster)
+            if state == MethylationStates.HIGH:
+                return high_score(cluster)
+            raise ValueError(f"Unknown state: {state}")
+
+        candidate_states = [
+            MethylationStates.LOW,
+            MethylationStates.PMR,
+            MethylationStates.INTERMEDIATE,
+            MethylationStates.HIGH,
+        ]
+
+        # -----------------------------
+        # Assign the most meaningful label(s) uniquely
+        # -----------------------------
+        best_assignment = None
+        best_key = None
+
+        for assignment in permutations(candidate_states, len(clusters)):
+            score_vector = tuple(
+                state_score(c, s) for c, s in zip(clusters, assignment)
+            )
+            total_score = float(np.sum(score_vector))
+            key = (total_score, score_vector)
+
+            if best_key is None or key > best_key:
+                best_key = key
+                best_assignment = assignment
+
+        mapping = {c: s for c, s in zip(clusters, best_assignment)}
+
+        # -----------------------------
+        # Apply mapping
+        # -----------------------------
+        new_labels = np.empty(labels.shape, dtype=object)
+        for c, state in mapping.items():
+            new_labels[labels == c] = state
+
+        return new_labels
+
+    def _transform_emission_features(
+        self,
+        feature_matrix: pd.DataFrame,
+    ) -> pd.DataFrame:
+        feature_matrix = feature_matrix.copy()
+        count_cols = [col for col in feature_matrix.columns if col.endswith("_n_cpg")]
+        for col in count_cols:
+            col_values = pd.to_numeric(feature_matrix[col], errors="raise")
+            if (col_values.dropna() < 0).any():
+                raise ValueError(
+                    f"Emission count feature '{col}' contains negative values, "
+                    "so log1p preprocessing cannot be applied."
+                )
+            feature_matrix[col] = np.log1p(col_values.astype(np.float64))
+        return feature_matrix
+
+    def _preprocess_emission_features(
+        self,
+        emission_df: pd.DataFrame,
+        feature_cols: List[str],
+        fit: bool = False,
+    ):
+        feature_matrix = emission_df[feature_cols].copy()
+        feature_matrix = self._transform_emission_features(feature_matrix)
+
+        all_nan_cols = feature_matrix.columns[feature_matrix.isna().all()].tolist()
+        if fit and all_nan_cols:
+            raise ValueError(
+                "Emission features are entirely missing for columns: "
+                f"{all_nan_cols}. Median imputation cannot fit these features."
+            )
+
+        feature_values = feature_matrix.to_numpy(dtype=np.float64, copy=True)
+        if np.isinf(feature_values).any():
+            raise ValueError(
+                "Emission features contain infinite values before imputation."
+            )
+        has_missing = np.isnan(feature_values).any()
+
+        if fit:
+            if has_missing:
+                imputer = SimpleImputer(strategy="median")
+                imputed_values = imputer.fit_transform(feature_values)
+            else:
+                imputer = None
+                imputed_values = feature_values
+            scaler = StandardScaler()
+            scaled_values = scaler.fit_transform(imputed_values)
+            if not np.isfinite(scaled_values).all():
+                raise ValueError(
+                    "Emission preprocessing produced non-finite values during fit."
+                )
+            return scaled_values, imputer, scaler
+
+        if not hasattr(self, "model"):
+            raise ValueError("No trained model found. Please train a model first.")
+        if getattr(self.model, "scaler", None) is None:
+            raise ValueError(
+                "The trained KMeans model is missing a scaler. Refit the model "
+                "with the updated preprocessing pipeline."
+            )
+
+        if getattr(self.model, "imputer", None) is None:
+            if has_missing:
+                raise ValueError(
+                    "Emission features contain missing values, but the trained "
+                    "KMeans model was fit without an imputer."
+                )
+            imputed_values = feature_values
+        elif has_missing:
+            imputed_values = self.model.imputer.transform(feature_values)
+        else:
+            imputed_values = feature_values
+        if not np.isfinite(imputed_values).all():
+            raise ValueError(
+                "Emission preprocessing produced non-finite values after imputation."
+            )
+        scaled_values = self.model.scaler.transform(imputed_values)
+        if not np.isfinite(scaled_values).all():
+            raise ValueError(
+                "Emission preprocessing produced non-finite values after scaling."
+            )
+        return scaled_values
+
+    def _resolve_feature_cols(
+        self,
+        emission_df: pd.DataFrame,
+        feature_cols: Optional[List[str]] = None,
+    ) -> List[str]:
+        if feature_cols is None:
+            feature_cols = [
+                col
+                for col in emission_df.columns.tolist()
+                if not col.endswith("_n_cpg")
+            ]
+
+        if not feature_cols:
+            raise ValueError(
+                "No emission feature columns were selected. Pass feature_cols "
+                "explicitly if you want to include only count-based features."
+            )
+
+        return feature_cols
+
+    def fit_kmeans_on_emissions(
+        self,
+        emission_df: pd.DataFrame,
+        feature_cols: Optional[List[str]] = None,
+    ) -> Tuple[KMeansMethylationModel, Optional[np.ndarray], np.ndarray]:
+        """
+        Fit KMeans on emission features using the assigner's configured cluster space.
+        Also returns PCA scores for PCA-backed clustering and relabeled assignments.
+        """
+        feature_cols = self._resolve_feature_cols(
+            emission_df=emission_df,
+            feature_cols=feature_cols,
+        )
+
+        X_scaled, imputer, scaler = self._preprocess_emission_features(
+            emission_df=emission_df,
+            feature_cols=feature_cols,
+            fit=True,
+        )
+
+        if self.cluster_space == "pca":
+            if self.n_pca is None or self.n_pca <= 0:
+                raise ValueError(
+                    "n_pca must be a positive integer when cluster_space='pca'."
+                )
+            n_components = min(self.n_pca, X_scaled.shape[0], X_scaled.shape[1])
+            if n_components <= 0:
+                raise ValueError(
+                    "Cannot fit PCA for clustering because the emission matrix is empty."
+                )
+            pca = PCA(n_components=n_components, random_state=self.random_state)
+            kmeans_input = pca.fit_transform(X_scaled)
+            pca_scores = kmeans_input
+        else:
+            pca = None
+            kmeans_input = X_scaled
+            pca_scores = None
+
+        kmeans = KMeans(
+            n_clusters=self.n_states, n_init=10, random_state=self.random_state
+        )
+        raw_labels = kmeans.fit_predict(kmeans_input)
+        relabeled = self.relabel_by_mean_emission(raw_labels, emission_df)
+        model = KMeansMethylationModel(
+            kmeans=kmeans,
+            scaler=scaler,
+            imputer=imputer,
+            pca=pca,
+            feature_cols=feature_cols,
+            n_states=self.n_states,
+            cluster_space=self.cluster_space,
+            n_pca=self.n_pca,
+        )
+        return model, pca_scores, relabeled
+
+    def apply_kmeans_to_emissions(
+        self,
+        emission_df: pd.DataFrame,
+    ) -> Tuple[Optional[np.ndarray], np.ndarray, np.ndarray, np.ndarray]:
+        """
+        Apply a previously trained KMeansMethylationModel to a new emission_df.
+
+        Returns (pca_scores, raw_distances, raw_labels, relabeled_labels).
+        """
+        if not hasattr(self, "model"):
+            raise ValueError("No trained model found. Please train a model first.")
+        X_scaled = self._preprocess_emission_features(
+            emission_df=emission_df,
+            feature_cols=self.model.feature_cols,
+            fit=False,
+        )
+
+        if self.model.pca is not None:
+            pca_scores = self.model.pca.transform(X_scaled)
+            kmeans_input = pca_scores
+        else:
+            pca_scores = None
+            kmeans_input = X_scaled
+
+        raw_distances = self.model.kmeans.transform(kmeans_input)
+
+        raw_labels = self.model.kmeans.predict(kmeans_input)
+        relabeled = self.relabel_by_mean_emission(raw_labels, emission_df)
+        return pca_scores, raw_distances, raw_labels, relabeled
+
+    def _get_kmeans_metric_input(self, emission_df: pd.DataFrame) -> np.ndarray:
+        if not hasattr(self, "model"):
+            raise ValueError("No trained model found. Please train a model first.")
+
+        X_scaled = self._preprocess_emission_features(
+            emission_df=emission_df,
+            feature_cols=self.model.feature_cols,
+            fit=False,
+        )
+        metric_cluster_space = getattr(self.model, "cluster_space", self.cluster_space)
+        if metric_cluster_space == "pca":
+            if getattr(self.model, "pca", None) is None:
+                raise ValueError(
+                    "The trained KMeans model is configured for PCA clustering but "
+                    "is missing a PCA model."
+                )
+            return self.model.pca.transform(X_scaled)
+        return X_scaled
+
+    def calculate_kmeans_cluster_metrics(
+        self,
+        emission_df: pd.DataFrame,
+        labels: np.ndarray,
+    ) -> Dict[str, Optional[float]]:
+        """
+        Calculate clustering-quality metrics in the same feature space used for KMeans.
+        """
+        metrics = {
+            "silhouette_score": None,
+            "davies_bouldin_score": None,
+        }
+
+        if not hasattr(self, "model"):
+            raise ValueError("No trained model found. Please train a model first.")
+
+        labels_array = np.asarray(labels)
+        if labels_array.ndim == 0:
+            labels_array = labels_array.reshape(1)
+        if labels_array.size == 0:
+            return metrics
+
+        labels_numeric = self._normalize_plot_labels(
+            labels=labels_array,
+            expected_length=len(emission_df),
+        )
+        metric_input = self._get_kmeans_metric_input(emission_df)
+
+        unique_labels = np.unique(labels_numeric)
+        n_samples = metric_input.shape[0]
+        n_clusters = len(unique_labels)
+        if n_samples < 2 or n_clusters < 2 or n_clusters >= n_samples:
+            return metrics
+
+        try:
+            metrics["silhouette_score"] = float(
+                silhouette_score(metric_input, labels_numeric)
+            )
+        except ValueError:
+            pass
+
+        try:
+            metrics["davies_bouldin_score"] = float(
+                davies_bouldin_score(metric_input, labels_numeric)
+            )
+        except ValueError:
+            pass
+
+        return metrics
+
+    def _fit_plot_pca(
+        self,
+        emission_df: pd.DataFrame,
+        n_pca_plot: int,
+    ) -> Tuple[PCA, np.ndarray, List[str], bool]:
+        if not hasattr(self, "model"):
+            raise ValueError("No trained model found. Please train a model first.")
+
+        if n_pca_plot not in (2, 3):
+            raise ValueError("n_pca_plot must be either 2 or 3.")
+
+        X_scaled = self._preprocess_emission_features(
+            emission_df=emission_df,
+            feature_cols=self.model.feature_cols,
+            fit=False,
+        )
+        feature_names = list(self.model.feature_cols)
+
+        if self.model.pca is not None:
+            pca = self.model.pca
+            if pca.n_components_ < n_pca_plot:
+                raise ValueError(
+                    "The trained PCA model does not contain enough components for "
+                    f"a {n_pca_plot}D PCA plot."
+                )
+            return pca, pca.transform(X_scaled), feature_names, True
+
+        max_plot_components = min(X_scaled.shape[0], X_scaled.shape[1])
+        if max_plot_components < n_pca_plot:
+            raise ValueError(
+                "Not enough samples/features are available to fit a temporary PCA "
+                f"with {n_pca_plot} components."
+            )
+
+        pca = PCA(n_components=n_pca_plot, random_state=self.random_state)
+        plot_scores = pca.fit_transform(X_scaled)
+        return pca, plot_scores, feature_names, False
+
+    def plot_umap_clusters(
+        self,
+        emission_df: pd.DataFrame,
+        labels: np.ndarray,
+        chrom: Optional[str] = None,
+        sample_name: Optional[str] = None,
+        use_pca: bool = False,
+        use_parrallel: bool = True,
+    ):
+        if not hasattr(self, "model"):
+            raise ValueError("No trained model found. Please train a model first.")
+        random_state = None if use_parrallel else self.random_state
+        if use_parrallel:
+            print(
+                "UMAP parralellisation cannot work with random seed, setting random_state to None for UMAP."
+            )
+
+        X_scaled = self._preprocess_emission_features(
+            emission_df=emission_df,
+            feature_cols=self.model.feature_cols,
+            fit=False,
+        )
+
+        if use_pca:
+            if self.model.pca is None:
+                raise ValueError(
+                    "model.pca is None: PCA-backed UMAP requires fitting with n_pca > 0."
+                )
+            umap_input = self.model.pca.transform(X_scaled)
+            title_suffix = "PCA features"
+        else:
+            umap_input = X_scaled
+            title_suffix = "raw features"
+
+        embedding = umap.UMAP(n_components=2, random_state=random_state).fit_transform(
+            umap_input
+        )
+
+        cmap, norm, state_colors_rgba, _ = get_biological_state_colors()
+        labels_numeric = MethylationStates.convert_to_numeric(labels)
+
+        state_names = {state.value: state.name for state in MethylationStates}
+        present_states = get_present_biological_states(labels_numeric)
+
+        title_parts = []
+        if sample_name is not None:
+            title_parts.append(str(sample_name))
+        if chrom is not None:
+            title_parts.append(str(chrom))
+        title_prefix = " ".join(title_parts) if title_parts else "Sample"
+
+        plt.figure(figsize=(10, 6))
+        scatter = plt.scatter(
+            embedding[:, 0],
+            embedding[:, 1],
+            c=labels_numeric,
+            cmap=cmap,
+            norm=norm,
+            s=8,
+        )
+        plt.xlabel("UMAP1")
+        plt.ylabel("UMAP2")
+        plt.title(f"{title_prefix}: UMAP + KMeans States ({title_suffix})")
+        legend_handles = [
+            Line2D(
+                [0],
+                [0],
+                marker="o",
+                linestyle="",
+                markerfacecolor=state_colors_rgba[state_value],
+                markeredgecolor=state_colors_rgba[state_value],
+                markersize=7,
+                label=state_names.get(state_value, str(state_value)),
+            )
+            for state_value in present_states
+        ]
+        if legend_handles:
+            plt.legend(handles=legend_handles, title="State", loc="best")
+        plt.tight_layout()
+        plt.show()
+
+    def plot_kmeans_clusters(
+        self,
+        meth_data: pd.DataFrame,
+        labels: np.ndarray,
+        chrom: Optional[str] = None,
+        sample_name: Optional[str] = None,
+        feature_cols_for_table: Optional[List[str]] = None,
+        interactive: bool = False,
+    ):
+        # Convert Enum labels to integers if needed
+        if isinstance(labels.flat[0], Enum):
+            labels_numeric = np.array([lbl.value for lbl in labels])
+        else:
+            labels_numeric = labels
+
+        n_states = self.n_states
+        cmap, norm, state_colors_rgba, state_colors_hex = get_biological_state_colors()
+        present_states = get_present_biological_states(labels_numeric)
+        x_pos = meth_data["CpG_beg"].to_numpy()
+        y_beta = meth_data["beta"].to_numpy()
+        title_parts = []
+        if sample_name is not None:
+            title_parts.append(str(sample_name))
+        if chrom is not None:
+            title_parts.append(str(chrom))
+        title_prefix = " ".join(title_parts) if title_parts else "Sample"
+        if not interactive:
+
+            if len(meth_data) != len(labels):
+                raise ValueError("meth_data and labels must be the same length.")
+
+            show_table = (
+                feature_cols_for_table is not None and len(feature_cols_for_table) > 0
+            )
+
+            if show_table:
+                fig = plt.figure(figsize=(18, 6))
+                gs = GridSpec(1, 2, width_ratios=[4, 1], figure=fig)
+                ax_scatter = fig.add_subplot(gs[0])
+                ax_table = fig.add_subplot(gs[1])
+            else:
+                fig = plt.figure(figsize=(12, 5))
+                ax_scatter = fig.add_subplot(111)
+                ax_table = None
+
+            x_pos = meth_data["CpG_beg"].to_numpy()
+            y_beta = meth_data["beta"].to_numpy()
+
+            sc = ax_scatter.scatter(
+                x_pos,
+                y_beta,
+                c=labels_numeric,
+                cmap=cmap,
+                norm=norm,
+                s=10,
+            )
+            ax_scatter.set_xlabel("Genomic Position")
+            ax_scatter.set_ylabel("Methylation (beta)")
+            ax_scatter.set_title(f"{title_prefix}: Methylation Beta by KMeans Cluster")
+            cbar = plt.colorbar(sc, ax=ax_scatter, ticks=present_states, label="State")
+            cbar.set_ticklabels(
+                [MethylationStates(state_value).name for state_value in present_states]
+            )
+
+            if show_table:
+                ax_table.axis("off")
+                rows = [
+                    feature_cols_for_table[i : i + 2]
+                    for i in range(0, len(feature_cols_for_table), 2)
+                ]
+                for r in rows:
+                    if len(r) < 2:
+                        r.append("")
+                table = ax_table.table(
+                    cellText=rows,
+                    colLabels=["Feature", "Feature"],
+                    loc="center",
+                    cellLoc="left",
+                )
+                table.auto_set_font_size(False)
+                table.set_fontsize(9)
+                table.scale(1, 1.3)
+                ax_table.set_title("Features Used", pad=10)
+
+            plt.tight_layout()
+            plt.show()
+
+        if interactive:
+            # Always plot using readable biological state names so sparse
+            # numeric labels like {0, 2, 3} map correctly to colors.
+            labels_str = np.array(
+                [MethylationStates(int(lbl)).name for lbl in labels_numeric]
+            )
+
+            # Ordered unique label names
+            state_names = [
+                MethylationStates(state_value).name for state_value in present_states
+            ]
+
+            color_map = {
+                state_name: state_colors_hex[MethylationStates[state_name].value]
+                for state_name in state_names
+            }
+
+            fig_interactive = px.scatter(
+                x=x_pos,
+                y=y_beta,
+                color=labels_str,  # Enum names now :)
+                color_discrete_map=color_map,
+                category_orders={"color": state_names},
+                labels={
+                    "x": "Genomic Position",
+                    "y": "Methylation (beta)",
+                    "color": "State",
+                },
+                title=f"{title_prefix}: Methylation States (Interactive)",
+            )
+            fig_interactive.update_traces(marker=dict(size=4))
+            fig_interactive.show(renderer="notebook")
+
+    def plot_pca_clusters(
+        self,
+        emission_df: pd.DataFrame,
+        labels: np.ndarray,
+        n_pca_plot: int = 2,  # 2 or 3
+        top_n_loadings: int = 5,
+        pca_hexbin: bool = False,  # True -> old hexbin behavior
+        interactive: bool = False,  # 3D Plotly option
+        include_kmeans_metrics: bool = True,
+        include_biplot: bool = False,
+        label_title: str = "State",
+        sample_name: str | None = None,
+        chrom: str | None = None,
+    ):
+        """
+        PCA embedding + loadings, using consistent colors per state.
+
+        Set ``include_kmeans_metrics=False`` to skip the expensive clustering
+        quality metric calculation and annotation.
+        """
+        return self._plot_pca_clusters_impl(
+            emission_df=emission_df,
+            labels=labels,
+            n_pca_plot=n_pca_plot,
+            top_n_loadings=top_n_loadings,
+            pca_hexbin=pca_hexbin,
+            interactive=interactive,
+            include_kmeans_metrics=include_kmeans_metrics,
+            include_biplot=include_biplot,
+            label_title=label_title,
+            sample_name=sample_name,
+            chrom=chrom,
+            highlight_mask=None,
+        )
+
+    def _wrap_pca_loading_feature_name(
+        self,
+        feature_name: str,
+        width: int = 24,
+    ) -> str:
+        if not feature_name:
+            return ""
+        return textwrap.fill(
+            str(feature_name),
+            width=width,
+            break_long_words=True,
+            break_on_hyphens=False,
+        )
+
+    def _build_pca_loadings_table(
+        self,
+        pca: PCA,
+        feature_names: List[str],
+        n_pca_plot: int,
+        top_n_loadings: int,
+    ) -> Tuple[List[List[str]], List[str]]:
+        n_pca = pca.n_components_
+        signed_loadings = pd.DataFrame(
+            pca.components_.T,
+            columns=[f"PC{i+1}" for i in range(n_pca)],
+            index=feature_names,
+        )
+        abs_loadings = signed_loadings.abs()
+
+        top_pc1 = abs_loadings["PC1"].sort_values(ascending=False).head(top_n_loadings)
+        top_pc2 = abs_loadings["PC2"].sort_values(ascending=False).head(top_n_loadings)
+        if n_pca_plot == 3 and "PC3" in abs_loadings.columns:
+            top_pc3 = (
+                abs_loadings["PC3"].sort_values(ascending=False).head(top_n_loadings)
+            )
+        else:
+            top_pc3 = None
+
+        table_data = []
+        for i in range(top_n_loadings):
+            row = [
+                (
+                    self._wrap_pca_loading_feature_name(top_pc1.index[i])
+                    if i < len(top_pc1)
+                    else ""
+                ),
+                (
+                    f"{signed_loadings.loc[top_pc1.index[i], 'PC1']:.3f}"
+                    if i < len(top_pc1)
+                    else ""
+                ),
+                (
+                    self._wrap_pca_loading_feature_name(top_pc2.index[i])
+                    if i < len(top_pc2)
+                    else ""
+                ),
+                (
+                    f"{signed_loadings.loc[top_pc2.index[i], 'PC2']:.3f}"
+                    if i < len(top_pc2)
+                    else ""
+                ),
+            ]
+            if n_pca_plot == 3 and top_pc3 is not None:
+                row.extend(
+                    [
+                        (
+                            self._wrap_pca_loading_feature_name(top_pc3.index[i])
+                            if i < len(top_pc3)
+                            else ""
+                        ),
+                        (
+                            f"{signed_loadings.loc[top_pc3.index[i], 'PC3']:.3f}"
+                            if i < len(top_pc3)
+                            else ""
+                        ),
+                    ]
+                )
+            table_data.append(row)
+
+        if n_pca_plot == 3 and top_pc3 is not None:
+            col_labels = [
+                "PC1 Feature",
+                "Abs Loading",
+                "PC2 Feature",
+                "Abs Loading",
+                "PC3 Feature",
+                "Abs Loading",
+            ]
+        else:
+            col_labels = ["PC1 Feature", "Abs Loading", "PC2 Feature", "Abs Loading"]
+
+        return table_data, col_labels
+
+    def _add_pca_highlight_overlay(
+        self,
+        ax,
+        plot_scores: np.ndarray,
+        highlight_mask: np.ndarray,
+    ) -> Line2D | None:
+        if not np.any(highlight_mask):
+            return None
+
+        ax.scatter(
+            plot_scores[highlight_mask, 0],
+            plot_scores[highlight_mask, 1],
+            marker="^",
+            c="red",
+            edgecolors="black",
+            linewidths=0.6,
+            s=40,
+            zorder=5,
+        )
+        return Line2D(
+            [0],
+            [0],
+            marker="^",
+            linestyle="",
+            markerfacecolor="red",
+            markeredgecolor="black",
+            markersize=8,
+            label="Highlighted region",
+        )
+
+    def _format_kmeans_cluster_metrics(
+        self,
+        metrics: Dict[str, Optional[float]],
+    ) -> str:
+        def render_metric(metric_key: str) -> str:
+            metric_value = metrics.get(metric_key)
+            if metric_value is None or not np.isfinite(metric_value):
+                return "n/a"
+            return f"{metric_value:.3f}"
+
+        return "\n".join(
+            [
+                f"Silhouette: {render_metric('silhouette_score')}",
+                f"Davies-Bouldin: {render_metric('davies_bouldin_score')}",
+            ]
+        )
+
+    def _add_pca_metrics_annotation(
+        self,
+        ax,
+        metrics_text: Optional[str],
+    ) -> None:
+        if not metrics_text:
+            return
+        ax.text(
+            0.98,
+            0.02,
+            metrics_text,
+            transform=ax.transAxes,
+            ha="right",
+            va="bottom",
+            bbox={
+                "boxstyle": "round",
+                "facecolor": "white",
+                "edgecolor": "black",
+                "alpha": 0.85,
+            },
+        )
+
+    def _add_pca_metrics_annotation_3d(
+        self,
+        ax,
+        metrics_text: Optional[str],
+    ) -> None:
+        if not metrics_text:
+            return
+        ax.text2D(
+            0.98,
+            0.02,
+            metrics_text,
+            transform=ax.transAxes,
+            ha="right",
+            va="bottom",
+            bbox={
+                "boxstyle": "round",
+                "facecolor": "white",
+                "edgecolor": "black",
+                "alpha": 0.85,
+            },
+        )
+
+    def _add_pca_metrics_annotation_plotly(
+        self,
+        fig,
+        metrics_text: Optional[str],
+    ) -> None:
+        if not metrics_text:
+            return
+        fig.update_layout(
+            annotations=[
+                {
+                    "x": 0.98,
+                    "y": 0.02,
+                    "xref": "paper",
+                    "yref": "paper",
+                    "text": metrics_text.replace("\n", "<br>"),
+                    "showarrow": False,
+                    "xanchor": "right",
+                    "yanchor": "bottom",
+                    "align": "right",
+                    "bgcolor": "rgba(255, 255, 255, 0.85)",
+                    "bordercolor": "black",
+                    "borderwidth": 1,
+                }
+            ]
+        )
+
+    def _normalize_plot_labels(
+        self,
+        labels,
+        expected_length: int,
+    ) -> np.ndarray:
+        labels_array = np.asarray(labels)
+        if labels_array.ndim != 1:
+            labels_array = labels_array.reshape(-1)
+
+        if len(labels_array) != expected_length:
+            raise ValueError(
+                "labels and emission_df must be the same length. "
+                f"Received {len(labels_array)} labels for {expected_length} emission rows. "
+                "If you are plotting HMM labels, make sure they come from the same "
+                "meth_data/emissions_df pair rather than from a separately sampled "
+                "training table."
+            )
+
+        if len(labels_array) == 0:
+            return np.array([], dtype=int)
+
+        first_value = labels_array[0]
+        if isinstance(first_value, Enum):
+            return np.array([label.value for label in labels_array], dtype=int)
+
+        if isinstance(first_value, str):
+            label_map = {state.name.lower(): state.value for state in MethylationStates}
+            normalized = []
+            for label in labels_array:
+                label_key = str(label).strip().lower()
+                if label_key not in label_map:
+                    raise ValueError(
+                        "String labels must match methylation state names: "
+                        f"{sorted(label_map)}. Received: {label!r}"
+                    )
+                normalized.append(label_map[label_key])
+            return np.array(normalized, dtype=int)
+
+        return labels_array.astype(int)
+
+    def _add_pca_biplot_overlay(
+        self,
+        ax,
+        pca: PCA,
+        plot_scores: np.ndarray,
+        feature_names: List[str],
+        top_n_loadings: int,
+    ) -> None:
+        if plot_scores.shape[1] < 2 or pca.components_.shape[0] < 2:
+            raise ValueError("Biplot overlay requires at least two PCA components.")
+
+        loadings = pd.DataFrame(
+            pca.components_.T[:, :2],
+            columns=["PC1", "PC2"],
+            index=feature_names,
+        )
+        loading_magnitude = np.sqrt(loadings["PC1"] ** 2 + loadings["PC2"] ** 2)
+        top_features = loading_magnitude.sort_values(ascending=False).head(
+            top_n_loadings
+        )
+        if top_features.empty:
+            return
+
+        score_scale = np.max(np.abs(plot_scores[:, :2]), axis=0)
+        score_scale = np.where(score_scale == 0, 1.0, score_scale)
+        loading_scale = np.max(
+            np.abs(loadings.loc[top_features.index, ["PC1", "PC2"]].to_numpy()),
+            axis=0,
+        )
+        loading_scale = np.where(loading_scale == 0, 1.0, loading_scale)
+        arrow_scale = 0.8 * np.min(score_scale / loading_scale)
+        head_width = max(0.02 * np.max(score_scale), 1e-6)
+
+        for feature_name in top_features.index:
+            x_loading = float(loadings.loc[feature_name, "PC1"]) * arrow_scale
+            y_loading = float(loadings.loc[feature_name, "PC2"]) * arrow_scale
+            ax.arrow(
+                0,
+                0,
+                x_loading,
+                y_loading,
+                color="black",
+                width=0.0,
+                head_width=head_width,
+                length_includes_head=True,
+                alpha=0.8,
+                zorder=6,
+            )
+            ax.text(
+                x_loading * 1.08,
+                y_loading * 1.08,
+                self._wrap_pca_loading_feature_name(feature_name, width=18),
+                fontsize=8,
+                ha="center",
+                va="center",
+                bbox={
+                    "boxstyle": "round,pad=0.2",
+                    "facecolor": "white",
+                    "edgecolor": "none",
+                    "alpha": 0.75,
+                },
+                zorder=7,
+            )
+
+    def _plot_pca_clusters_impl(
+        self,
+        emission_df: pd.DataFrame,
+        labels: np.ndarray,
+        n_pca_plot: int = 2,
+        top_n_loadings: int = 5,
+        pca_hexbin: bool = False,
+        interactive: bool = False,
+        include_kmeans_metrics: bool = True,
+        include_biplot: bool = False,
+        label_title: str = "State",
+        sample_name: str | None = None,
+        chrom: str | None = None,
+        highlight_mask: Optional[np.ndarray] = None,
+    ):
+        if not hasattr(self, "model"):
+            raise ValueError("No trained model found. Please train a model first.")
+
+        pca, plot_scores, feature_names, _ = self._fit_plot_pca(
+            emission_df=emission_df,
+            n_pca_plot=n_pca_plot,
+        )
+        cmap, norm, state_colors_rgba, state_colors_hex = get_biological_state_colors()
+
+        labels_numeric = self._normalize_plot_labels(
+            labels=labels,
+            expected_length=plot_scores.shape[0],
+        )
+        present_states = get_present_biological_states(labels_numeric)
+        if highlight_mask is not None:
+            highlight_mask = np.asarray(highlight_mask, dtype=bool)
+            if highlight_mask.ndim != 1 or len(highlight_mask) != plot_scores.shape[0]:
+                raise ValueError(
+                    "highlight_mask must be a 1D boolean array aligned to emission_df."
+                )
+            if n_pca_plot != 2 or interactive:
+                raise ValueError(
+                    "Region highlighting is currently supported only for 2-D "
+                    "non-interactive PCA plots."
+                )
+
+        n_pca = pca.n_components_
+        explained_variance = pca.explained_variance_ratio_
+        pc_axis_labels = [
+            f"PC{i+1} ({explained_variance[i] * 100:.1f}%)" for i in range(n_pca)
+        ]
+        metrics_text = None
+        if include_kmeans_metrics:
+            metrics_text = self._format_kmeans_cluster_metrics(
+                self.calculate_kmeans_cluster_metrics(
+                    emission_df=emission_df,
+                    labels=labels,
+                )
+            )
+        table_data, col_labels = self._build_pca_loadings_table(
+            pca=pca,
+            feature_names=feature_names,
+            n_pca_plot=n_pca_plot,
+            top_n_loadings=top_n_loadings,
+        )
+
+        fig = plt.figure(figsize=(22 if n_pca_plot == 3 else 20, 6.5))
+        gs = fig.add_gridspec(1, 2, width_ratios=[2.1, 1.35])
+
+        # Title
+        title_parts = []
+        if sample_name is not None:
+            title_parts.append(str(sample_name))
+        if chrom is not None:
+            title_parts.append(str(chrom))
+        title_prefix = " ".join(title_parts) if title_parts else "Sample"
+        title_basis = "PCA"
+
+        # --- PCA embedding ---
+        if n_pca_plot == 2:
+            ax0 = fig.add_subplot(gs[0])
+            highlight_handle = None
+
+            if pca_hexbin:
+                gridsize = 60
+                cluster_cmaps = []
+                for state_value in present_states:
+                    base_color = state_colors_rgba[state_value]
+                    cluster_cmaps.append(
+                        mcolors.LinearSegmentedColormap.from_list(
+                            f"cluster_{state_value}", [(1, 1, 1, 0.0), base_color]
+                        )
+                    )
+
+                for cmap_idx, state_value in enumerate(present_states):
+                    mask = labels_numeric == state_value
+                    if not np.any(mask):
+                        continue
+                    ax0.hexbin(
+                        plot_scores[mask, 0],
+                        plot_scores[mask, 1],
+                        gridsize=gridsize,
+                        bins="log",
+                        mincnt=1,
+                        cmap=cluster_cmaps[cmap_idx],
+                    )
+
+                ax0.set_xlabel(pc_axis_labels[0])
+                ax0.set_ylabel(pc_axis_labels[1])
+                ax0.set_title(
+                    f"{title_prefix}: PCA + {label_title}s (2-D Hexbin, {title_basis})"
+                )
+                self._add_pca_metrics_annotation(ax0, metrics_text)
+                if highlight_mask is not None:
+                    highlight_handle = self._add_pca_highlight_overlay(
+                        ax=ax0,
+                        plot_scores=plot_scores,
+                        highlight_mask=highlight_mask,
+                    )
+
+                from matplotlib.patches import Patch
+
+                handles = [
+                    Patch(
+                        color=state_colors_rgba[state_value],
+                        label=MethylationStates(state_value).name,
+                    )
+                    for state_value in present_states
+                ]
+                if highlight_handle is not None:
+                    handles.append(highlight_handle)
+                ax0.legend(handles=handles, title=label_title, loc="best")
+
+            else:
+                sc0 = ax0.scatter(
+                    plot_scores[:, 0],
+                    plot_scores[:, 1],
+                    c=labels_numeric,
+                    cmap=cmap,
+                    norm=norm,
+                    s=8,
+                )
+                ax0.set_xlabel(pc_axis_labels[0])
+                ax0.set_ylabel(pc_axis_labels[1])
+                ax0.set_title(
+                    f"{title_prefix}: PCA + {label_title}s (2-D, {title_basis})"
+                )
+                self._add_pca_metrics_annotation(ax0, metrics_text)
+                cbar = plt.colorbar(
+                    sc0,
+                    ax=ax0,
+                    ticks=present_states,
+                    label=label_title,
+                )
+                cbar.set_ticklabels(
+                    [
+                        MethylationStates(state_value).name
+                        for state_value in present_states
+                    ]
+                )
+                if highlight_mask is not None:
+                    highlight_handle = self._add_pca_highlight_overlay(
+                        ax=ax0,
+                        plot_scores=plot_scores,
+                        highlight_mask=highlight_mask,
+                    )
+                    if highlight_handle is not None:
+                        ax0.legend(
+                            handles=[highlight_handle],
+                            title="Overlay",
+                            loc="best",
+                        )
+
+            if include_biplot:
+                self._add_pca_biplot_overlay(
+                    ax=ax0,
+                    pca=pca,
+                    plot_scores=plot_scores,
+                    feature_names=feature_names,
+                    top_n_loadings=top_n_loadings,
+                )
+
+        else:
+            # 3-D PCA
+            if include_biplot:
+                raise ValueError(
+                    "include_biplot is currently supported only for 2-D PCA plots."
+                )
+            if interactive and plot_scores.shape[1] >= 3:
+                labels_str = np.array(
+                    [MethylationStates(int(lbl)).name for lbl in labels_numeric]
+                )
+                fig_plotly = px.scatter_3d(
+                    x=plot_scores[:, 0],
+                    y=plot_scores[:, 1],
+                    z=plot_scores[:, 2],
+                    color=labels_str,
+                    color_discrete_map={
+                        MethylationStates(state_value).name: state_colors_hex[
+                            state_value
+                        ]
+                        for state_value in present_states
+                    },
+                    category_orders={
+                        "color": [
+                            MethylationStates(state_value).name
+                            for state_value in present_states
+                        ]
+                    },
+                    labels={
+                        "x": pc_axis_labels[0],
+                        "y": pc_axis_labels[1],
+                        "z": pc_axis_labels[2],
+                        "color": label_title,
+                    },
+                    title=(
+                        f"{title_prefix}: PCA + {label_title}s "
+                        f"(3-D Interactive, {title_basis})"
+                    ),
+                )
+                self._add_pca_metrics_annotation_plotly(fig_plotly, metrics_text)
+                fig_plotly.update_traces(marker=dict(size=3))
+                fig_plotly.show(renderer="notebook")
+            else:
+                ax0 = fig.add_subplot(gs[0], projection="3d")
+                sc0 = ax0.scatter(
+                    plot_scores[:, 0],
+                    plot_scores[:, 1],
+                    plot_scores[:, 2],
+                    c=labels_numeric,
+                    cmap=cmap,
+                    norm=norm,
+                    s=8,
+                )
+                ax0.set_xlabel(pc_axis_labels[0])
+                ax0.set_ylabel(pc_axis_labels[1])
+                ax0.set_zlabel(pc_axis_labels[2])
+                ax0.set_title(
+                    f"{title_prefix}: PCA + {label_title}s (3-D, {title_basis})"
+                )
+                self._add_pca_metrics_annotation_3d(ax0, metrics_text)
+                cbar = fig.colorbar(sc0, ax=ax0, ticks=present_states, shrink=0.6)
+                cbar.set_label(label_title)
+                cbar.set_ticklabels(
+                    [
+                        MethylationStates(state_value).name
+                        for state_value in present_states
+                    ]
+                )
+
+        # --- Loadings table ---
+        ax1 = fig.add_subplot(gs[1])
+        ax1.axis("off")
+        table = ax1.table(
+            cellText=table_data,
+            colLabels=col_labels,
+            loc="center",
+            cellLoc="center",
+        )
+        table.auto_set_font_size(False)
+        table.set_fontsize(9)
+        table.scale(1, 1.45)
+        try:
+            table.auto_set_column_width(col=list(range(len(col_labels))))
+        except AttributeError:
+            pass
+        feature_col_indices = list(range(0, len(col_labels), 2))
+        for (row_idx, col_idx), cell in table.get_celld().items():
+            if row_idx == 0:
+                cell.get_text().set_weight("bold")
+                cell.get_text().set_ha("center")
+                continue
+            if col_idx in feature_col_indices:
+                cell.get_text().set_ha("left")
+            else:
+                cell.get_text().set_ha("center")
+        ax1.set_title(f"Top {top_n_loadings} Absolute Loadings", pad=10)
+
+        plt.tight_layout()
+        plt.show()
+
+    def plot_pca_clusters_with_region(
+        self,
+        meth_data: pd.DataFrame,
+        emission_df: pd.DataFrame,
+        labels: np.ndarray,
+        region_start: int,
+        region_end: int,
+        region_chrom: Optional[str] = None,
+        n_pca_plot: int = 2,
+        top_n_loadings: int = 5,
+        pca_hexbin: bool = False,
+        interactive: bool = False,
+        include_kmeans_metrics: bool = True,
+        include_biplot: bool = False,
+        label_title: str = "State",
+        sample_name: str | None = None,
+        chrom: str | None = None,
+    ):
+        required_cols = {"CpG_chrm", "CpG_beg", "CpG_end"}
+        missing_cols = sorted(required_cols - set(meth_data.columns))
+        if missing_cols:
+            raise ValueError(
+                "meth_data must contain genomic coordinate columns for region "
+                f"highlighting. Missing: {missing_cols}"
+            )
+
+        if len(meth_data) != len(emission_df) or len(meth_data) != len(labels):
+            raise ValueError(
+                "meth_data, emission_df, and labels must be the same length."
+            )
+
+        resolved_region_start = int(region_start)
+        resolved_region_end = int(region_end)
+        if resolved_region_end < resolved_region_start:
+            raise ValueError(
+                "region_end must be greater than or equal to region_start."
+            )
+
+        meth_chroms = meth_data["CpG_chrm"].astype(str)
+        if region_chrom is None:
+            unique_chroms = meth_chroms.unique()
+            if len(unique_chroms) != 1:
+                raise ValueError(
+                    "region_chrom is required when meth_data contains multiple "
+                    "chromosomes."
+                )
+            resolved_region_chrom = str(unique_chroms[0])
+        else:
+            resolved_region_chrom = str(region_chrom)
+
+        cpg_beg = pd.to_numeric(meth_data["CpG_beg"], errors="raise").to_numpy(
+            dtype=np.int64
+        )
+        cpg_end = pd.to_numeric(meth_data["CpG_end"], errors="raise").to_numpy(
+            dtype=np.int64
+        )
+        highlight_mask = (
+            (meth_chroms.to_numpy() == resolved_region_chrom)
+            & (cpg_beg <= resolved_region_end)
+            & (cpg_end >= resolved_region_start)
+        )
+
+        if not np.any(highlight_mask):
+            warnings.warn(
+                "No CpGs overlapped the requested genomic region for PCA highlighting: "
+                f"{resolved_region_chrom}:{resolved_region_start}-{resolved_region_end}.",
+                RuntimeWarning,
+                stacklevel=2,
+            )
+
+        return self._plot_pca_clusters_impl(
+            emission_df=emission_df,
+            labels=labels,
+            n_pca_plot=n_pca_plot,
+            top_n_loadings=top_n_loadings,
+            pca_hexbin=pca_hexbin,
+            interactive=interactive,
+            include_kmeans_metrics=include_kmeans_metrics,
+            include_biplot=include_biplot,
+            label_title=label_title,
+            sample_name=sample_name,
+            chrom=chrom,
+            highlight_mask=highlight_mask,
+        )
+
+    def _format_train_chrom_label(
+        self,
+    ) -> str | None:
+        train_chroms = getattr(self, "train_chroms", None)
+        if train_chroms is None:
+            legacy_train_chrom = getattr(self, "train_chrom", None)
+            train_chroms = (
+                [legacy_train_chrom] if legacy_train_chrom is not None else None
+            )
+
+        if not train_chroms:
+            return None
+
+        chroms = [str(chrom) for chrom in train_chroms]
+        if len(chroms) == 1:
+            return chroms[0]
+        if set(chroms) == set(CANONICAL_AUTOSOMES) and len(chroms) == len(
+            CANONICAL_AUTOSOMES
+        ):
+            return "autosomes"
+        if len(chroms) <= 3:
+            return ",".join(chroms)
+        return f"{len(chroms)} chromosomes"
+
+    def plot_train_pca_clusters(
+        self,
+        n_pca_plot: int = 2,
+        top_n_loadings: int = 5,
+        pca_hexbin: bool = False,
+        interactive: bool = False,
+        include_kmeans_metrics: bool = True,
+        include_biplot: bool = False,
+        region_start: Optional[int] = None,
+        region_end: Optional[int] = None,
+        region_chrom: Optional[str] = None,
+    ):
+        """
+        Convenience wrapper to plot the PCA embedding saved from k-means training.
+        """
+        region_requested = any(
+            value is not None for value in (region_start, region_end, region_chrom)
+        )
+        if region_requested and (region_start is None or region_end is None):
+            raise ValueError(
+                "region_start and region_end must both be provided when requesting "
+                "region highlighting."
+            )
+
+        required_attrs = ["train_emission_df", "train_labels"]
+        if region_requested:
+            required_attrs.append("train_meth")
+
+        missing = [attr for attr in required_attrs if not hasattr(self, attr)]
+        if missing:
+            raise ValueError(
+                "No saved training clustering artifacts found. "
+                f"Missing attributes: {missing}. Train k-means first."
+            )
+
+        resolved_sample_name = getattr(self, "train_sample", None)
+        resolved_chrom_label = self._format_train_chrom_label()
+
+        if region_start is not None and region_end is not None:
+            return self.plot_pca_clusters_with_region(
+                meth_data=self.train_meth,
+                emission_df=self.train_emission_df,
+                labels=self.train_labels,
+                region_start=region_start,
+                region_end=region_end,
+                region_chrom=region_chrom,
+                n_pca_plot=n_pca_plot,
+                top_n_loadings=top_n_loadings,
+                pca_hexbin=pca_hexbin,
+                interactive=interactive,
+                include_kmeans_metrics=include_kmeans_metrics,
+                include_biplot=include_biplot,
+                sample_name=resolved_sample_name,
+                chrom=resolved_chrom_label,
+            )
+
+        return self.plot_pca_clusters(
+            emission_df=self.train_emission_df,
+            labels=self.train_labels,
+            n_pca_plot=n_pca_plot,
+            top_n_loadings=top_n_loadings,
+            pca_hexbin=pca_hexbin,
+            interactive=interactive,
+            include_kmeans_metrics=include_kmeans_metrics,
+            include_biplot=include_biplot,
+            sample_name=resolved_sample_name,
+            chrom=resolved_chrom_label,
+        )
+
+    def _subset_emission_features(
+        self,
+        X: np.ndarray,
+        feature_names: List[str],
+        windows_to_use: Optional[List[str]] = None,
+    ) -> Tuple[np.ndarray, List[str]]:
+        if windows_to_use is None:
+            return X, feature_names
+
+        keep_cols = ["beta"]
+        for label in windows_to_use:
+            keep_cols.extend(
+                [
+                    f"{label}_avg_meth",
+                    f"{label}_std",
+                    f"{label}_high_pct",
+                    f"{label}_int_pct",
+                    f"{label}_low_pct",
+                    f"{label}_n_cpg",
+                ]
+            )
+
+        col_indices = [feature_names.index(c) for c in keep_cols]
+        return X[:, col_indices], keep_cols
+
+    def _prepare_filtered_sample_for_clustering(
+        self,
+        meth_data: pd.DataFrame,
+        windows_to_use: Optional[List[str]] = None,
+    ) -> Tuple[pd.DataFrame, np.ndarray, pd.DataFrame]:
+        if len(meth_data) == 0:
+            raise ValueError("No CpGs remaining after filtering.")
+
+        positions = meth_data["CpG_beg"].to_numpy(dtype=np.int64)
+        betas = meth_data["beta"].to_numpy(dtype=np.float64)
+
+        order = np.argsort(positions, kind="mergesort")
+        positions = positions[order]
+        betas = betas[order]
+        meth_data = meth_data.iloc[order].reset_index(drop=True)
+
+        X, feature_names = self.build_emission_matrix(
+            positions=positions,
+            betas=betas,
+            window_specs=self.window_specs,
+            int_low_cutoff=self.int_low_cutoff,
+            int_high_cutoff=self.int_high_cutoff,
+            high_cutoff=self.high_cutoff,
+        )
+        X, feature_names = self._subset_emission_features(
+            X=X,
+            feature_names=feature_names,
+            windows_to_use=windows_to_use,
+        )
+        emission_df = pd.DataFrame(X, columns=feature_names)
+        return meth_data, X, emission_df
+
+    def prepare_sample_for_clustering(
+        self,
+        sample_info: SampleInfo,
+        chrom: Optional[str] = None,
+        windows_to_use: Optional[List[str]] = None,
+    ) -> Tuple[pd.DataFrame, np.ndarray, pd.DataFrame]:
+        """
+        Convenience wrapper to:
+        1. Filter methylation DataFrame (optionally by chromosome).
+        2. Build emission matrix using NumPy sliding windows.
+        3. Optionally subset windows.
+
+        Returns:
+            meth_data (filtered DataFrame),
+            emission_matrix (np.ndarray),
+            emission_df (pandas DataFrame view)
+        """
+
+        meth_data = sample_info.meth_data.copy()
+
+        if chrom is not None:
+            meth_data = meth_data[meth_data["CpG_chrm"] == chrom]
+            return self._prepare_filtered_sample_for_clustering(
+                meth_data=meth_data,
+                windows_to_use=windows_to_use,
+            )
+
+        if len(meth_data) == 0:
+            raise ValueError("No CpGs remaining after filtering.")
+
+        chrom_series = meth_data["CpG_chrm"].astype(str)
+        chrom_order = chrom_series.drop_duplicates().tolist()
+        if len(chrom_order) <= 1:
+            return self._prepare_filtered_sample_for_clustering(
+                meth_data=meth_data,
+                windows_to_use=windows_to_use,
+            )
+
+        meth_frames = []
+        emission_frames = []
+        emission_arrays = []
+
+        for chrom_name in chrom_order:
+            chrom_meth = meth_data[chrom_series == chrom_name].copy()
+            chrom_meth, chrom_X, chrom_emission_df = (
+                self._prepare_filtered_sample_for_clustering(
+                    meth_data=chrom_meth,
+                    windows_to_use=windows_to_use,
+                )
+            )
+            meth_frames.append(chrom_meth)
+            emission_arrays.append(chrom_X)
+            emission_frames.append(chrom_emission_df)
+
+        combined_meth = pd.concat(meth_frames, ignore_index=True)
+        combined_X = np.vstack(emission_arrays)
+        combined_emission_df = pd.concat(emission_frames, ignore_index=True)
+        return combined_meth, combined_X, combined_emission_df
+
+    def _resolve_train_chroms(
+        self,
+        sample_info: SampleInfo,
+        train_chroms: Optional[List[str]] = None,
+    ) -> Tuple[List[str], List[str]]:
+        available_chroms = set(sample_info.meth_data["CpG_chrm"].astype(str).unique())
+
+        if train_chroms is None:
+            resolved = [
+                chrom for chrom in CANONICAL_AUTOSOMES if chrom in available_chroms
+            ]
+            missing = []
+        else:
+            resolved = []
+            missing = []
+            for chrom in train_chroms:
+                chrom = str(chrom)
+                if chrom in available_chroms:
+                    resolved.append(chrom)
+                else:
+                    missing.append(chrom)
+
+        if not resolved:
+            requested = (
+                list(train_chroms)
+                if train_chroms is not None
+                else list(CANONICAL_AUTOSOMES)
+            )
+            raise ValueError(
+                "No eligible training chromosomes remained after filtering. "
+                f"Requested: {requested}"
+            )
+
+        return resolved, missing
+
+    def _prepare_training_data_for_kmeans(
+        self,
+        sample_info: SampleInfo,
+        train_chroms: Optional[List[str]] = None,
+        windows_to_use: Optional[List[str]] = None,
+        max_cpg_per_chrom: Optional[int] = 50_000,
+        sampling_random_state: Optional[int] = None,
+    ) -> Tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
+        if max_cpg_per_chrom is not None and max_cpg_per_chrom <= 0:
+            raise ValueError("max_cpg_per_chrom must be > 0 or None.")
+
+        resolved_chroms, missing_chroms = self._resolve_train_chroms(
+            sample_info=sample_info,
+            train_chroms=train_chroms,
+        )
+
+        seed = (
+            self.random_state
+            if sampling_random_state is None
+            else sampling_random_state
+        )
+        rng = np.random.default_rng(seed)
+
+        meth_frames = []
+        emission_frames = []
+        summary_rows = []
+
+        for chrom in resolved_chroms:
+            meth_data, _, emission_df = self.prepare_sample_for_clustering(
+                sample_info=sample_info,
+                chrom=chrom,
+                windows_to_use=windows_to_use,
+            )
+
+            n_total = len(meth_data)
+            if max_cpg_per_chrom is not None and n_total > max_cpg_per_chrom:
+                sampled_idx = np.sort(
+                    rng.choice(n_total, size=max_cpg_per_chrom, replace=False)
+                )
+                was_sampled = True
+            else:
+                sampled_idx = np.arange(n_total)
+                was_sampled = False
+
+            meth_frames.append(meth_data.iloc[sampled_idx].reset_index(drop=True))
+            emission_frames.append(emission_df.iloc[sampled_idx].reset_index(drop=True))
+
+            summary_rows.append(
+                {
+                    "chrom": chrom,
+                    "available": True,
+                    "selected_for_training": True,
+                    "n_cpg_total": int(n_total),
+                    "n_cpg_sampled": int(len(sampled_idx)),
+                    "sampled": was_sampled,
+                    "sampling_fraction": float(len(sampled_idx) / n_total),
+                }
+            )
+
+        for chrom in missing_chroms:
+            summary_rows.append(
+                {
+                    "chrom": chrom,
+                    "available": False,
+                    "selected_for_training": False,
+                    "n_cpg_total": 0,
+                    "n_cpg_sampled": 0,
+                    "sampled": False,
+                    "sampling_fraction": 0.0,
+                }
+            )
+
+        train_meth_data = pd.concat(meth_frames, ignore_index=True)
+        train_emission_df = pd.concat(emission_frames, ignore_index=True)
+        training_summary_df = pd.DataFrame(summary_rows)
+
+        return train_meth_data, train_emission_df, training_summary_df
+
+    # def prepare_sample_for_clustering(
+    #     self,
+    #     sample_info: SampleInfo,
+    #     chrom: Optional[str] = None,
+    #     windows_to_use: Optional[List[str]] = None,
+    # ) -> Tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
+    #     """
+    #     Convenience wrapper to:
+    #     1. Load methylation for a sample (optionally filtered to `chrom`).
+    #     2. Compute multi-window summary stats (full chromosome).
+    #     3. Create emission_df with only selected windows.
+
+    #     Returns (meth_data, summary_stats, emission_df).
+    #     """
+    #     meth_data = sample_info.meth_data
+    #     if chrom is not None:
+    #         meth_data = meth_data[meth_data["CpG_chrm"] == chrom]
+
+    #     summary_stats = self.generate_multi_window_summary_centered(
+    #         meth_data,
+    #         chrom=chrom,
+    #     )
+
+    #     emission_df = self.create_emission_df(
+    #         summary_stats, windows_to_use=windows_to_use
+    #     )
+    #     return meth_data, summary_stats, emission_df
+
+    def train_kmeans_for_sample(
+        self,
+        sample_info: SampleInfo,
+        train_chroms: Optional[List[str]] = None,
+        windows_to_use: Optional[List[str]] = None,
+        feature_cols: Optional[List[str]] = None,
+        max_cpg_per_chrom: Optional[int] = 50_000,
+        sampling_random_state: Optional[int] = None,
+    ):
+        """
+        High-level: given a sample ID and training chromosomes,
+        train a KMeans model and return:
+        - model (reusable)
+        - meth_data
+        - emission_df
+        - pca_scores (or None when clustering in raw feature space)
+        - labels
+        """
+        self.train_sample = sample_info.sample_id
+        self.train_sample_info = sample_info
+        meth_data, emission_df, training_summary_df = (
+            self._prepare_training_data_for_kmeans(
+                sample_info=sample_info,
+                train_chroms=train_chroms,
+                windows_to_use=windows_to_use,
+                max_cpg_per_chrom=max_cpg_per_chrom,
+                sampling_random_state=sampling_random_state,
+            )
+        )
+        self.train_chroms, _ = self._resolve_train_chroms(
+            sample_info=sample_info,
+            train_chroms=train_chroms,
+        )
+        self.max_cpg_per_chrom = max_cpg_per_chrom
+        self.train_meth = meth_data
+        self.train_emission_df = emission_df
+        self.training_summary_df = training_summary_df
+
+        model, pca_scores, labels = self.fit_kmeans_on_emissions(
+            emission_df=emission_df,
+            feature_cols=feature_cols,
+        )
+        self.model = model
+        self.train_pca_scores = pca_scores
+        self.train_labels = labels
+
+        return model, meth_data, emission_df, pca_scores, labels
+
+    def apply_kmeans_to_sample(
+        self,
+        sample_info: SampleInfo,
+        chrom: Optional[str] = None,
+        windows_to_use: Optional[List[str]] = None,
+        sample_meth_data: Optional[pd.DataFrame] = None,
+    ):
+        """
+        High-level: apply an already-trained model to a new sample (same features).
+
+        Returns:
+        - meth_data
+        - emission_df
+        - pca_scores
+        - raw_distances
+        - raw_labels
+        - relabeled_labels
+        """
+        if not hasattr(self, "model"):
+            raise ValueError("No trained model found. Please train a model first.")
+
+        meth_data, _emission_matrix, emission_df = self.prepare_sample_for_clustering(
+            sample_info=sample_info,
+            chrom=chrom,
+            windows_to_use=windows_to_use,
+        )
+
+        missing = [c for c in self.model.feature_cols if c not in emission_df.columns]
+        if missing:
+            raise ValueError(
+                f"emission_df for sample {sample_info.sample_id} is missing features: {missing}"
+            )
+
+        pca_scores, raw_distances, raw_labels, relabeled_labels = (
+            self.apply_kmeans_to_emissions(emission_df)
+        )
+        return (
+            meth_data,
+            emission_df,
+            pca_scores,
+            raw_distances,
+            raw_labels,
+            relabeled_labels,
+        )
+
+    def get_pca_loadings(
+        self,
+    ) -> pd.DataFrame:
+        """
+        Return a DataFrame of PCA loadings for the features used in the model.
+        """
+        if not hasattr(self, "model"):
+            raise ValueError("No trained model found. Please train a model first.")
+        pca = self.model.pca
+        if pca is None:
+            raise ValueError("model.pca is None: PCA loadings are not available.")
+
+        loadings = pd.DataFrame(
+            pca.components_.T,
+            columns=[f"PC{i+1}" for i in range(pca.n_components_)],
+            index=self.model.feature_cols,
+        )
+        return loadings
