@@ -1,0 +1,46 @@
+pathway:
+  out_dir: test_data
+  train_chroms:
+  - chr1
+  max_cpg_per_chrom: null
+  random_state: 42
+state_assigner:
+  window_specs:
+  - - 500000
+    - 500kb
+  n_states: 4
+  int_low_cutoff: 0.2
+  int_high_cutoff: 0.7
+  high_cutoff: 0.8
+hmm:
+  type: ct
+  params:
+    n_emissions: 4
+    times:
+      __npy_path__: test_data/hmm_params/times.npy
+    holding_time_guess: 200
+    algorithm: forward-backward
+    max_iter: 5
+    tol: 0.01
+state_cutoffs:
+  cutoffs:
+    beta_low_max: 0.28953450344841725
+    beta_high_min: 0.694195675252982
+    pmr_cutoffs:
+      500kb:
+        int_min: 0.5604250370335937
+        std_max: 0.26418485236146244
+        high_max: 0.2462720810967043
+  set_manually: false
+saved_tables: {}
+models:
+  kmeans: test_data/models/kmeans.joblib
+  scaler: test_data/models/scaler.joblib
+  pca: test_data/models/pca.joblib
+  feature_cols:
+  - beta
+  - 500kb_avg_meth
+  - 500kb_std
+  - 500kb_high_pct
+  - 500kb_int_pct
+  n_states: 4

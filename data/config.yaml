@@ -1,0 +1,7 @@
+genome: hg38
+hm450K_file: WGBS_colon-primary-tumor_1_450k.beta.gz
+wgbs_file: WGBS_colon-primary-tumor_1_wgbs.tsv.gz
+test_sample_name: WGBS_colon-primary-tumor_1_meth
+train_sample_name: TCGA-BD-A3EP-01A
+train_sample_file: TCGA-BD-A3EP-01A_450k.tsv.gz
+min_coverage: 5

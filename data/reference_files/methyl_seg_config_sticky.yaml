@@ -1,0 +1,36 @@
+pathway:
+  n_states: 4
+  int_low_cutoff: 0.2
+  int_high_cutoff: 0.7
+  high_cutoff: 0.8
+  window_specs:
+  - - 500000
+    - 500kb
+  train_chroms: chr1
+  max_cpg_per_chrom: null
+  out_dir: data
+  random_state: 42
+  hmm_type: sticky
+hmm_params: {}
+train_sample_info:
+  sample_id: TCGA-BD-A3EP-01A
+  meth_data_path: data/train_sample_meth.feather
+trained_model:
+  kmeans: data/models/kmeans.joblib
+  scaler: data/models/scaler.joblib
+  pca: data/models/pca.joblib
+  feature_cols:
+  - beta
+  - 500kb_avg_meth
+  - 500kb_std
+  - 500kb_high_pct
+  - 500kb_int_pct
+  n_states: 4
+state_cutoffs:
+  beta_low_max: 0.28953450344841725
+  beta_high_min: 0.694195675252982
+  pmr_cutoffs:
+    500kb:
+      int_min: 0.5604250370335937
+      std_max: 0.26418485236146244
+      high_max: 0.2462720810967043
