@@ -1,0 +1,16 @@
+README.md
+pyproject.toml
+methylseg/__init__.py
+methylseg/helper_classes.py
+methylseg/methyl_segmentor.py
+methylseg/methyl_state_analyzer.py
+methylseg/methyl_state_assigner.py
+methylseg/methylseg_config.py
+methylseg/methylseg_hmm.py
+methylseg/methylseg_pathway.py
+methylseg/utils.py
+methylseg.egg-info/PKG-INFO
+methylseg.egg-info/SOURCES.txt
+methylseg.egg-info/dependency_links.txt
+methylseg.egg-info/requires.txt
+methylseg.egg-info/top_level.txt

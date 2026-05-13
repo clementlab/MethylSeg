@@ -1,3 +1,5 @@
+"""HMM-backed segmentation from per-CpG state labels to genomic regions."""
+
 from typing import Dict, List, Optional, Tuple
 
 
@@ -8,9 +10,7 @@ from sklearn.cluster import KMeans
 from sklearn.decomposition import PCA
 
 
-from .utils import (
-    _plot_interactive_beta_scatter,
-)
+from .utils import plot_interactive_beta_scatter, relabel_by_mean_emission
 from .helper_classes import (
     HMMObservationMode,
     MethylStateAssignmentMethod,
@@ -229,10 +229,13 @@ class MethylSegmentor:
         self.hmm_model.create_model()
         self.hmm_model.fit(states, sample_info, chrom)
         hidden_states = self.hmm_model.predict(states)
-        readable_states = self.analyzer.assigner.relabel_by_mean_emission(
+        readable_states = relabel_by_mean_emission(
             hidden_states,
             self.emissions_df,
             self._get_state_cutoffs(),
+            self.analyzer.assigner.int_low_cutoff,
+            self.analyzer.assigner.int_high_cutoff,
+            self.analyzer.assigner.window_specs,
         )
         return hidden_states, readable_states
 
@@ -245,10 +248,13 @@ class MethylSegmentor:
         X_scaled = self._prepare_gaussian_feature_matrix(self.emissions_df)
         km_labels = self._get_gaussian_init_labels(self.emissions_df, X_scaled)
 
-        init_readable_states = self.analyzer.assigner.relabel_by_mean_emission(
+        init_readable_states = relabel_by_mean_emission(
             km_labels,
             self.emissions_df,
             self._get_state_cutoffs(),
+            self.analyzer.assigner.int_low_cutoff,
+            self.analyzer.assigner.int_high_cutoff,
+            self.analyzer.assigner.window_specs,
         )
         self.meth_data["state"] = MethylationStates.convert_to_numeric(
             init_readable_states
@@ -271,10 +277,13 @@ class MethylSegmentor:
         )
         self.hmm_model.fit(X_scaled, sample_info, chrom)
         hidden_states = self.hmm_model.predict(X_scaled)
-        readable_states = self.analyzer.assigner.relabel_by_mean_emission(
+        readable_states = relabel_by_mean_emission(
             hidden_states,
             self.emissions_df,
             self._get_state_cutoffs(),
+            self.analyzer.assigner.int_low_cutoff,
+            self.analyzer.assigner.int_high_cutoff,
+            self.analyzer.assigner.window_specs,
         )
         return hidden_states, readable_states
 
@@ -330,10 +339,13 @@ class MethylSegmentor:
         X_pca = self._prepare_pca_feature_matrix(self.emissions_df)
         km_labels = self._get_pca_init_labels(self.emissions_df, X_pca)
 
-        init_readable_states = self.analyzer.assigner.relabel_by_mean_emission(
+        init_readable_states = relabel_by_mean_emission(
             km_labels,
             self.emissions_df,
             self._get_state_cutoffs(),
+            self.analyzer.assigner.int_low_cutoff,
+            self.analyzer.assigner.int_high_cutoff,
+            self.analyzer.assigner.window_specs,
         )
         self.meth_data["state"] = MethylationStates.convert_to_numeric(
             init_readable_states
@@ -356,10 +368,13 @@ class MethylSegmentor:
         )
         self.hmm_model.fit(X_pca, sample_info, chrom)
         hidden_states = self.hmm_model.predict(X_pca)
-        readable_states = self.analyzer.assigner.relabel_by_mean_emission(
+        readable_states = relabel_by_mean_emission(
             hidden_states,
             self.emissions_df,
             self._get_state_cutoffs(),
+            self.analyzer.assigner.int_low_cutoff,
+            self.analyzer.assigner.int_high_cutoff,
+            self.analyzer.assigner.window_specs,
         )
         return hidden_states, readable_states
 
@@ -583,7 +598,7 @@ class MethylSegmentor:
             label_col = f"{label_type}_state_readable"
         else:
             label_col = "state_readable"
-        return _plot_interactive_beta_scatter(
+        return plot_interactive_beta_scatter(
             df_plot=df_plot,
             sample_info=sample_info,
             sample_info_removed=sample_info_removed,

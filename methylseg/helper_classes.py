@@ -1,3 +1,5 @@
+"""Shared enums, data containers, and input-preparation helpers for methylseg."""
+
 import os
 from dataclasses import dataclass
 from enum import Enum
@@ -18,6 +20,8 @@ CANONICAL_AUTOSOMES = tuple(f"chr{i}" for i in range(1, 23))
 
 @dataclass
 class KMeansMethylationModel:
+    """Container for the trained clustering model and its preprocessing steps."""
+
     kmeans: KMeans
     scaler: StandardScaler
     imputer: Optional[SimpleImputer]
@@ -29,12 +33,16 @@ class KMeansMethylationModel:
 
 
 class MethylStateAssignmentMethod(Enum):
+    """Strategies for mapping emissions to biological methylation states."""
+
     DEFINITION = "definition"
     KMEANS = "kmeans"
     AUTO = "auto"
 
 
 class HMMObservationMode(Enum):
+    """Observation representations supported by the downstream HMM segmentor."""
+
     DISCRETE_STATES = "discrete_states"
     GAUSSIAN_EMISSIONS = "gaussian_emissions"
     PCA_EMISSIONS = "pca_emissions"
@@ -43,14 +51,15 @@ class HMMObservationMode(Enum):
 @dataclass
 class SampleInfo:
     """
-    Simple dataclass to hold sample metadata and methylation data together.
+    Simple container for sample metadata and prepared methylation rows.
 
-    `sample_id` is a unique identifier for the sample (e.g., TCGA barcode).
-    `meth_data` is expected to be a DataFrame with columns ['CpG_chrm', 'CpG_beg', 'CpG_end', 'beta'].
-        - `CpG_chrm`: chromosome name (e.g., 'chr1')
-        - `CpG_beg`: 0-based start position of the CpG
-        - `CpG_end`: 0-based end position of the CpG (typically CpG is 1 base long)
-        - `beta`: methylation beta value (0-1)
+    Parameters
+    ----------
+    sample_id
+        Unique sample identifier such as a TCGA barcode.
+    meth_data
+        DataFrame with canonical methylation columns ``CpG_chrm``, ``CpG_beg``,
+        ``CpG_end``, and ``beta``.
     """
 
     sample_id: str
@@ -83,6 +92,8 @@ class SampleInfo:
 
 
 class MethylDataPrep:
+    """Normalize methylation input tables into the canonical ``SampleInfo`` schema."""
+
     REQUIRED_COLUMNS = ["CpG_chrm", "CpG_beg", "CpG_end", "beta"]
     INPUT_ROW_INDEX_COL = "__input_row_index__"
     LOW_COVERAGE_LIKE_BETA_VALUES = frozenset(
@@ -379,6 +390,8 @@ class MethylDataPrep:
 
 
 class MethylationStates(Enum):
+    """Canonical biological methylation states used throughout the package."""
+
     LOW = 0
     PMD = 1
     INTERMEDIATE = 2

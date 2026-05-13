@@ -1,10 +1,14 @@
+"""Plotting and utility helpers shared across the public methylseg workflow."""
+
 from enum import Enum
+from itertools import permutations
 
 import matplotlib.colors as mcolors
 import numpy as np
 import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
+from typing import Dict, List, Optional, Tuple
 
 from matplotlib import pyplot as plt
 from numba import njit
@@ -45,8 +49,7 @@ def get_present_biological_states(labels) -> list[int]:
     ]
 
 
-# TODO: move interactive beta plotting helpers to a shared utils module.
-def _normalize_state_label(value) -> str | None:
+def normalize_state_label(value) -> str | None:
     if pd.isna(value):
         return None
     if isinstance(value, MethylationStates):
@@ -71,7 +74,7 @@ def _normalize_state_label(value) -> str | None:
     return str(value)
 
 
-def _annotate_plot_df_with_regions(
+def annotate_plot_df_with_regions(
     df_plot: pd.DataFrame,
     regions_df: pd.DataFrame,
     *,
@@ -121,7 +124,7 @@ def _annotate_plot_df_with_regions(
     region_df["start"] = pd.to_numeric(region_df["start"], errors="raise").astype(int)
     region_df["end"] = pd.to_numeric(region_df["end"], errors="raise").astype(int)
     region_df[region_label_col] = region_df[region_label_col].apply(
-        _normalize_state_label
+        normalize_state_label
     )
     region_df = region_df.sort_values(["CpG_chrm", "start", "end"]).reset_index(
         drop=True
@@ -143,12 +146,11 @@ def _annotate_plot_df_with_regions(
             if color_pmd_only:
                 color_label = (
                     "PMD"
-                    if _normalize_state_label(getattr(region, region_label_col))
-                    == "PMD"
+                    if normalize_state_label(getattr(region, region_label_col)) == "PMD"
                     else "non-PMD"
                 )
             else:
-                color_label = _normalize_state_label(getattr(region, region_label_col))
+                color_label = normalize_state_label(getattr(region, region_label_col))
                 if color_label is None:
                     color_label = "Region"
             plot_df.loc[chrom_indices[region_mask], "__region_color__"] = color_label
@@ -187,7 +189,7 @@ def _annotate_plot_df_with_regions(
     )
 
 
-def _plot_interactive_beta_scatter(
+def plot_interactive_beta_scatter(
     *,
     df_plot: pd.DataFrame,
     sample_info: SampleInfo | None,
@@ -280,7 +282,7 @@ def _plot_interactive_beta_scatter(
             category_orders,
             color_label,
             legend_title,
-        ) = _annotate_plot_df_with_regions(
+        ) = annotate_plot_df_with_regions(
             df_plot=df_plot,
             regions_df=color_regions_df,
             chrom_col="CpG_chrm",
@@ -397,7 +399,7 @@ def _plot_interactive_beta_scatter(
 
 
 @njit
-def _build_emission_matrix_numba(
+def build_emission_matrix_numba(
     positions,
     betas,
     window_sizes,
@@ -512,3 +514,198 @@ def get_cluster_colors(n_states: int, cmap_name: str = "viridis"):
     state_colors_hex = [mcolors.to_hex(c) for c in state_colors_rgba]
 
     return cmap, norm, state_colors_rgba, state_colors_hex
+
+
+def absorb_small_clusters(
+    raw_labels: np.ndarray,
+    emission_df: pd.DataFrame,
+    min_frac: float = 0.001,
+) -> np.ndarray:
+    """
+    Absorb clusters smaller than min_frac of total CpGs
+    into nearest larger cluster (by mean beta).
+    """
+
+    labels = np.asarray(raw_labels).copy()
+    unique = np.unique(labels)
+
+    total = len(labels)
+    cluster_sizes = {c: np.sum(labels == c) for c in unique}
+
+    # Identify large clusters
+    large_clusters = [c for c in unique if cluster_sizes[c] / total >= min_frac]
+
+    # If all clusters are large, return unchanged
+    if len(large_clusters) == len(unique):
+        return labels
+
+    beta_vals = emission_df["beta"].to_numpy()
+
+    # Compute mean beta for each cluster
+    cluster_means = {c: beta_vals[labels == c].mean() for c in unique}
+
+    # Absorb small clusters
+    for c in unique:
+        if c in large_clusters:
+            continue
+
+        # Find nearest large cluster in beta space
+        small_mean = cluster_means[c]
+
+        nearest = min(
+            large_clusters,
+            key=lambda lc: abs(cluster_means[lc] - small_mean),
+        )
+
+        labels[labels == c] = nearest
+
+    return labels
+
+
+def get_regional_window_labels(window_specs) -> List[str]:
+    sorted_window_specs = sorted(window_specs, key=lambda item: item[0])
+    if len(sorted_window_specs) <= 2:
+        return [label for _, label in sorted_window_specs]
+    return [label for _, label in sorted_window_specs[-2:]]
+
+
+def relabel_by_mean_emission(
+    raw_labels: np.ndarray,
+    emission_df: pd.DataFrame,
+    state_cutoffs: Optional[Dict[str, object]] = None,
+    int_low_cutoff: float = 0.2,
+    int_high_cutoff: float = 0.7,
+    window_specs: List[Tuple[int, str]] = [(40_000, "40kb"), (450_000, "450kb")],
+) -> np.ndarray:
+    labels = np.asarray(absorb_small_clusters(raw_labels, emission_df))
+    clusters = np.unique(labels)
+
+    if len(clusters) == 0:
+        return np.asarray(labels, dtype=object)
+
+    beta_min = (
+        int_low_cutoff
+        if state_cutoffs is None
+        else state_cutoffs.get("beta_low_max", int_low_cutoff)
+    )
+    beta_max = (
+        int_high_cutoff
+        if state_cutoffs is None
+        else state_cutoffs.get("beta_high_min", int_high_cutoff)
+    )
+
+    regional_window_labels = get_regional_window_labels(window_specs)
+
+    def regional_mean(cluster, suffix):
+        mask = labels == cluster
+        return float(
+            np.mean(
+                [
+                    emission_df[f"{w}_{suffix}"].to_numpy()[mask].mean()
+                    for w in regional_window_labels
+                ]
+            )
+        )
+
+    def cluster_mean(cluster, col):
+        mask = labels == cluster
+        return float(emission_df[col].to_numpy()[mask].mean())
+
+    # -----------------------------
+    # Compute stats
+    # -----------------------------
+    stats = {
+        c: {
+            "beta": cluster_mean(c, "beta"),
+            "intermediate": regional_mean(c, "int_pct"),
+            "high": regional_mean(c, "high_pct"),
+            "low": regional_mean(c, "low_pct"),
+        }
+        for c in clusters
+    }
+
+    beta_mid = (beta_min + beta_max) / 2.0
+    beta_span = max(beta_max - beta_min, 1e-6)
+
+    def beta_mid_score(beta: float) -> float:
+        return max(0.0, 1.0 - (abs(beta - beta_mid) / beta_span))
+
+    def low_score(cluster) -> float:
+        s = stats[cluster]
+        return (
+            (2.0 * s["low"])
+            + (1.0 - s["beta"])
+            - (0.5 * s["intermediate"])
+            - (0.75 * s["high"])
+        )
+
+    def high_score(cluster) -> float:
+        s = stats[cluster]
+        return (
+            (2.0 * s["high"])
+            + s["beta"]
+            - (0.5 * s["intermediate"])
+            - (0.75 * s["low"])
+        )
+
+    def pmd_score(cluster) -> float:
+        s = stats[cluster]
+        return (
+            (3.0 * s["intermediate"])
+            + (1.0 * s["low"])
+            - (1.5 * s["high"])
+            + beta_mid_score(s["beta"])
+        )
+
+    def intermediate_score(cluster) -> float:
+        s = stats[cluster]
+        return (
+            (2.0 * s["intermediate"])
+            + (1.0 * s["high"])
+            - (1.0 * s["low"])
+            + beta_mid_score(s["beta"])
+        )
+
+    def state_score(cluster, state):
+        if state == MethylationStates.LOW:
+            return low_score(cluster)
+        if state == MethylationStates.PMD:
+            return pmd_score(cluster)
+        if state == MethylationStates.INTERMEDIATE:
+            return intermediate_score(cluster)
+        if state == MethylationStates.HIGH:
+            return high_score(cluster)
+        raise ValueError(f"Unknown state: {state}")
+
+    candidate_states = [
+        MethylationStates.LOW,
+        MethylationStates.PMD,
+        MethylationStates.INTERMEDIATE,
+        MethylationStates.HIGH,
+    ]
+
+    # -----------------------------
+    # Assign the most meaningful label(s) uniquely
+    # -----------------------------
+    best_assignment = None
+    best_key = None
+
+    for assignment in permutations(candidate_states, len(clusters)):
+        score_vector = tuple(state_score(c, s) for c, s in zip(clusters, assignment))
+        total_score = float(np.sum(score_vector))
+        key = (total_score, score_vector)
+
+        if best_key is None or key > best_key:
+            best_key = key
+            best_assignment = assignment
+
+    mapping = {c: s for c, s in zip(clusters, best_assignment)}
+
+    # -----------------------------
+    # Apply mapping
+    # -----------------------------
+    new_labels = np.empty(labels.shape, dtype=object)
+    for c, state in mapping.items():
+        new_labels[labels == c] = state
+
+    return new_labels

@@ -1,5 +1,6 @@
+"""Window-based emission feature engineering and KMeans state assignment."""
+
 from enum import Enum
-from itertools import permutations
 import textwrap
 import warnings
 
@@ -30,13 +31,15 @@ from .helper_classes import (
     CANONICAL_AUTOSOMES,
 )
 from .utils import (
-    _build_emission_matrix_numba,
+    build_emission_matrix_numba,
     get_biological_state_colors,
     get_present_biological_states,
+    relabel_by_mean_emission,
 )
 
 
 class MethylStateAssigner:
+    """Create per-CpG window summaries and assign coarse methylation states."""
 
     def __init__(
         self,
@@ -54,9 +57,13 @@ class MethylStateAssigner:
         n_pca: Optional[int] = 5,
     ):
         """
-        window_specs : list of (window_size, label).
-        n_states : int
-            Number of states for the clustering.
+        Parameters
+        ----------
+        window_specs
+            List of ``(window_size_bp, label)`` tuples used to summarize local
+            methylation context around each CpG.
+        n_states
+            Number of coarse methylation states to learn during clustering.
         """
         self.window_specs = window_specs
         self.n_states = n_states
@@ -77,12 +84,6 @@ class MethylStateAssigner:
                 f"Received: {cluster_space!r}"
             )
         return normalized_cluster_space
-
-    def get_regional_window_labels(self) -> List[str]:
-        sorted_window_specs = sorted(self.window_specs, key=lambda item: item[0])
-        if len(sorted_window_specs) <= 2:
-            return [label for _, label in sorted_window_specs]
-        return [label for _, label in sorted_window_specs[-2:]]
 
     def generate_multi_window_summary_centered(
         self,
@@ -338,7 +339,7 @@ class MethylStateAssigner:
 
         window_sizes = np.array([w[0] for w in window_specs], dtype=np.int64)
 
-        X = _build_emission_matrix_numba(
+        X = build_emission_matrix_numba(
             positions,
             betas,
             window_sizes,
@@ -362,194 +363,6 @@ class MethylStateAssigner:
             )
 
         return X, feature_names
-
-    def absorb_small_clusters(
-        self,
-        raw_labels: np.ndarray,
-        emission_df: pd.DataFrame,
-        min_frac: float = 0.001,
-    ) -> np.ndarray:
-        """
-        Absorb clusters smaller than min_frac of total CpGs
-        into nearest larger cluster (by mean beta).
-        """
-
-        labels = np.asarray(raw_labels).copy()
-        unique = np.unique(labels)
-
-        total = len(labels)
-        cluster_sizes = {c: np.sum(labels == c) for c in unique}
-
-        # Identify large clusters
-        large_clusters = [c for c in unique if cluster_sizes[c] / total >= min_frac]
-
-        # If all clusters are large, return unchanged
-        if len(large_clusters) == len(unique):
-            return labels
-
-        beta_vals = emission_df["beta"].to_numpy()
-
-        # Compute mean beta for each cluster
-        cluster_means = {c: beta_vals[labels == c].mean() for c in unique}
-
-        # Absorb small clusters
-        for c in unique:
-            if c in large_clusters:
-                continue
-
-            # Find nearest large cluster in beta space
-            small_mean = cluster_means[c]
-
-            nearest = min(
-                large_clusters,
-                key=lambda lc: abs(cluster_means[lc] - small_mean),
-            )
-
-            labels[labels == c] = nearest
-
-        return labels
-
-    # TODO : move to utils to share with MethylStateAnalyzer and MethylSegmenter
-    def relabel_by_mean_emission(
-        self,
-        raw_labels: np.ndarray,
-        emission_df: pd.DataFrame,
-        state_cutoffs: Optional[Dict[str, object]] = None,
-    ) -> np.ndarray:
-        labels = np.asarray(self.absorb_small_clusters(raw_labels, emission_df))
-        clusters = np.unique(labels)
-
-        if len(clusters) == 0:
-            return np.asarray(labels, dtype=object)
-
-        beta_min = (
-            self.int_low_cutoff
-            if state_cutoffs is None
-            else state_cutoffs.get("beta_low_max", self.int_low_cutoff)
-        )
-        beta_max = (
-            self.int_high_cutoff
-            if state_cutoffs is None
-            else state_cutoffs.get("beta_high_min", self.int_high_cutoff)
-        )
-
-        regional_window_labels = self.get_regional_window_labels()
-
-        def regional_mean(cluster, suffix):
-            mask = labels == cluster
-            return float(
-                np.mean(
-                    [
-                        emission_df[f"{w}_{suffix}"].to_numpy()[mask].mean()
-                        for w in regional_window_labels
-                    ]
-                )
-            )
-
-        def cluster_mean(cluster, col):
-            mask = labels == cluster
-            return float(emission_df[col].to_numpy()[mask].mean())
-
-        # -----------------------------
-        # Compute stats
-        # -----------------------------
-        stats = {
-            c: {
-                "beta": cluster_mean(c, "beta"),
-                "intermediate": regional_mean(c, "int_pct"),
-                "high": regional_mean(c, "high_pct"),
-                "low": regional_mean(c, "low_pct"),
-            }
-            for c in clusters
-        }
-
-        beta_mid = (beta_min + beta_max) / 2.0
-        beta_span = max(beta_max - beta_min, 1e-6)
-
-        def beta_mid_score(beta: float) -> float:
-            return max(0.0, 1.0 - (abs(beta - beta_mid) / beta_span))
-
-        def low_score(cluster) -> float:
-            s = stats[cluster]
-            return (
-                (2.0 * s["low"])
-                + (1.0 - s["beta"])
-                - (0.5 * s["intermediate"])
-                - (0.75 * s["high"])
-            )
-
-        def high_score(cluster) -> float:
-            s = stats[cluster]
-            return (
-                (2.0 * s["high"])
-                + s["beta"]
-                - (0.5 * s["intermediate"])
-                - (0.75 * s["low"])
-            )
-
-        def pmd_score(cluster) -> float:
-            s = stats[cluster]
-            return (
-                (3.0 * s["intermediate"])
-                + (1.0 * s["low"])
-                - (1.5 * s["high"])
-                + beta_mid_score(s["beta"])
-            )
-
-        def intermediate_score(cluster) -> float:
-            s = stats[cluster]
-            return (
-                (2.0 * s["intermediate"])
-                + (1.0 * s["high"])
-                - (1.0 * s["low"])
-                + beta_mid_score(s["beta"])
-            )
-
-        def state_score(cluster, state):
-            if state == MethylationStates.LOW:
-                return low_score(cluster)
-            if state == MethylationStates.PMD:
-                return pmd_score(cluster)
-            if state == MethylationStates.INTERMEDIATE:
-                return intermediate_score(cluster)
-            if state == MethylationStates.HIGH:
-                return high_score(cluster)
-            raise ValueError(f"Unknown state: {state}")
-
-        candidate_states = [
-            MethylationStates.LOW,
-            MethylationStates.PMD,
-            MethylationStates.INTERMEDIATE,
-            MethylationStates.HIGH,
-        ]
-
-        # -----------------------------
-        # Assign the most meaningful label(s) uniquely
-        # -----------------------------
-        best_assignment = None
-        best_key = None
-
-        for assignment in permutations(candidate_states, len(clusters)):
-            score_vector = tuple(
-                state_score(c, s) for c, s in zip(clusters, assignment)
-            )
-            total_score = float(np.sum(score_vector))
-            key = (total_score, score_vector)
-
-            if best_key is None or key > best_key:
-                best_key = key
-                best_assignment = assignment
-
-        mapping = {c: s for c, s in zip(clusters, best_assignment)}
-
-        # -----------------------------
-        # Apply mapping
-        # -----------------------------
-        new_labels = np.empty(labels.shape, dtype=object)
-        for c, state in mapping.items():
-            new_labels[labels == c] = state
-
-        return new_labels
 
     def _transform_emission_features(
         self,
@@ -697,7 +510,13 @@ class MethylStateAssigner:
             n_clusters=self.n_states, n_init=10, random_state=self.random_state
         )
         raw_labels = kmeans.fit_predict(kmeans_input)
-        relabeled = self.relabel_by_mean_emission(raw_labels, emission_df)
+        relabeled = relabel_by_mean_emission(
+            raw_labels,
+            emission_df,
+            self.int_low_cutoff,
+            self.int_high_cutoff,
+            self.window_specs,
+        )
         model = KMeansMethylationModel(
             kmeans=kmeans,
             scaler=scaler,
@@ -737,7 +556,13 @@ class MethylStateAssigner:
         raw_distances = self.model.kmeans.transform(kmeans_input)
 
         raw_labels = self.model.kmeans.predict(kmeans_input)
-        relabeled = self.relabel_by_mean_emission(raw_labels, emission_df)
+        relabeled = relabel_by_mean_emission(
+            raw_labels,
+            emission_df,
+            self.int_low_cutoff,
+            self.int_high_cutoff,
+            self.window_specs,
+        )
         return pca_scores, raw_distances, raw_labels, relabeled
 
     def _get_kmeans_metric_input(self, emission_df: pd.DataFrame) -> np.ndarray:

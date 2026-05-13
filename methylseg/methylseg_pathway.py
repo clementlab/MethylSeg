@@ -1,3 +1,5 @@
+"""Top-level workflow orchestration for preparing, training, segmenting, and exporting."""
+
 from pathlib import Path
 from typing import List, Optional
 
@@ -27,6 +29,7 @@ from .helper_classes import (
 
 
 class MethylSegPathway:
+    """High-level API that coordinates preparation, training, and segmentation."""
 
     @classmethod
     def get_pretrained_model(cls, out_dir, hmm_type="ct"):

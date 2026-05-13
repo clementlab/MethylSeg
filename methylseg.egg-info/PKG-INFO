@@ -1,0 +1,86 @@
+Metadata-Version: 2.4
+Name: methylseg
+Version: 0.1.0
+Summary: Methylation segmentation utilities used in the TCGA methylation analysis repo.
+Requires-Python: >=3.10
+Description-Content-Type: text/markdown
+Requires-Dist: cthmm>=0.0.3
+Requires-Dist: hmmlearn>=0.3.3
+Requires-Dist: joblib>=1.5
+Requires-Dist: matplotlib>=3.8
+Requires-Dist: numba>=0.60
+Requires-Dist: numpy>=1.26
+Requires-Dist: pandas>=2.2
+Requires-Dist: panel>=1.4
+Requires-Dist: plotly>=5.24
+Requires-Dist: pybedtools>=0.12.0
+Requires-Dist: PyYAML>=6.0
+Requires-Dist: scikit-learn>=1.5
+Requires-Dist: seaborn>=0.13
+Requires-Dist: tqdm>=4.66
+Requires-Dist: umap-learn>=0.5
+Provides-Extra: docs
+Requires-Dist: ipykernel; extra == "docs"
+Requires-Dist: nbsphinx>=0.9.6; extra == "docs"
+Requires-Dist: Sphinx>=7.4.7; extra == "docs"
+Requires-Dist: sphinx-autobuild>=2024.4.16; extra == "docs"
+Requires-Dist: sphinx-rtd-theme>=2.0.0; extra == "docs"
+
+# MethylSeg
+
+`methylseg` is a methylation segmentation toolkit in this repository for:
+
+- preparing WGBS and HM450K-style methylation tables
+- learning methylation state assignments from local window summaries
+- segmenting samples with several HMM backends
+- exporting raw and cleaned genomic regions for downstream analysis
+
+## Install
+
+Install the current public version directly from GitHub:
+
+```bash
+python -m pip install git+https://github.com/clementlab/MethylSeg.git
+```
+
+PyPI installation can be added here once the package is published there. The
+repository also includes a conda environment file at [environment.yml](./environment.yml)
+for local environment management.
+
+## Quickstart
+
+```python
+from pathlib import Path
+
+from methylseg import MethylDataPrep, MethylSegPathway
+
+reference_dir = Path("data/reference_files")
+sample_name = "TCGA-BD-A3EP-01A"
+sample_file = reference_dir / "TCGA-BD-A3EP-01A_450k.tsv.gz"
+
+sample_info, removed_df = MethylDataPrep(
+    meth_file=sample_file,
+    sample_id=sample_name,
+    resolution="450k",
+).prepare()
+
+pathway = MethylSegPathway.get_pretrained_model(out_dir="out", hmm_type="ct")
+regions = pathway.generate_regions(
+    sample_info=sample_info,
+    chrom="chr1",
+    force_resegment=True,
+)
+clean_pmds = pathway.get_clean_regions(regions_df=regions)
+```
+
+## Package Layout
+
+- `methylseg/`: installable Python package
+- `data/`: small config and reference assets used by examples and pretrained configs
+- `examples/`: notebook examples
+- `docs/`: Sphinx documentation source
+
+## Notes
+
+- The example notebook in `examples/example.ipynb` is included in the docs as a rendered tutorial.
+- API docs are generated from package docstrings with Sphinx `autodoc` and `autosummary`, so docstring updates appear after each rebuild.

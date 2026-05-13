@@ -1,0 +1,584 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>methylseg.MethylStateAssigner &mdash; methylseg 0.1.0 documentation</title>
+      <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=80d5e7a1" />
+      <link rel="stylesheet" type="text/css" href="../_static/css/theme.css?v=9edc463e" />
+
+  
+      <script src="../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="../_static/documentation_options.js?v=01f34227"></script>
+      <script src="../_static/doctools.js?v=9bcbadda"></script>
+      <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
+      <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
+    <script src="../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="methylseg.MethylStateAnalyzer" href="methylseg.MethylStateAnalyzer.html" />
+    <link rel="prev" title="methylseg.MethylSegConfig" href="methylseg.MethylSegConfig.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../index.html" class="icon icon-home">
+            methylseg
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Contents</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../installation.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../quickstart.html">Quickstart</a></li>
+<li class="toctree-l1 current"><a class="reference internal" href="../api.html">API Reference</a><ul class="current">
+<li class="toctree-l2 current"><a class="reference internal" href="../api.html#workflow-objects">Workflow objects</a><ul class="current">
+<li class="toctree-l3"><a class="reference internal" href="methylseg.MethylSegPathway.html">methylseg.MethylSegPathway</a></li>
+<li class="toctree-l3"><a class="reference internal" href="methylseg.MethylDataPrep.html">methylseg.MethylDataPrep</a></li>
+<li class="toctree-l3"><a class="reference internal" href="methylseg.SampleInfo.html">methylseg.SampleInfo</a></li>
+<li class="toctree-l3"><a class="reference internal" href="methylseg.MethylSegConfig.html">methylseg.MethylSegConfig</a></li>
+<li class="toctree-l3 current"><a class="current reference internal" href="#">methylseg.MethylStateAssigner</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#methylseg.MethylStateAssigner"><code class="docutils literal notranslate"><span class="pre">MethylStateAssigner</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="methylseg.MethylStateAnalyzer.html">methylseg.MethylStateAnalyzer</a></li>
+<li class="toctree-l3"><a class="reference internal" href="methylseg.MethylSegmentor.html">methylseg.MethylSegmentor</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../api.html#enums-and-labels">Enums and labels</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../api.html#hmm-backends">HMM backends</a></li>
+<li class="toctree-l2 current"><a class="reference internal" href="../api.html#utility-helpers">Utility helpers</a><ul class="current">
+<li class="toctree-l3"><a class="reference internal" href="methylseg.get_biological_state_colors.html">methylseg.get_biological_state_colors</a></li>
+<li class="toctree-l3"><a class="reference internal" href="methylseg.get_cluster_colors.html">methylseg.get_cluster_colors</a></li>
+<li class="toctree-l3"><a class="reference internal" href="methylseg.CTMethylSegHMM.html">methylseg.CTMethylSegHMM</a></li>
+<li class="toctree-l3"><a class="reference internal" href="methylseg.DAMethylSegHMM.html">methylseg.DAMethylSegHMM</a></li>
+<li class="toctree-l3"><a class="reference internal" href="methylseg.GaussianMethylSegHMM.html">methylseg.GaussianMethylSegHMM</a></li>
+<li class="toctree-l3"><a class="reference internal" href="methylseg.HMMObservationMode.html">methylseg.HMMObservationMode</a></li>
+<li class="toctree-l3"><a class="reference internal" href="methylseg.MethylDataPrep.html">methylseg.MethylDataPrep</a></li>
+<li class="toctree-l3"><a class="reference internal" href="methylseg.MethylSegConfig.html">methylseg.MethylSegConfig</a></li>
+<li class="toctree-l3"><a class="reference internal" href="methylseg.MethylSegHMM.html">methylseg.MethylSegHMM</a></li>
+<li class="toctree-l3"><a class="reference internal" href="methylseg.MethylSegPathway.html">methylseg.MethylSegPathway</a></li>
+<li class="toctree-l3"><a class="reference internal" href="methylseg.MethylSegmentor.html">methylseg.MethylSegmentor</a></li>
+<li class="toctree-l3"><a class="reference internal" href="methylseg.MethylStateAnalyzer.html">methylseg.MethylStateAnalyzer</a></li>
+<li class="toctree-l3 current"><a class="current reference internal" href="#">methylseg.MethylStateAssigner</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#methylseg.MethylStateAssigner"><code class="docutils literal notranslate"><span class="pre">MethylStateAssigner</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="methylseg.MethylStateAssignmentMethod.html">methylseg.MethylStateAssignmentMethod</a></li>
+<li class="toctree-l3"><a class="reference internal" href="methylseg.MethylationStates.html">methylseg.MethylationStates</a></li>
+<li class="toctree-l3"><a class="reference internal" href="methylseg.MultinomialSegHMM.html">methylseg.MultinomialSegHMM</a></li>
+<li class="toctree-l3"><a class="reference internal" href="methylseg.SampleInfo.html">methylseg.SampleInfo</a></li>
+<li class="toctree-l3"><a class="reference internal" href="methylseg.StickyCategoricalMethylSegHMM.html">methylseg.StickyCategoricalMethylSegHMM</a></li>
+<li class="toctree-l3"><a class="reference internal" href="methylseg.get_biological_state_colors.html">methylseg.get_biological_state_colors</a></li>
+<li class="toctree-l3"><a class="reference internal" href="methylseg.get_cluster_colors.html">methylseg.get_cluster_colors</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../tutorials.html">Tutorial Notebook</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../index.html">methylseg</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="../api.html">API Reference</a></li>
+      <li class="breadcrumb-item active">methylseg.MethylStateAssigner</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="../_sources/generated/methylseg.MethylStateAssigner.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="methylseg-methylstateassigner">
+<h1>methylseg.MethylStateAssigner<a class="headerlink" href="#methylseg-methylstateassigner" title="Link to this heading"></a></h1>
+<dl class="py class">
+<dt class="sig sig-object py" id="methylseg.MethylStateAssigner">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">methylseg.</span></span><span class="sig-name descname"><span class="pre">MethylStateAssigner</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">window_specs</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">[(40000,</span> <span class="pre">'40kb'),</span> <span class="pre">(450000,</span> <span class="pre">'450kb')]</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">n_states</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">4</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">int_low_cutoff</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0.2</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">int_high_cutoff</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0.7</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">high_cutoff</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0.7</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">out_dir</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'.'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">random_state</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">42</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">cluster_space</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'pca'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">n_pca</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">5</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/methylseg/methyl_state_assigner.html#MethylStateAssigner"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#methylseg.MethylStateAssigner" title="Link to this definition"></a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<p>Create per-CpG window summaries and assign coarse methylation states.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>window_specs</strong> (<em>List</em><em>[</em><em>Tuple</em><em>[</em><em>int</em><em>, </em><em>str</em><em>]</em><em>]</em>)</p></li>
+<li><p><strong>n_states</strong> (<em>int</em>)</p></li>
+<li><p><strong>int_low_cutoff</strong> (<em>float</em>)</p></li>
+<li><p><strong>int_high_cutoff</strong> (<em>float</em>)</p></li>
+<li><p><strong>high_cutoff</strong> (<em>float</em>)</p></li>
+<li><p><strong>random_state</strong> (<em>int</em><em> | </em><em>None</em>)</p></li>
+<li><p><strong>cluster_space</strong> (<em>str</em>)</p></li>
+<li><p><strong>n_pca</strong> (<em>int</em><em> | </em><em>None</em>)</p></li>
+</ul>
+</dd>
+</dl>
+<dl class="py method">
+<dt class="sig sig-object py" id="methylseg.MethylStateAssigner.__init__">
+<span class="sig-name descname"><span class="pre">__init__</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">window_specs</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">[(40000,</span> <span class="pre">'40kb'),</span> <span class="pre">(450000,</span> <span class="pre">'450kb')]</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">n_states</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">4</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">int_low_cutoff</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0.2</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">int_high_cutoff</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0.7</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">high_cutoff</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0.7</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">out_dir</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'.'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">random_state</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">42</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">cluster_space</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'pca'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">n_pca</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">5</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/methylseg/methyl_state_assigner.html#MethylStateAssigner.__init__"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#methylseg.MethylStateAssigner.__init__" title="Link to this definition"></a></dt>
+<dd><dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>window_specs</strong> (<em>List</em><em>[</em><em>Tuple</em><em>[</em><em>int</em><em>, </em><em>str</em><em>]</em><em>]</em>) – List of <code class="docutils literal notranslate"><span class="pre">(window_size_bp,</span> <span class="pre">label)</span></code> tuples used to summarize local
+methylation context around each CpG.</p></li>
+<li><p><strong>n_states</strong> (<em>int</em>) – Number of coarse methylation states to learn during clustering.</p></li>
+<li><p><strong>int_low_cutoff</strong> (<em>float</em>)</p></li>
+<li><p><strong>int_high_cutoff</strong> (<em>float</em>)</p></li>
+<li><p><strong>high_cutoff</strong> (<em>float</em>)</p></li>
+<li><p><strong>random_state</strong> (<em>int</em><em> | </em><em>None</em>)</p></li>
+<li><p><strong>cluster_space</strong> (<em>str</em>)</p></li>
+<li><p><strong>n_pca</strong> (<em>int</em><em> | </em><em>None</em>)</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<p class="rubric">Methods</p>
+<table class="autosummary longtable docutils align-default">
+<tbody>
+<tr class="row-odd"><td><p><a class="reference internal" href="#methylseg.MethylStateAssigner.__init__" title="methylseg.MethylStateAssigner.__init__"><code class="xref py py-obj docutils literal notranslate"><span class="pre">__init__</span></code></a>([window_specs, n_states, ...])</p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#methylseg.MethylStateAssigner.apply_kmeans_to_emissions" title="methylseg.MethylStateAssigner.apply_kmeans_to_emissions"><code class="xref py py-obj docutils literal notranslate"><span class="pre">apply_kmeans_to_emissions</span></code></a>(emission_df)</p></td>
+<td><p>Apply a previously trained KMeansMethylationModel to a new emission_df.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#methylseg.MethylStateAssigner.apply_kmeans_to_sample" title="methylseg.MethylStateAssigner.apply_kmeans_to_sample"><code class="xref py py-obj docutils literal notranslate"><span class="pre">apply_kmeans_to_sample</span></code></a>(sample_info[, chrom, ...])</p></td>
+<td><p>High-level: apply an already-trained model to a new sample (same features).</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#methylseg.MethylStateAssigner.build_emission_matrix" title="methylseg.MethylStateAssigner.build_emission_matrix"><code class="xref py py-obj docutils literal notranslate"><span class="pre">build_emission_matrix</span></code></a>(positions, betas, ...)</p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#methylseg.MethylStateAssigner.calculate_kmeans_cluster_metrics" title="methylseg.MethylStateAssigner.calculate_kmeans_cluster_metrics"><code class="xref py py-obj docutils literal notranslate"><span class="pre">calculate_kmeans_cluster_metrics</span></code></a>(...)</p></td>
+<td><p>Calculate clustering-quality metrics in the same feature space used for KMeans.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#methylseg.MethylStateAssigner.create_emission_df" title="methylseg.MethylStateAssigner.create_emission_df"><code class="xref py py-obj docutils literal notranslate"><span class="pre">create_emission_df</span></code></a>(summary_stats[, ...])</p></td>
+<td><p>Convert the <cite>summaries</cite> column into a flat emission feature matrix.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#methylseg.MethylStateAssigner.fit_kmeans_on_emissions" title="methylseg.MethylStateAssigner.fit_kmeans_on_emissions"><code class="xref py py-obj docutils literal notranslate"><span class="pre">fit_kmeans_on_emissions</span></code></a>(emission_df[, ...])</p></td>
+<td><p>Fit KMeans on emission features using the assigner's configured cluster space.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#methylseg.MethylStateAssigner.generate_multi_window_summary_centered" title="methylseg.MethylStateAssigner.generate_multi_window_summary_centered"><code class="xref py py-obj docutils literal notranslate"><span class="pre">generate_multi_window_summary_centered</span></code></a>(meth_data)</p></td>
+<td><p>Compute per-CpG multi-window summary statistics using windows centered on each CpG.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#methylseg.MethylStateAssigner.get_pca_loadings" title="methylseg.MethylStateAssigner.get_pca_loadings"><code class="xref py py-obj docutils literal notranslate"><span class="pre">get_pca_loadings</span></code></a>()</p></td>
+<td><p>Return a DataFrame of PCA loadings for the features used in the model.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#methylseg.MethylStateAssigner.plot_kmeans_clusters" title="methylseg.MethylStateAssigner.plot_kmeans_clusters"><code class="xref py py-obj docutils literal notranslate"><span class="pre">plot_kmeans_clusters</span></code></a>(meth_data, labels[, ...])</p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#methylseg.MethylStateAssigner.plot_pca_clusters" title="methylseg.MethylStateAssigner.plot_pca_clusters"><code class="xref py py-obj docutils literal notranslate"><span class="pre">plot_pca_clusters</span></code></a>(emission_df, labels[, ...])</p></td>
+<td><p>PCA embedding + loadings, using consistent colors per state.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#methylseg.MethylStateAssigner.plot_pca_clusters_with_region" title="methylseg.MethylStateAssigner.plot_pca_clusters_with_region"><code class="xref py py-obj docutils literal notranslate"><span class="pre">plot_pca_clusters_with_region</span></code></a>(meth_data, ...)</p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#methylseg.MethylStateAssigner.plot_train_pca_clusters" title="methylseg.MethylStateAssigner.plot_train_pca_clusters"><code class="xref py py-obj docutils literal notranslate"><span class="pre">plot_train_pca_clusters</span></code></a>([n_pca_plot, ...])</p></td>
+<td><p>Convenience wrapper to plot the PCA embedding saved from k-means training.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#methylseg.MethylStateAssigner.plot_umap_clusters" title="methylseg.MethylStateAssigner.plot_umap_clusters"><code class="xref py py-obj docutils literal notranslate"><span class="pre">plot_umap_clusters</span></code></a>(emission_df, labels[, ...])</p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#methylseg.MethylStateAssigner.prepare_sample_for_clustering" title="methylseg.MethylStateAssigner.prepare_sample_for_clustering"><code class="xref py py-obj docutils literal notranslate"><span class="pre">prepare_sample_for_clustering</span></code></a>(sample_info[, ...])</p></td>
+<td><p>Convenience wrapper to: 1.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#methylseg.MethylStateAssigner.preprocess_emission_features" title="methylseg.MethylStateAssigner.preprocess_emission_features"><code class="xref py py-obj docutils literal notranslate"><span class="pre">preprocess_emission_features</span></code></a>(emission_df, ...)</p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#methylseg.MethylStateAssigner.resolve_feature_cols" title="methylseg.MethylStateAssigner.resolve_feature_cols"><code class="xref py py-obj docutils literal notranslate"><span class="pre">resolve_feature_cols</span></code></a>(emission_df[, feature_cols])</p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#methylseg.MethylStateAssigner.train_kmeans_for_sample" title="methylseg.MethylStateAssigner.train_kmeans_for_sample"><code class="xref py py-obj docutils literal notranslate"><span class="pre">train_kmeans_for_sample</span></code></a>(sample_info[, ...])</p></td>
+<td><p>High-level: given a sample ID and training chromosomes, train a KMeans model and return: - model (reusable) - meth_data - emission_df - pca_scores (or None when clustering in raw feature space) - labels</p></td>
+</tr>
+</tbody>
+</table>
+<dl class="py method">
+<dt class="sig sig-object py" id="methylseg.MethylStateAssigner.generate_multi_window_summary_centered">
+<span class="sig-name descname"><span class="pre">generate_multi_window_summary_centered</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">meth_data</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">chrom</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/methylseg/methyl_state_assigner.html#MethylStateAssigner.generate_multi_window_summary_centered"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#methylseg.MethylStateAssigner.generate_multi_window_summary_centered" title="Link to this definition"></a></dt>
+<dd><p>Compute per-CpG multi-window summary statistics using windows centered on each CpG.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>meth_data</strong> (<em>DataFrame</em>)</p></li>
+<li><p><strong>[</strong><strong>'CpG_chrm'</strong> (<em>Must contain columns</em>)</p></li>
+<li><p><strong>'CpG_beg'</strong></p></li>
+<li><p><strong>'CpG_end'</strong></p></li>
+<li><p><strong>'beta'</strong><strong>]</strong><strong>.</strong></p></li>
+<li><p><strong>chrom</strong> (<em>optional chromosome filter.</em>)</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><strong>DataFrame</strong></p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>one row per CpG with a ‘summaries’ dict per row.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="methylseg.MethylStateAssigner.create_emission_df">
+<span class="sig-name descname"><span class="pre">create_emission_df</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">summary_stats</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">windows_to_use</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/methylseg/methyl_state_assigner.html#MethylStateAssigner.create_emission_df"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#methylseg.MethylStateAssigner.create_emission_df" title="Link to this definition"></a></dt>
+<dd><p>Convert the <cite>summaries</cite> column into a flat emission feature matrix.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>windows_to_use</strong> (<em>list</em><em> of </em><em>window labels to include</em><em> (</em><em>subset</em><em> of </em><em>summary keys</em><em>)</em><em>.</em>) – If None, use all available windows.</p></li>
+<li><p><strong>summary_stats</strong> (<em>DataFrame</em>)</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><ul class="simple">
+<li><p><em>DataFrame with columns</em></p></li>
+<li><p><em>’beta’ +</em></p></li>
+<li><p><em>’{label}_avg_meth’, ‘{label}_std’, ‘{label}_high_pct’, ‘{label}_int_pct’,</em></p></li>
+<li><p><em>’{label}_low_pct’,</em></p></li>
+<li><p><em>’{label}_n_cpg’</em></p></li>
+</ul>
+</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><em>DataFrame</em></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="methylseg.MethylStateAssigner.build_emission_matrix">
+<span class="sig-name descname"><span class="pre">build_emission_matrix</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">positions</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">betas</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">window_specs</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">int_low_cutoff</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">int_high_cutoff</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">high_cutoff</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/methylseg/methyl_state_assigner.html#MethylStateAssigner.build_emission_matrix"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#methylseg.MethylStateAssigner.build_emission_matrix" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="methylseg.MethylStateAssigner.preprocess_emission_features">
+<span class="sig-name descname"><span class="pre">preprocess_emission_features</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">emission_df</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">feature_cols</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">fit</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/methylseg/methyl_state_assigner.html#MethylStateAssigner.preprocess_emission_features"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#methylseg.MethylStateAssigner.preprocess_emission_features" title="Link to this definition"></a></dt>
+<dd><dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>emission_df</strong> (<em>DataFrame</em>)</p></li>
+<li><p><strong>feature_cols</strong> (<em>List</em><em>[</em><em>str</em><em>]</em>)</p></li>
+<li><p><strong>fit</strong> (<em>bool</em>)</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="methylseg.MethylStateAssigner.resolve_feature_cols">
+<span class="sig-name descname"><span class="pre">resolve_feature_cols</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">emission_df</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">feature_cols</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/methylseg/methyl_state_assigner.html#MethylStateAssigner.resolve_feature_cols"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#methylseg.MethylStateAssigner.resolve_feature_cols" title="Link to this definition"></a></dt>
+<dd><dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>emission_df</strong> (<em>DataFrame</em>)</p></li>
+<li><p><strong>feature_cols</strong> (<em>List</em><em>[</em><em>str</em><em>] </em><em>| </em><em>None</em>)</p></li>
+</ul>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p><em>List</em>[str]</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="methylseg.MethylStateAssigner.fit_kmeans_on_emissions">
+<span class="sig-name descname"><span class="pre">fit_kmeans_on_emissions</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">emission_df</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">feature_cols</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/methylseg/methyl_state_assigner.html#MethylStateAssigner.fit_kmeans_on_emissions"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#methylseg.MethylStateAssigner.fit_kmeans_on_emissions" title="Link to this definition"></a></dt>
+<dd><p>Fit KMeans on emission features using the assigner’s configured cluster space.
+Also returns PCA scores for PCA-backed clustering and relabeled assignments.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>emission_df</strong> (<em>DataFrame</em>)</p></li>
+<li><p><strong>feature_cols</strong> (<em>List</em><em>[</em><em>str</em><em>] </em><em>| </em><em>None</em>)</p></li>
+</ul>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p><em>Tuple</em>[<em>KMeansMethylationModel</em>, <em>ndarray</em> | None, <em>ndarray</em>]</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="methylseg.MethylStateAssigner.apply_kmeans_to_emissions">
+<span class="sig-name descname"><span class="pre">apply_kmeans_to_emissions</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">emission_df</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/methylseg/methyl_state_assigner.html#MethylStateAssigner.apply_kmeans_to_emissions"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#methylseg.MethylStateAssigner.apply_kmeans_to_emissions" title="Link to this definition"></a></dt>
+<dd><p>Apply a previously trained KMeansMethylationModel to a new emission_df.</p>
+<p>Returns (pca_scores, raw_distances, raw_labels, relabeled_labels).</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>emission_df</strong> (<em>DataFrame</em>)</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p><em>Tuple</em>[<em>ndarray</em> | None, <em>ndarray</em>, <em>ndarray</em>, <em>ndarray</em>]</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="methylseg.MethylStateAssigner.calculate_kmeans_cluster_metrics">
+<span class="sig-name descname"><span class="pre">calculate_kmeans_cluster_metrics</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">emission_df</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">labels</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/methylseg/methyl_state_assigner.html#MethylStateAssigner.calculate_kmeans_cluster_metrics"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#methylseg.MethylStateAssigner.calculate_kmeans_cluster_metrics" title="Link to this definition"></a></dt>
+<dd><p>Calculate clustering-quality metrics in the same feature space used for KMeans.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>emission_df</strong> (<em>DataFrame</em>)</p></li>
+<li><p><strong>labels</strong> (<em>ndarray</em>)</p></li>
+</ul>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p><em>Dict</em>[str, float | None]</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="methylseg.MethylStateAssigner.plot_umap_clusters">
+<span class="sig-name descname"><span class="pre">plot_umap_clusters</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">emission_df</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">labels</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">chrom</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">sample_name</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">use_pca</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">use_parrallel</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/methylseg/methyl_state_assigner.html#MethylStateAssigner.plot_umap_clusters"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#methylseg.MethylStateAssigner.plot_umap_clusters" title="Link to this definition"></a></dt>
+<dd><dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>emission_df</strong> (<em>DataFrame</em>)</p></li>
+<li><p><strong>labels</strong> (<em>ndarray</em>)</p></li>
+<li><p><strong>chrom</strong> (<em>str</em><em> | </em><em>None</em>)</p></li>
+<li><p><strong>sample_name</strong> (<em>str</em><em> | </em><em>None</em>)</p></li>
+<li><p><strong>use_pca</strong> (<em>bool</em>)</p></li>
+<li><p><strong>use_parrallel</strong> (<em>bool</em>)</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="methylseg.MethylStateAssigner.plot_kmeans_clusters">
+<span class="sig-name descname"><span class="pre">plot_kmeans_clusters</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">meth_data</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">labels</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">chrom</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">sample_name</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">feature_cols_for_table</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">interactive</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/methylseg/methyl_state_assigner.html#MethylStateAssigner.plot_kmeans_clusters"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#methylseg.MethylStateAssigner.plot_kmeans_clusters" title="Link to this definition"></a></dt>
+<dd><dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>meth_data</strong> (<em>DataFrame</em>)</p></li>
+<li><p><strong>labels</strong> (<em>ndarray</em>)</p></li>
+<li><p><strong>chrom</strong> (<em>str</em><em> | </em><em>None</em>)</p></li>
+<li><p><strong>sample_name</strong> (<em>str</em><em> | </em><em>None</em>)</p></li>
+<li><p><strong>feature_cols_for_table</strong> (<em>List</em><em>[</em><em>str</em><em>] </em><em>| </em><em>None</em>)</p></li>
+<li><p><strong>interactive</strong> (<em>bool</em>)</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="methylseg.MethylStateAssigner.plot_pca_clusters">
+<span class="sig-name descname"><span class="pre">plot_pca_clusters</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">emission_df</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">labels</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">n_pca_plot</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">2</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">top_n_loadings</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">5</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">pca_hexbin</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">interactive</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">include_kmeans_metrics</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">include_biplot</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">label_title</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'State'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">sample_name</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">chrom</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/methylseg/methyl_state_assigner.html#MethylStateAssigner.plot_pca_clusters"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#methylseg.MethylStateAssigner.plot_pca_clusters" title="Link to this definition"></a></dt>
+<dd><p>PCA embedding + loadings, using consistent colors per state.</p>
+<p>Set <code class="docutils literal notranslate"><span class="pre">include_kmeans_metrics=False</span></code> to skip the expensive clustering
+quality metric calculation and annotation.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>emission_df</strong> (<em>DataFrame</em>)</p></li>
+<li><p><strong>labels</strong> (<em>ndarray</em>)</p></li>
+<li><p><strong>n_pca_plot</strong> (<em>int</em>)</p></li>
+<li><p><strong>top_n_loadings</strong> (<em>int</em>)</p></li>
+<li><p><strong>pca_hexbin</strong> (<em>bool</em>)</p></li>
+<li><p><strong>interactive</strong> (<em>bool</em>)</p></li>
+<li><p><strong>include_kmeans_metrics</strong> (<em>bool</em>)</p></li>
+<li><p><strong>include_biplot</strong> (<em>bool</em>)</p></li>
+<li><p><strong>label_title</strong> (<em>str</em>)</p></li>
+<li><p><strong>sample_name</strong> (<em>str</em><em> | </em><em>None</em>)</p></li>
+<li><p><strong>chrom</strong> (<em>str</em><em> | </em><em>None</em>)</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="methylseg.MethylStateAssigner.plot_pca_clusters_with_region">
+<span class="sig-name descname"><span class="pre">plot_pca_clusters_with_region</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">meth_data</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">emission_df</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">labels</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">region_start</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">region_end</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">region_chrom</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">n_pca_plot</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">2</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">top_n_loadings</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">5</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">pca_hexbin</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">interactive</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">include_kmeans_metrics</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">include_biplot</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">label_title</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'State'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">sample_name</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">chrom</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/methylseg/methyl_state_assigner.html#MethylStateAssigner.plot_pca_clusters_with_region"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#methylseg.MethylStateAssigner.plot_pca_clusters_with_region" title="Link to this definition"></a></dt>
+<dd><dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>meth_data</strong> (<em>DataFrame</em>)</p></li>
+<li><p><strong>emission_df</strong> (<em>DataFrame</em>)</p></li>
+<li><p><strong>labels</strong> (<em>ndarray</em>)</p></li>
+<li><p><strong>region_start</strong> (<em>int</em>)</p></li>
+<li><p><strong>region_end</strong> (<em>int</em>)</p></li>
+<li><p><strong>region_chrom</strong> (<em>str</em><em> | </em><em>None</em>)</p></li>
+<li><p><strong>n_pca_plot</strong> (<em>int</em>)</p></li>
+<li><p><strong>top_n_loadings</strong> (<em>int</em>)</p></li>
+<li><p><strong>pca_hexbin</strong> (<em>bool</em>)</p></li>
+<li><p><strong>interactive</strong> (<em>bool</em>)</p></li>
+<li><p><strong>include_kmeans_metrics</strong> (<em>bool</em>)</p></li>
+<li><p><strong>include_biplot</strong> (<em>bool</em>)</p></li>
+<li><p><strong>label_title</strong> (<em>str</em>)</p></li>
+<li><p><strong>sample_name</strong> (<em>str</em><em> | </em><em>None</em>)</p></li>
+<li><p><strong>chrom</strong> (<em>str</em><em> | </em><em>None</em>)</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="methylseg.MethylStateAssigner.plot_train_pca_clusters">
+<span class="sig-name descname"><span class="pre">plot_train_pca_clusters</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">n_pca_plot</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">2</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">top_n_loadings</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">5</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">pca_hexbin</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">interactive</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">include_kmeans_metrics</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">include_biplot</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">region_start</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">region_end</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">region_chrom</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/methylseg/methyl_state_assigner.html#MethylStateAssigner.plot_train_pca_clusters"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#methylseg.MethylStateAssigner.plot_train_pca_clusters" title="Link to this definition"></a></dt>
+<dd><p>Convenience wrapper to plot the PCA embedding saved from k-means training.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>n_pca_plot</strong> (<em>int</em>)</p></li>
+<li><p><strong>top_n_loadings</strong> (<em>int</em>)</p></li>
+<li><p><strong>pca_hexbin</strong> (<em>bool</em>)</p></li>
+<li><p><strong>interactive</strong> (<em>bool</em>)</p></li>
+<li><p><strong>include_kmeans_metrics</strong> (<em>bool</em>)</p></li>
+<li><p><strong>include_biplot</strong> (<em>bool</em>)</p></li>
+<li><p><strong>region_start</strong> (<em>int</em><em> | </em><em>None</em>)</p></li>
+<li><p><strong>region_end</strong> (<em>int</em><em> | </em><em>None</em>)</p></li>
+<li><p><strong>region_chrom</strong> (<em>str</em><em> | </em><em>None</em>)</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="methylseg.MethylStateAssigner.prepare_sample_for_clustering">
+<span class="sig-name descname"><span class="pre">prepare_sample_for_clustering</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">sample_info</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">chrom</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">windows_to_use</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/methylseg/methyl_state_assigner.html#MethylStateAssigner.prepare_sample_for_clustering"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#methylseg.MethylStateAssigner.prepare_sample_for_clustering" title="Link to this definition"></a></dt>
+<dd><p>Convenience wrapper to:
+1. Filter methylation DataFrame (optionally by chromosome).
+2. Build emission matrix using NumPy sliding windows.
+3. Optionally subset windows.</p>
+<dl class="simple">
+<dt>Returns:</dt><dd><p>meth_data (filtered DataFrame),
+emission_matrix (np.ndarray),
+emission_df (pandas DataFrame view)</p>
+</dd>
+</dl>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>sample_info</strong> (<a class="reference internal" href="methylseg.SampleInfo.html#methylseg.SampleInfo" title="methylseg.helper_classes.SampleInfo"><em>SampleInfo</em></a>)</p></li>
+<li><p><strong>chrom</strong> (<em>str</em><em> | </em><em>None</em>)</p></li>
+<li><p><strong>windows_to_use</strong> (<em>List</em><em>[</em><em>str</em><em>] </em><em>| </em><em>None</em>)</p></li>
+</ul>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p><em>Tuple</em>[<em>DataFrame</em>, <em>ndarray</em>, <em>DataFrame</em>]</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="methylseg.MethylStateAssigner.train_kmeans_for_sample">
+<span class="sig-name descname"><span class="pre">train_kmeans_for_sample</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">sample_info</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">train_chroms</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">windows_to_use</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">feature_cols</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">max_cpg_per_chrom</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">50000</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">sampling_random_state</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/methylseg/methyl_state_assigner.html#MethylStateAssigner.train_kmeans_for_sample"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#methylseg.MethylStateAssigner.train_kmeans_for_sample" title="Link to this definition"></a></dt>
+<dd><p>High-level: given a sample ID and training chromosomes,
+train a KMeans model and return:
+- model (reusable)
+- meth_data
+- emission_df
+- pca_scores (or None when clustering in raw feature space)
+- labels</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>sample_info</strong> (<a class="reference internal" href="methylseg.SampleInfo.html#methylseg.SampleInfo" title="methylseg.helper_classes.SampleInfo"><em>SampleInfo</em></a>)</p></li>
+<li><p><strong>train_chroms</strong> (<em>List</em><em>[</em><em>str</em><em>] </em><em>| </em><em>None</em>)</p></li>
+<li><p><strong>windows_to_use</strong> (<em>List</em><em>[</em><em>str</em><em>] </em><em>| </em><em>None</em>)</p></li>
+<li><p><strong>feature_cols</strong> (<em>List</em><em>[</em><em>str</em><em>] </em><em>| </em><em>None</em>)</p></li>
+<li><p><strong>max_cpg_per_chrom</strong> (<em>int</em><em> | </em><em>None</em>)</p></li>
+<li><p><strong>sampling_random_state</strong> (<em>int</em><em> | </em><em>None</em>)</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="methylseg.MethylStateAssigner.apply_kmeans_to_sample">
+<span class="sig-name descname"><span class="pre">apply_kmeans_to_sample</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">sample_info</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">chrom</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">windows_to_use</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">sample_meth_data</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/methylseg/methyl_state_assigner.html#MethylStateAssigner.apply_kmeans_to_sample"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#methylseg.MethylStateAssigner.apply_kmeans_to_sample" title="Link to this definition"></a></dt>
+<dd><p>High-level: apply an already-trained model to a new sample (same features).</p>
+<p>Returns:
+- meth_data
+- emission_df
+- pca_scores
+- raw_distances
+- raw_labels
+- relabeled_labels</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>sample_info</strong> (<a class="reference internal" href="methylseg.SampleInfo.html#methylseg.SampleInfo" title="methylseg.helper_classes.SampleInfo"><em>SampleInfo</em></a>)</p></li>
+<li><p><strong>chrom</strong> (<em>str</em><em> | </em><em>None</em>)</p></li>
+<li><p><strong>windows_to_use</strong> (<em>List</em><em>[</em><em>str</em><em>] </em><em>| </em><em>None</em>)</p></li>
+<li><p><strong>sample_meth_data</strong> (<em>DataFrame</em><em> | </em><em>None</em>)</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="methylseg.MethylStateAssigner.get_pca_loadings">
+<span class="sig-name descname"><span class="pre">get_pca_loadings</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/methylseg/methyl_state_assigner.html#MethylStateAssigner.get_pca_loadings"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#methylseg.MethylStateAssigner.get_pca_loadings" title="Link to this definition"></a></dt>
+<dd><p>Return a DataFrame of PCA loadings for the features used in the model.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><em>DataFrame</em></p>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="methylseg.MethylSegConfig.html" class="btn btn-neutral float-left" title="methylseg.MethylSegConfig" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="methylseg.MethylStateAnalyzer.html" class="btn btn-neutral float-right" title="methylseg.MethylStateAnalyzer" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright .</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

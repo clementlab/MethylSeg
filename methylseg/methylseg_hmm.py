@@ -1,3 +1,5 @@
+"""Hidden Markov Model backends used by the methylseg segmentor."""
+
 import warnings
 
 from typing import List, Optional
@@ -14,6 +16,8 @@ warnings.filterwarnings(
 
 
 class MethylSegHMM:
+    """Abstract base class for methylseg HMM backends."""
+
     def __init__(self, n_states: int):
         raise NotImplementedError("MethylSegHMM is an abstract class")
 
@@ -35,6 +39,8 @@ class MethylSegHMM:
 
 # TODO implement and test custom DAHMM to test speed and performance against CTHMM
 class DAMethylSegHMM(MethylSegHMM):
+    """Placeholder for an alternative HMM implementation that is not yet built."""
+
     def __init__(self, n_states: int):
         raise NotImplementedError("DAMethylSegHMM is not implemented")
 
@@ -55,6 +61,7 @@ class DAMethylSegHMM(MethylSegHMM):
 
 
 class MultinomialSegHMM(MethylSegHMM):
+    """Discrete multinomial HMM over categorical methylation state labels."""
 
     def __init__(
         self,
@@ -97,6 +104,8 @@ class MultinomialSegHMM(MethylSegHMM):
 
 
 class StickyCategoricalMethylSegHMM(MethylSegHMM):
+    """Categorical HMM with strong self-transition priors for smoother segments."""
+
     DEFAULT_STAY_PROB = 0.99995
     EMISSION_MISMATCH_PROB = 0.45
     TRANSITION_PRIOR_STRENGTH = 50.0
@@ -217,6 +226,8 @@ class StickyCategoricalMethylSegHMM(MethylSegHMM):
 
 
 class GaussianMethylSegHMM(MethylSegHMM):
+    """Gaussian HMM for continuous emission vectors such as PCA features."""
+
     TRANSITION_FLOOR = 1e-6
     COVARIANCE_FLOOR = 1e-3
 
@@ -389,6 +400,8 @@ class GaussianMethylSegHMM(MethylSegHMM):
 
 
 class CTMethylSegHMM(MethylSegHMM):
+    """Continuous-time HMM backend for sparsely spaced CpGs along a chromosome."""
+
 
     def __init__(
         self,

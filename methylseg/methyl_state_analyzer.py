@@ -1,3 +1,5 @@
+"""Utilities for analyzing, comparing, and tuning methylation state assignments."""
+
 from enum import Enum
 
 from matplotlib import pyplot as plt
@@ -25,11 +27,13 @@ from .helper_classes import (
     SampleInfo,
 )
 from .utils import (
-    _plot_interactive_beta_scatter,
+    plot_interactive_beta_scatter,
 )
 
 
 class MethylStateAnalyzer:
+    """Inspect training outputs and optimize rule-based state cutoffs."""
+
     def __init__(self, assigner: MethylStateAssigner, out_dir="."):
         self.assigner = assigner
         self.out_dir = out_dir
@@ -73,43 +77,25 @@ class MethylStateAnalyzer:
         pmd_cutoffs: Dict[str, Dict[str, float]],
     ) -> np.ndarray:
         """
-        Rule-based state definition with tunable, per-window cutoffs.
-
-        PMD is defined as:
-
-          beta_low_max <= beta <= beta_high_min
-          AND OR over regional windows of:
-            {label}_int_pct >= label.int_min
-            AND {label}_std <= label.std_max
-            AND {label}_high_pct <= label.high_max
-            AND {label}_low_pct <= label.low_max
+        Apply rule-based state labels with tunable per-window PMD cutoffs.
 
         Parameters
         ----------
-        meth_emissions : DataFrame
-            Must contain:
-              'beta',
-              '{label}_int_pct', '{label}_std', '{label}_high_pct', '{label}_low_pct'
-            for each window label in self.assigner.window_specs.
-        beta_low_max : float
-        beta_high_min : float
-        pmd_cutoffs : dict
-            {
-              label: {
-                'int_min': ...,
-                'std_max': ...,
-                'high_max': ...,
-                'low_max': ...,
-              },
-              ...
-            }
+        meth_emissions
+            Emission table containing ``beta`` and the per-window summary columns
+            used by the PMD rules.
+        beta_low_max
+            Upper beta threshold for the low-methylation regime.
+        beta_high_min
+            Lower beta threshold for the high-methylation regime.
+        pmd_cutoffs
+            Mapping of window label to rule cutoffs with ``int_min``, ``std_max``,
+            ``high_max``, and ``low_max`` entries.
 
-        States
-        ------
-        0 = low methylation outside PMDs
-        1 = PMD
-        2 = intermediate / other outside PMDs
-        3 = high methylation outside PMDs
+        Returns
+        -------
+        numpy.ndarray
+            Array of ``MethylationStates`` values for each input row.
         """
         beta = meth_emissions["beta"].values
         n = len(meth_emissions)
@@ -240,27 +226,20 @@ class MethylStateAnalyzer:
         param_distributions: dict | None = None,
     ):
         """
-        Random-search optimization of rule parameters, similar in spirit to
-        sklearn.model_selection.RandomizedSearchCV.
+        Tune rule-based cutoffs with random search against KMeans labels.
 
-        param_distributions structure:
-        -------------------------------
-        {
-          "beta_low_max": (low, high),
-          "beta_high_min": (low, high),
-          "pmd": {
-            "<label>": {
-              "int_min": (low, high),
-              "std_max": (low, high),
-              "high_max": (low, high),
-              "low_max": (low, high),
-            },
-            ...
-          }
-        }
-
-        If param_distributions is None, sensible defaults are built
-        for all window labels in self.assigner.window_specs.
+        Parameters
+        ----------
+        n_iter
+            Number of random parameter draws to evaluate.
+        score_key
+            Metric name from :meth:`evaluate_rules_against_kmeans` used to pick
+            the best rule set.
+        random_state
+            Seed for reproducible sampling.
+        param_distributions
+            Optional nested dictionary describing the search ranges. When omitted,
+            defaults are created for each window label in ``assigner.window_specs``.
         """
         self._build_train_joint()
         rng = np.random.default_rng(random_state)
@@ -399,18 +378,7 @@ class MethylStateAnalyzer:
 
     def set_state_cutoffs_from_yaml(self, yaml_file: str):
         """
-        Load state cutoffs from a YAML configuration file.
-
-        Expected YAML structure:
-        beta_low_max: float
-        beta_high_min: float
-        pmd_cutoffs:
-          <label>:
-            int_min: float
-            std_max: float
-            high_max: float
-            low_max: float
-          ...
+        Load rule cutoffs from a YAML file written by ``MethylSegConfig``.
         """
         config = MethylSegConfig.from_yaml(yaml_file).config
         self.__set_from_config(config)
@@ -464,24 +432,7 @@ class MethylStateAnalyzer:
 
     def pretty_print_rules(self):
         """
-        Print the current rule-based state definitions in a concise, human-readable format.
-
-        PMD:
-          beta_low_cutoff <= beta <= beta_high_cutoff
-          AND OR over regional windows of:
-            {label}_int_pct >= label.int_min
-            AND {label}_std <= label.std_max
-            AND {label}_high_pct <= label.high_max
-            AND {label}_low_pct <= label.low_max
-
-        Low methylation:
-          beta <= low_cutoff AND NOT PMD
-
-        Intermediate:
-          low_cutoff < beta < high_cutoff AND NOT PMD
-
-        High methylation:
-          beta >= high_cutoff AND NOT PMD
+        Print the active rule-based state definitions in a compact form.
         """
         if not hasattr(self, "state_cutoffs"):
             raise ValueError(
@@ -630,7 +581,7 @@ class MethylStateAnalyzer:
                 )
                 df_plot["rule_based_label"] = rule_labels
         label_col = f"{label_type}_label"
-        return _plot_interactive_beta_scatter(
+        return plot_interactive_beta_scatter(
             df_plot=df_plot,
             sample_info=sample_info,
             sample_info_removed=sample_info_removed,

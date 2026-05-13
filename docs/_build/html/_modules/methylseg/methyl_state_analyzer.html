@@ -1,0 +1,739 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../../">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>methylseg.methyl_state_analyzer &mdash; methylseg 0.1.0 documentation</title>
+      <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=80d5e7a1" />
+      <link rel="stylesheet" type="text/css" href="../../_static/css/theme.css?v=9edc463e" />
+
+  
+      <script src="../../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="../../_static/documentation_options.js?v=01f34227"></script>
+      <script src="../../_static/doctools.js?v=9bcbadda"></script>
+      <script src="../../_static/sphinx_highlight.js?v=dc90522c"></script>
+      <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
+    <script src="../../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../../index.html" class="icon icon-home">
+            methylseg
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Contents</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../installation.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../quickstart.html">Quickstart</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../api.html">API Reference</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../tutorials.html">Tutorial Notebook</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../index.html">methylseg</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="../index.html">Module code</a></li>
+      <li class="breadcrumb-item active">methylseg.methyl_state_analyzer</li>
+      <li class="wy-breadcrumbs-aside">
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <h1>Source code for methylseg.methyl_state_analyzer</h1><div class="highlight"><pre>
+<span></span><span class="sd">&quot;&quot;&quot;Utilities for analyzing, comparing, and tuning methylation state assignments.&quot;&quot;&quot;</span>
+
+<span class="kn">from</span> <span class="nn">enum</span> <span class="kn">import</span> <span class="n">Enum</span>
+
+<span class="kn">from</span> <span class="nn">matplotlib</span> <span class="kn">import</span> <span class="n">pyplot</span> <span class="k">as</span> <span class="n">plt</span>
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+<span class="kn">import</span> <span class="nn">pandas</span> <span class="k">as</span> <span class="nn">pd</span>
+<span class="kn">from</span> <span class="nn">typing</span> <span class="kn">import</span> <span class="n">Dict</span>
+
+<span class="kn">from</span> <span class="nn">sklearn.metrics</span> <span class="kn">import</span> <span class="p">(</span>
+    <span class="n">accuracy_score</span><span class="p">,</span>
+    <span class="n">adjusted_rand_score</span><span class="p">,</span>
+    <span class="n">classification_report</span><span class="p">,</span>
+    <span class="n">confusion_matrix</span><span class="p">,</span>
+    <span class="n">f1_score</span><span class="p">,</span>
+    <span class="n">normalized_mutual_info_score</span><span class="p">,</span>
+    <span class="n">precision_score</span><span class="p">,</span>
+    <span class="n">recall_score</span><span class="p">,</span>
+<span class="p">)</span>
+<span class="kn">from</span> <span class="nn">tqdm</span> <span class="kn">import</span> <span class="n">tqdm</span>
+<span class="kn">import</span> <span class="nn">seaborn</span> <span class="k">as</span> <span class="nn">sns</span>
+
+<span class="kn">from</span> <span class="nn">.methyl_state_assigner</span> <span class="kn">import</span> <span class="n">MethylStateAssigner</span>
+<span class="kn">from</span> <span class="nn">.methylseg_config</span> <span class="kn">import</span> <span class="n">MethylSegConfig</span>
+<span class="kn">from</span> <span class="nn">.helper_classes</span> <span class="kn">import</span> <span class="p">(</span>
+    <span class="n">MethylationStates</span><span class="p">,</span>
+    <span class="n">SampleInfo</span><span class="p">,</span>
+<span class="p">)</span>
+<span class="kn">from</span> <span class="nn">.utils</span> <span class="kn">import</span> <span class="p">(</span>
+    <span class="n">plot_interactive_beta_scatter</span><span class="p">,</span>
+<span class="p">)</span>
+
+
+<div class="viewcode-block" id="MethylStateAnalyzer">
+<a class="viewcode-back" href="../../generated/methylseg.MethylStateAnalyzer.html#methylseg.MethylStateAnalyzer">[docs]</a>
+<span class="k">class</span> <span class="nc">MethylStateAnalyzer</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Inspect training outputs and optimize rule-based state cutoffs.&quot;&quot;&quot;</span>
+
+<div class="viewcode-block" id="MethylStateAnalyzer.__init__">
+<a class="viewcode-back" href="../../generated/methylseg.MethylStateAnalyzer.html#methylseg.MethylStateAnalyzer.__init__">[docs]</a>
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">assigner</span><span class="p">:</span> <span class="n">MethylStateAssigner</span><span class="p">,</span> <span class="n">out_dir</span><span class="o">=</span><span class="s2">&quot;.&quot;</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">assigner</span> <span class="o">=</span> <span class="n">assigner</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">out_dir</span> <span class="o">=</span> <span class="n">out_dir</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">train_joint</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">window_specs</span> <span class="o">=</span> <span class="n">assigner</span><span class="o">.</span><span class="n">window_specs</span></div>
+
+
+    <span class="k">def</span> <span class="nf">_build_train_joint</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">train_joint</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">return</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">hasattr</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">assigner</span><span class="p">,</span> <span class="s2">&quot;model&quot;</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;No trained model found. Please train a model first.&quot;</span><span class="p">)</span>
+        <span class="n">train_joint</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">concat</span><span class="p">(</span>
+            <span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">assigner</span><span class="o">.</span><span class="n">train_meth</span><span class="o">.</span><span class="n">copy</span><span class="p">(),</span> <span class="bp">self</span><span class="o">.</span><span class="n">assigner</span><span class="o">.</span><span class="n">train_emission_df</span><span class="o">.</span><span class="n">copy</span><span class="p">()],</span>
+            <span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span>
+        <span class="p">)</span>
+        <span class="n">train_joint</span> <span class="o">=</span> <span class="n">train_joint</span><span class="o">.</span><span class="n">loc</span><span class="p">[:,</span> <span class="o">~</span><span class="n">train_joint</span><span class="o">.</span><span class="n">columns</span><span class="o">.</span><span class="n">duplicated</span><span class="p">()]</span>
+        <span class="n">train_joint</span><span class="p">[</span><span class="s2">&quot;kmeans_label&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">assigner</span><span class="o">.</span><span class="n">train_labels</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">train_joint</span> <span class="o">=</span> <span class="n">train_joint</span>
+
+<div class="viewcode-block" id="MethylStateAnalyzer.plot_feature_distributions_by_kmeans_state">
+<a class="viewcode-back" href="../../generated/methylseg.MethylStateAnalyzer.html#methylseg.MethylStateAnalyzer.plot_feature_distributions_by_kmeans_state">[docs]</a>
+    <span class="k">def</span> <span class="nf">plot_feature_distributions_by_kmeans_state</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">show_plots</span><span class="o">=</span><span class="kc">True</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_build_train_joint</span><span class="p">()</span>
+        <span class="n">train_loadings</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">assigner</span><span class="o">.</span><span class="n">get_pca_loadings</span><span class="p">()</span>
+        <span class="k">for</span> <span class="n">emission</span> <span class="ow">in</span> <span class="n">train_loadings</span><span class="p">[</span><span class="s2">&quot;PC2&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">abs</span><span class="p">()</span><span class="o">.</span><span class="n">sort_values</span><span class="p">(</span><span class="n">ascending</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span><span class="o">.</span><span class="n">index</span><span class="p">:</span>
+            <span class="k">for</span> <span class="n">state</span><span class="p">,</span> <span class="n">df</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">train_joint</span><span class="o">.</span><span class="n">groupby</span><span class="p">(</span><span class="s2">&quot;kmeans_label&quot;</span><span class="p">):</span>
+                <span class="n">df</span><span class="p">[</span><span class="n">emission</span><span class="p">]</span><span class="o">.</span><span class="n">hist</span><span class="p">(</span><span class="n">bins</span><span class="o">=</span><span class="mi">50</span><span class="p">,</span> <span class="n">alpha</span><span class="o">=</span><span class="mf">0.5</span><span class="p">,</span> <span class="n">label</span><span class="o">=</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">state</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+            <span class="n">plt</span><span class="o">.</span><span class="n">xlabel</span><span class="p">(</span><span class="n">emission</span><span class="p">)</span>
+            <span class="n">plt</span><span class="o">.</span><span class="n">ylabel</span><span class="p">(</span><span class="s2">&quot;Count&quot;</span><span class="p">)</span>
+            <span class="n">plt</span><span class="o">.</span><span class="n">title</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Distribution of </span><span class="si">{</span><span class="n">emission</span><span class="si">}</span><span class="s2"> by KMeans State&quot;</span><span class="p">)</span>
+            <span class="n">plt</span><span class="o">.</span><span class="n">legend</span><span class="p">()</span>
+            <span class="k">if</span> <span class="n">show_plots</span><span class="p">:</span>
+                <span class="n">plt</span><span class="o">.</span><span class="n">show</span><span class="p">()</span>
+            <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">out_dir</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="n">plt</span><span class="o">.</span><span class="n">savefig</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">out_dir</span><span class="si">}</span><span class="s2">/feature_distribution_</span><span class="si">{</span><span class="n">emission</span><span class="si">}</span><span class="s2">.png&quot;</span><span class="p">)</span>
+            <span class="n">plt</span><span class="o">.</span><span class="n">close</span><span class="p">()</span></div>
+
+
+<div class="viewcode-block" id="MethylStateAnalyzer.define_states_by_rules_param">
+<a class="viewcode-back" href="../../generated/methylseg.MethylStateAnalyzer.html#methylseg.MethylStateAnalyzer.define_states_by_rules_param">[docs]</a>
+    <span class="k">def</span> <span class="nf">define_states_by_rules_param</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">meth_emissions</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">,</span>
+        <span class="n">beta_low_max</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span>
+        <span class="n">beta_high_min</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span>
+        <span class="n">pmd_cutoffs</span><span class="p">:</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">float</span><span class="p">]],</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Apply rule-based state labels with tunable per-window PMD cutoffs.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        meth_emissions</span>
+<span class="sd">            Emission table containing ``beta`` and the per-window summary columns</span>
+<span class="sd">            used by the PMD rules.</span>
+<span class="sd">        beta_low_max</span>
+<span class="sd">            Upper beta threshold for the low-methylation regime.</span>
+<span class="sd">        beta_high_min</span>
+<span class="sd">            Lower beta threshold for the high-methylation regime.</span>
+<span class="sd">        pmd_cutoffs</span>
+<span class="sd">            Mapping of window label to rule cutoffs with ``int_min``, ``std_max``,</span>
+<span class="sd">            ``high_max``, and ``low_max`` entries.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        numpy.ndarray</span>
+<span class="sd">            Array of ``MethylationStates`` values for each input row.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">beta</span> <span class="o">=</span> <span class="n">meth_emissions</span><span class="p">[</span><span class="s2">&quot;beta&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">values</span>
+        <span class="n">n</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">meth_emissions</span><span class="p">)</span>
+        <span class="n">labels</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">full</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">meth_emissions</span><span class="p">),</span> <span class="kc">None</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">object</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">hasattr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="s2">&quot;assigner&quot;</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="ne">AttributeError</span><span class="p">(</span>
+                <span class="s2">&quot;MethylStateAnalyzer must have an `assigner` with `window_specs`.&quot;</span>
+            <span class="p">)</span>
+
+        <span class="n">window_labels</span> <span class="o">=</span> <span class="p">[</span><span class="n">label</span> <span class="k">for</span> <span class="n">_</span><span class="p">,</span> <span class="n">label</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">assigner</span><span class="o">.</span><span class="n">window_specs</span><span class="p">]</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">window_labels</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;No window_specs found on assigner.&quot;</span><span class="p">)</span>
+        <span class="n">regional_window_labels</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">assigner</span><span class="o">.</span><span class="n">get_regional_window_labels</span><span class="p">()</span>
+
+        <span class="n">pmd_window_masks</span> <span class="o">=</span> <span class="p">[]</span>
+
+        <span class="k">for</span> <span class="n">label</span> <span class="ow">in</span> <span class="n">regional_window_labels</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">label</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">pmd_cutoffs</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="ne">KeyError</span><span class="p">(</span>
+                    <span class="sa">f</span><span class="s2">&quot;No PMD cutoffs provided for window &#39;</span><span class="si">{</span><span class="n">label</span><span class="si">}</span><span class="s2">&#39;. &quot;</span>
+                    <span class="sa">f</span><span class="s2">&quot;Expected a key in pmd_cutoffs for each label in window_specs.&quot;</span>
+                <span class="p">)</span>
+
+            <span class="n">cfg</span> <span class="o">=</span> <span class="n">pmd_cutoffs</span><span class="p">[</span><span class="n">label</span><span class="p">]</span>
+            <span class="k">try</span><span class="p">:</span>
+                <span class="n">int_min</span> <span class="o">=</span> <span class="n">cfg</span><span class="p">[</span><span class="s2">&quot;int_min&quot;</span><span class="p">]</span>
+                <span class="n">std_max</span> <span class="o">=</span> <span class="n">cfg</span><span class="p">[</span><span class="s2">&quot;std_max&quot;</span><span class="p">]</span>
+                <span class="n">high_max</span> <span class="o">=</span> <span class="n">cfg</span><span class="p">[</span><span class="s2">&quot;high_max&quot;</span><span class="p">]</span>
+                <span class="n">low_max</span> <span class="o">=</span> <span class="n">cfg</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;low_max&quot;</span><span class="p">,</span> <span class="n">high_max</span><span class="p">)</span>
+            <span class="k">except</span> <span class="ne">KeyError</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="ne">KeyError</span><span class="p">(</span>
+                    <span class="sa">f</span><span class="s2">&quot;PMD cutoff for window &#39;</span><span class="si">{</span><span class="n">label</span><span class="si">}</span><span class="s2">&#39; must contain &quot;</span>
+                    <span class="sa">f</span><span class="s2">&quot;keys &#39;int_min&#39;, &#39;std_max&#39;, &#39;high_max&#39;. Missing: </span><span class="si">{</span><span class="n">e</span><span class="si">}</span><span class="s2">&quot;</span>
+                <span class="p">)</span>
+
+            <span class="n">int_col</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">label</span><span class="si">}</span><span class="s2">_int_pct&quot;</span>
+            <span class="n">std_col</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">label</span><span class="si">}</span><span class="s2">_std&quot;</span>
+            <span class="n">high_col</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">label</span><span class="si">}</span><span class="s2">_high_pct&quot;</span>
+            <span class="n">low_col</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">label</span><span class="si">}</span><span class="s2">_low_pct&quot;</span>
+
+            <span class="k">if</span> <span class="n">int_col</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">meth_emissions</span><span class="o">.</span><span class="n">columns</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="ne">KeyError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Column &#39;</span><span class="si">{</span><span class="n">int_col</span><span class="si">}</span><span class="s2">&#39; not found in meth_emissions.&quot;</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">std_col</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">meth_emissions</span><span class="o">.</span><span class="n">columns</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="ne">KeyError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Column &#39;</span><span class="si">{</span><span class="n">std_col</span><span class="si">}</span><span class="s2">&#39; not found in meth_emissions.&quot;</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">high_col</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">meth_emissions</span><span class="o">.</span><span class="n">columns</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="ne">KeyError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Column &#39;</span><span class="si">{</span><span class="n">high_col</span><span class="si">}</span><span class="s2">&#39; not found in meth_emissions.&quot;</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">low_col</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">meth_emissions</span><span class="o">.</span><span class="n">columns</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="ne">KeyError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Column &#39;</span><span class="si">{</span><span class="n">low_col</span><span class="si">}</span><span class="s2">&#39; not found in meth_emissions.&quot;</span><span class="p">)</span>
+
+            <span class="n">int_vals</span> <span class="o">=</span> <span class="n">meth_emissions</span><span class="p">[</span><span class="n">int_col</span><span class="p">]</span><span class="o">.</span><span class="n">values</span>
+            <span class="n">std_vals</span> <span class="o">=</span> <span class="n">meth_emissions</span><span class="p">[</span><span class="n">std_col</span><span class="p">]</span><span class="o">.</span><span class="n">values</span>
+            <span class="n">high_vals</span> <span class="o">=</span> <span class="n">meth_emissions</span><span class="p">[</span><span class="n">high_col</span><span class="p">]</span><span class="o">.</span><span class="n">values</span>
+            <span class="n">low_vals</span> <span class="o">=</span> <span class="n">meth_emissions</span><span class="p">[</span><span class="n">low_col</span><span class="p">]</span><span class="o">.</span><span class="n">values</span>
+
+            <span class="n">pmd_window_masks</span><span class="o">.</span><span class="n">append</span><span class="p">(</span>
+                <span class="p">(</span><span class="n">int_vals</span> <span class="o">&gt;=</span> <span class="n">int_min</span><span class="p">)</span>
+                <span class="o">&amp;</span> <span class="p">(</span><span class="n">std_vals</span> <span class="o">&lt;=</span> <span class="n">std_max</span><span class="p">)</span>
+                <span class="o">&amp;</span> <span class="p">(</span><span class="n">high_vals</span> <span class="o">&lt;=</span> <span class="n">high_max</span><span class="p">)</span>
+                <span class="o">&amp;</span> <span class="p">(</span><span class="n">low_vals</span> <span class="o">&lt;=</span> <span class="n">low_max</span><span class="p">)</span>
+            <span class="p">)</span>
+
+        <span class="n">regional_any</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">logical_or</span><span class="o">.</span><span class="n">reduce</span><span class="p">(</span><span class="n">pmd_window_masks</span><span class="p">)</span>
+        <span class="n">pmd_mask</span> <span class="o">=</span> <span class="n">regional_any</span> <span class="o">&amp;</span> <span class="p">(</span><span class="n">beta</span> <span class="o">&gt;=</span> <span class="n">beta_low_max</span><span class="p">)</span> <span class="o">&amp;</span> <span class="p">(</span><span class="n">beta</span> <span class="o">&lt;=</span> <span class="n">beta_high_min</span><span class="p">)</span>
+
+        <span class="n">low_mask</span> <span class="o">=</span> <span class="p">(</span><span class="n">beta</span> <span class="o">&lt;=</span> <span class="n">beta_low_max</span><span class="p">)</span> <span class="o">&amp;</span> <span class="o">~</span><span class="n">pmd_mask</span>
+        <span class="n">high_mask</span> <span class="o">=</span> <span class="p">(</span><span class="n">beta</span> <span class="o">&gt;=</span> <span class="n">beta_high_min</span><span class="p">)</span> <span class="o">&amp;</span> <span class="o">~</span><span class="n">pmd_mask</span>
+        <span class="n">interm_mask</span> <span class="o">=</span> <span class="o">~</span><span class="p">(</span><span class="n">pmd_mask</span> <span class="o">|</span> <span class="n">low_mask</span> <span class="o">|</span> <span class="n">high_mask</span><span class="p">)</span>
+
+        <span class="n">labels</span><span class="p">[</span><span class="n">low_mask</span><span class="p">]</span> <span class="o">=</span> <span class="n">MethylationStates</span><span class="o">.</span><span class="n">LOW</span>
+        <span class="n">labels</span><span class="p">[</span><span class="n">pmd_mask</span><span class="p">]</span> <span class="o">=</span> <span class="n">MethylationStates</span><span class="o">.</span><span class="n">PMD</span>
+        <span class="n">labels</span><span class="p">[</span><span class="n">interm_mask</span><span class="p">]</span> <span class="o">=</span> <span class="n">MethylationStates</span><span class="o">.</span><span class="n">INTERMEDIATE</span>
+        <span class="n">labels</span><span class="p">[</span><span class="n">high_mask</span><span class="p">]</span> <span class="o">=</span> <span class="n">MethylationStates</span><span class="o">.</span><span class="n">HIGH</span>
+
+        <span class="k">return</span> <span class="n">labels</span></div>
+
+
+<div class="viewcode-block" id="MethylStateAnalyzer.evaluate_rules_against_kmeans">
+<a class="viewcode-back" href="../../generated/methylseg.MethylStateAnalyzer.html#methylseg.MethylStateAnalyzer.evaluate_rules_against_kmeans">[docs]</a>
+    <span class="k">def</span> <span class="nf">evaluate_rules_against_kmeans</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">meth_emissions</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">,</span>
+        <span class="n">kmeans_labels</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="o">**</span><span class="n">rule_params</span><span class="p">,</span>
+    <span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Apply rule-based states and compare to KMeans labels.</span>
+<span class="sd">        Returns (metrics_dict, rule_labels_array).</span>
+
+<span class="sd">        rule_params must contain:</span>
+<span class="sd">          - beta_low_max</span>
+<span class="sd">          - beta_high_min</span>
+<span class="sd">          - pmd_cutoffs (dict[label -&gt; {&#39;int_min&#39;,&#39;std_max&#39;,&#39;high_max&#39;,&#39;low_max&#39;}])</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">y_true</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">kmeans_labels</span><span class="p">)</span>
+        <span class="n">y_pred</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">define_states_by_rules_param</span><span class="p">(</span><span class="n">meth_emissions</span><span class="p">,</span> <span class="o">**</span><span class="n">rule_params</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">y_true</span><span class="o">.</span><span class="n">flat</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">Enum</span><span class="p">):</span>
+            <span class="n">y_true</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="n">lbl</span><span class="o">.</span><span class="n">value</span> <span class="k">for</span> <span class="n">lbl</span> <span class="ow">in</span> <span class="n">y_true</span><span class="p">])</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">y_pred</span><span class="o">.</span><span class="n">flat</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">Enum</span><span class="p">):</span>
+            <span class="n">y_pred_numeric</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="n">lbl</span><span class="o">.</span><span class="n">value</span> <span class="k">for</span> <span class="n">lbl</span> <span class="ow">in</span> <span class="n">y_pred</span><span class="p">])</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">y_pred_numeric</span> <span class="o">=</span> <span class="n">y_pred</span>
+
+        <span class="n">metrics</span> <span class="o">=</span> <span class="p">{</span>
+            <span class="s2">&quot;Accuracy&quot;</span><span class="p">:</span> <span class="n">accuracy_score</span><span class="p">(</span><span class="n">y_true</span><span class="p">,</span> <span class="n">y_pred_numeric</span><span class="p">),</span>
+            <span class="s2">&quot;F1_macro&quot;</span><span class="p">:</span> <span class="n">f1_score</span><span class="p">(</span>
+                <span class="n">y_true</span><span class="p">,</span> <span class="n">y_pred_numeric</span><span class="p">,</span> <span class="n">average</span><span class="o">=</span><span class="s2">&quot;macro&quot;</span><span class="p">,</span> <span class="n">zero_division</span><span class="o">=</span><span class="mi">0</span>
+            <span class="p">),</span>
+            <span class="s2">&quot;F1_weighted&quot;</span><span class="p">:</span> <span class="n">f1_score</span><span class="p">(</span>
+                <span class="n">y_true</span><span class="p">,</span> <span class="n">y_pred_numeric</span><span class="p">,</span> <span class="n">average</span><span class="o">=</span><span class="s2">&quot;weighted&quot;</span><span class="p">,</span> <span class="n">zero_division</span><span class="o">=</span><span class="mi">0</span>
+            <span class="p">),</span>
+            <span class="s2">&quot;Precision_macro&quot;</span><span class="p">:</span> <span class="n">precision_score</span><span class="p">(</span>
+                <span class="n">y_true</span><span class="p">,</span> <span class="n">y_pred_numeric</span><span class="p">,</span> <span class="n">average</span><span class="o">=</span><span class="s2">&quot;macro&quot;</span><span class="p">,</span> <span class="n">zero_division</span><span class="o">=</span><span class="mi">0</span>
+            <span class="p">),</span>
+            <span class="s2">&quot;Recall_macro&quot;</span><span class="p">:</span> <span class="n">recall_score</span><span class="p">(</span>
+                <span class="n">y_true</span><span class="p">,</span> <span class="n">y_pred_numeric</span><span class="p">,</span> <span class="n">average</span><span class="o">=</span><span class="s2">&quot;macro&quot;</span><span class="p">,</span> <span class="n">zero_division</span><span class="o">=</span><span class="mi">0</span>
+            <span class="p">),</span>
+            <span class="s2">&quot;ARI&quot;</span><span class="p">:</span> <span class="n">adjusted_rand_score</span><span class="p">(</span><span class="n">y_true</span><span class="p">,</span> <span class="n">y_pred_numeric</span><span class="p">),</span>
+            <span class="s2">&quot;NMI&quot;</span><span class="p">:</span> <span class="n">normalized_mutual_info_score</span><span class="p">(</span><span class="n">y_true</span><span class="p">,</span> <span class="n">y_pred_numeric</span><span class="p">),</span>
+        <span class="p">}</span>
+
+        <span class="k">return</span> <span class="n">metrics</span><span class="p">,</span> <span class="n">y_pred</span></div>
+
+
+    <span class="c1"># TODO: improve the rules definition logic to improve accuracy when based against k-means, e.g. by adding interaction terms or more complex combinations of stats across windows.</span>
+<div class="viewcode-block" id="MethylStateAnalyzer.optimize_rule_params_random">
+<a class="viewcode-back" href="../../generated/methylseg.MethylStateAnalyzer.html#methylseg.MethylStateAnalyzer.optimize_rule_params_random">[docs]</a>
+    <span class="k">def</span> <span class="nf">optimize_rule_params_random</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">n_iter</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">500</span><span class="p">,</span>
+        <span class="n">score_key</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;F1_macro&quot;</span><span class="p">,</span>
+        <span class="n">random_state</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">42</span><span class="p">,</span>
+        <span class="n">param_distributions</span><span class="p">:</span> <span class="nb">dict</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Tune rule-based cutoffs with random search against KMeans labels.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        n_iter</span>
+<span class="sd">            Number of random parameter draws to evaluate.</span>
+<span class="sd">        score_key</span>
+<span class="sd">            Metric name from :meth:`evaluate_rules_against_kmeans` used to pick</span>
+<span class="sd">            the best rule set.</span>
+<span class="sd">        random_state</span>
+<span class="sd">            Seed for reproducible sampling.</span>
+<span class="sd">        param_distributions</span>
+<span class="sd">            Optional nested dictionary describing the search ranges. When omitted,</span>
+<span class="sd">            defaults are created for each window label in ``assigner.window_specs``.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_build_train_joint</span><span class="p">()</span>
+        <span class="n">rng</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">default_rng</span><span class="p">(</span><span class="n">random_state</span><span class="p">)</span>
+
+        <span class="c1"># Build default distributions if none provided</span>
+        <span class="k">if</span> <span class="n">param_distributions</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">window_labels</span> <span class="o">=</span> <span class="p">[</span><span class="n">label</span> <span class="k">for</span> <span class="n">_</span><span class="p">,</span> <span class="n">label</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">assigner</span><span class="o">.</span><span class="n">window_specs</span><span class="p">]</span>
+            <span class="n">pmd_dist</span> <span class="o">=</span> <span class="p">{</span>
+                <span class="n">label</span><span class="p">:</span> <span class="p">{</span>
+                    <span class="s2">&quot;int_min&quot;</span><span class="p">:</span> <span class="p">(</span><span class="mf">0.40</span><span class="p">,</span> <span class="mf">0.90</span><span class="p">),</span>
+                    <span class="s2">&quot;std_max&quot;</span><span class="p">:</span> <span class="p">(</span><span class="mf">0.10</span><span class="p">,</span> <span class="mf">0.40</span><span class="p">),</span>
+                    <span class="s2">&quot;high_max&quot;</span><span class="p">:</span> <span class="p">(</span><span class="mf">0.05</span><span class="p">,</span> <span class="mf">0.40</span><span class="p">),</span>
+                    <span class="s2">&quot;low_max&quot;</span><span class="p">:</span> <span class="p">(</span><span class="mf">0.05</span><span class="p">,</span> <span class="mf">0.40</span><span class="p">),</span>
+                <span class="p">}</span>
+                <span class="k">for</span> <span class="n">label</span> <span class="ow">in</span> <span class="n">window_labels</span>
+            <span class="p">}</span>
+            <span class="n">param_distributions</span> <span class="o">=</span> <span class="p">{</span>
+                <span class="s2">&quot;beta_low_max&quot;</span><span class="p">:</span> <span class="p">(</span><span class="mf">0.05</span><span class="p">,</span> <span class="mf">0.35</span><span class="p">),</span>
+                <span class="s2">&quot;beta_high_min&quot;</span><span class="p">:</span> <span class="p">(</span><span class="mf">0.60</span><span class="p">,</span> <span class="mf">0.95</span><span class="p">),</span>
+                <span class="s2">&quot;pmd&quot;</span><span class="p">:</span> <span class="n">pmd_dist</span><span class="p">,</span>
+            <span class="p">}</span>
+
+        <span class="c1"># Helper: sample a valid param set</span>
+        <span class="k">def</span> <span class="nf">sample_params</span><span class="p">():</span>
+            <span class="k">while</span> <span class="kc">True</span><span class="p">:</span>
+                <span class="n">beta_low_max</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">rng</span><span class="o">.</span><span class="n">uniform</span><span class="p">(</span><span class="o">*</span><span class="n">param_distributions</span><span class="p">[</span><span class="s2">&quot;beta_low_max&quot;</span><span class="p">]))</span>
+                <span class="n">beta_high_min</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span>
+                    <span class="n">rng</span><span class="o">.</span><span class="n">uniform</span><span class="p">(</span><span class="o">*</span><span class="n">param_distributions</span><span class="p">[</span><span class="s2">&quot;beta_high_min&quot;</span><span class="p">])</span>
+                <span class="p">)</span>
+                <span class="k">if</span> <span class="n">beta_low_max</span> <span class="o">&gt;=</span> <span class="n">beta_high_min</span><span class="p">:</span>
+                    <span class="k">continue</span>
+
+                <span class="n">pmd_cutoffs</span> <span class="o">=</span> <span class="p">{}</span>
+                <span class="k">for</span> <span class="n">label</span><span class="p">,</span> <span class="n">ranges</span> <span class="ow">in</span> <span class="n">param_distributions</span><span class="p">[</span><span class="s2">&quot;pmd&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+                    <span class="n">pmd_cutoffs</span><span class="p">[</span><span class="n">label</span><span class="p">]</span> <span class="o">=</span> <span class="p">{</span>
+                        <span class="s2">&quot;int_min&quot;</span><span class="p">:</span> <span class="nb">float</span><span class="p">(</span><span class="n">rng</span><span class="o">.</span><span class="n">uniform</span><span class="p">(</span><span class="o">*</span><span class="n">ranges</span><span class="p">[</span><span class="s2">&quot;int_min&quot;</span><span class="p">])),</span>
+                        <span class="s2">&quot;std_max&quot;</span><span class="p">:</span> <span class="nb">float</span><span class="p">(</span><span class="n">rng</span><span class="o">.</span><span class="n">uniform</span><span class="p">(</span><span class="o">*</span><span class="n">ranges</span><span class="p">[</span><span class="s2">&quot;std_max&quot;</span><span class="p">])),</span>
+                        <span class="s2">&quot;high_max&quot;</span><span class="p">:</span> <span class="nb">float</span><span class="p">(</span><span class="n">rng</span><span class="o">.</span><span class="n">uniform</span><span class="p">(</span><span class="o">*</span><span class="n">ranges</span><span class="p">[</span><span class="s2">&quot;high_max&quot;</span><span class="p">])),</span>
+                        <span class="s2">&quot;low_max&quot;</span><span class="p">:</span> <span class="nb">float</span><span class="p">(</span><span class="n">rng</span><span class="o">.</span><span class="n">uniform</span><span class="p">(</span><span class="o">*</span><span class="n">ranges</span><span class="p">[</span><span class="s2">&quot;low_max&quot;</span><span class="p">])),</span>
+                    <span class="p">}</span>
+
+                <span class="k">return</span> <span class="p">{</span>
+                    <span class="s2">&quot;beta_low_max&quot;</span><span class="p">:</span> <span class="n">beta_low_max</span><span class="p">,</span>
+                    <span class="s2">&quot;beta_high_min&quot;</span><span class="p">:</span> <span class="n">beta_high_min</span><span class="p">,</span>
+                    <span class="s2">&quot;pmd_cutoffs&quot;</span><span class="p">:</span> <span class="n">pmd_cutoffs</span><span class="p">,</span>
+                <span class="p">}</span>
+
+        <span class="k">def</span> <span class="nf">flatten_rule_params</span><span class="p">(</span><span class="n">params</span><span class="p">:</span> <span class="nb">dict</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">:</span>
+            <span class="n">out</span> <span class="o">=</span> <span class="p">{</span>
+                <span class="s2">&quot;beta_low_max&quot;</span><span class="p">:</span> <span class="n">params</span><span class="p">[</span><span class="s2">&quot;beta_low_max&quot;</span><span class="p">],</span>
+                <span class="s2">&quot;beta_high_min&quot;</span><span class="p">:</span> <span class="n">params</span><span class="p">[</span><span class="s2">&quot;beta_high_min&quot;</span><span class="p">],</span>
+            <span class="p">}</span>
+            <span class="k">for</span> <span class="n">label</span><span class="p">,</span> <span class="n">cfg</span> <span class="ow">in</span> <span class="n">params</span><span class="p">[</span><span class="s2">&quot;pmd_cutoffs&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+                <span class="n">out</span><span class="p">[</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">label</span><span class="si">}</span><span class="s2">_int_min&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">cfg</span><span class="p">[</span><span class="s2">&quot;int_min&quot;</span><span class="p">]</span>
+                <span class="n">out</span><span class="p">[</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">label</span><span class="si">}</span><span class="s2">_std_max&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">cfg</span><span class="p">[</span><span class="s2">&quot;std_max&quot;</span><span class="p">]</span>
+                <span class="n">out</span><span class="p">[</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">label</span><span class="si">}</span><span class="s2">_high_max&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">cfg</span><span class="p">[</span><span class="s2">&quot;high_max&quot;</span><span class="p">]</span>
+                <span class="n">out</span><span class="p">[</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">label</span><span class="si">}</span><span class="s2">_low_max&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">cfg</span><span class="p">[</span><span class="s2">&quot;low_max&quot;</span><span class="p">]</span>
+            <span class="k">return</span> <span class="n">out</span>
+
+        <span class="n">best_score</span> <span class="o">=</span> <span class="o">-</span><span class="n">np</span><span class="o">.</span><span class="n">inf</span>
+        <span class="n">best_params</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="n">best_metrics</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="n">best_labels</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="n">history</span> <span class="o">=</span> <span class="p">[]</span>
+
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">tqdm</span><span class="p">(</span><span class="nb">range</span><span class="p">(</span><span class="n">n_iter</span><span class="p">),</span> <span class="n">desc</span><span class="o">=</span><span class="s2">&quot;Random search&quot;</span><span class="p">):</span>
+            <span class="n">rule_params</span> <span class="o">=</span> <span class="n">sample_params</span><span class="p">()</span>
+
+            <span class="n">metrics</span><span class="p">,</span> <span class="n">labels</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">evaluate_rules_against_kmeans</span><span class="p">(</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">assigner</span><span class="o">.</span><span class="n">train_emission_df</span><span class="p">,</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">train_joint</span><span class="p">[</span><span class="s2">&quot;kmeans_label&quot;</span><span class="p">],</span>
+                <span class="o">**</span><span class="n">rule_params</span><span class="p">,</span>
+            <span class="p">)</span>
+            <span class="n">score</span> <span class="o">=</span> <span class="n">metrics</span><span class="p">[</span><span class="n">score_key</span><span class="p">]</span>
+
+            <span class="n">record</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&quot;iter&quot;</span><span class="p">:</span> <span class="n">i</span><span class="p">,</span> <span class="s2">&quot;score&quot;</span><span class="p">:</span> <span class="n">score</span><span class="p">}</span>
+            <span class="n">record</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">flatten_rule_params</span><span class="p">(</span><span class="n">rule_params</span><span class="p">))</span>
+            <span class="n">history</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">record</span><span class="p">)</span>
+
+            <span class="k">if</span> <span class="n">score</span> <span class="o">&gt;</span> <span class="n">best_score</span><span class="p">:</span>
+                <span class="n">best_score</span> <span class="o">=</span> <span class="n">score</span>
+                <span class="n">best_params</span> <span class="o">=</span> <span class="n">rule_params</span>
+                <span class="n">best_metrics</span> <span class="o">=</span> <span class="n">metrics</span>
+                <span class="n">best_labels</span> <span class="o">=</span> <span class="n">labels</span>
+
+        <span class="n">history_df</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span><span class="n">history</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">cutoffs_set_manually</span> <span class="o">=</span> <span class="kc">False</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">state_cutoffs</span> <span class="o">=</span> <span class="n">best_params</span>
+
+        <span class="n">states_by_rules</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">define_states_by_rules</span><span class="p">(</span>
+            <span class="n">sample_info</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">assigner</span><span class="o">.</span><span class="n">train_sample_info</span><span class="p">,</span>
+            <span class="n">sample_emissions</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">assigner</span><span class="o">.</span><span class="n">train_emission_df</span><span class="p">,</span>
+        <span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">train_joint</span><span class="p">[</span><span class="s2">&quot;rule_based_label&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">states_by_rules</span>
+
+        <span class="n">best_configs</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">([</span><span class="n">flatten_rule_params</span><span class="p">(</span><span class="n">best_params</span><span class="p">)])</span>
+        <span class="n">best_results</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span><span class="n">best_metrics</span><span class="p">,</span> <span class="n">index</span><span class="o">=</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+        <span class="n">optimization_summary</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">concat</span><span class="p">([</span><span class="n">best_configs</span><span class="p">,</span> <span class="n">best_results</span><span class="p">],</span> <span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">out_dir</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">optimization_summary</span><span class="o">.</span><span class="n">to_csv</span><span class="p">(</span>
+                <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">out_dir</span><span class="si">}</span><span class="s2">/rule_based_optimization_summary.csv&quot;</span><span class="p">,</span> <span class="n">index</span><span class="o">=</span><span class="kc">False</span>
+            <span class="p">)</span>
+        <span class="k">return</span> <span class="n">best_params</span><span class="p">,</span> <span class="n">best_metrics</span><span class="p">,</span> <span class="n">best_labels</span><span class="p">,</span> <span class="n">history_df</span></div>
+
+
+<div class="viewcode-block" id="MethylStateAnalyzer.define_states_by_rules">
+<a class="viewcode-back" href="../../generated/methylseg.MethylStateAnalyzer.html#methylseg.MethylStateAnalyzer.define_states_by_rules">[docs]</a>
+    <span class="k">def</span> <span class="nf">define_states_by_rules</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span> <span class="n">sample_info</span><span class="p">:</span> <span class="n">SampleInfo</span><span class="p">,</span> <span class="n">chrom</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">sample_emissions</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">sample_emissions</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">meth_emissions</span> <span class="o">=</span> <span class="n">sample_emissions</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">test_meth</span><span class="p">,</span> <span class="n">summary_stats</span><span class="p">,</span> <span class="n">test_emissions</span> <span class="o">=</span> <span class="p">(</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">assigner</span><span class="o">.</span><span class="n">prepare_sample_for_clustering</span><span class="p">(</span><span class="n">sample_info</span><span class="p">,</span> <span class="n">chrom</span><span class="p">)</span>
+            <span class="p">)</span>
+            <span class="n">meth_emissions</span> <span class="o">=</span> <span class="n">test_emissions</span>
+
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">hasattr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="s2">&quot;state_cutoffs&quot;</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                <span class="s2">&quot;State cutoffs not defined. Please run optimization or set cutoffs manually.&quot;</span>
+            <span class="p">)</span>
+
+        <span class="n">states_by_rules</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">define_states_by_rules_param</span><span class="p">(</span>
+            <span class="n">meth_emissions</span><span class="p">,</span> <span class="o">**</span><span class="bp">self</span><span class="o">.</span><span class="n">state_cutoffs</span>
+        <span class="p">)</span>
+        <span class="k">return</span> <span class="n">states_by_rules</span></div>
+
+
+    <span class="k">def</span> <span class="nf">__set_from_config</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">config</span><span class="p">:</span> <span class="n">MethylSegConfig</span><span class="p">):</span>
+        <span class="n">state_cfg</span> <span class="o">=</span> <span class="n">config</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;state_cutoffs&quot;</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">state_cfg</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">cutoffs</span> <span class="o">=</span> <span class="n">state_cfg</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;cutoffs&quot;</span><span class="p">,</span> <span class="p">{})</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">set_state_cutoffs</span><span class="p">(</span>
+                <span class="n">beta_low_max</span><span class="o">=</span><span class="n">cutoffs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;beta_low_max&quot;</span><span class="p">),</span>
+                <span class="n">beta_high_min</span><span class="o">=</span><span class="n">cutoffs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;beta_high_min&quot;</span><span class="p">),</span>
+                <span class="n">pmd_cutoffs</span><span class="o">=</span><span class="n">cutoffs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;pmd_cutoffs&quot;</span><span class="p">),</span>
+            <span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">cutoffs_set_manually</span> <span class="o">=</span> <span class="nb">bool</span><span class="p">(</span><span class="n">state_cfg</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;set_manually&quot;</span><span class="p">,</span> <span class="kc">False</span><span class="p">))</span>
+
+<div class="viewcode-block" id="MethylStateAnalyzer.set_state_cutoffs_from_yaml">
+<a class="viewcode-back" href="../../generated/methylseg.MethylStateAnalyzer.html#methylseg.MethylStateAnalyzer.set_state_cutoffs_from_yaml">[docs]</a>
+    <span class="k">def</span> <span class="nf">set_state_cutoffs_from_yaml</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">yaml_file</span><span class="p">:</span> <span class="nb">str</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Load rule cutoffs from a YAML file written by ``MethylSegConfig``.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">config</span> <span class="o">=</span> <span class="n">MethylSegConfig</span><span class="o">.</span><span class="n">from_yaml</span><span class="p">(</span><span class="n">yaml_file</span><span class="p">)</span><span class="o">.</span><span class="n">config</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">__set_from_config</span><span class="p">(</span><span class="n">config</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="MethylStateAnalyzer.set_state_cutoffs">
+<a class="viewcode-back" href="../../generated/methylseg.MethylStateAnalyzer.html#methylseg.MethylStateAnalyzer.set_state_cutoffs">[docs]</a>
+    <span class="k">def</span> <span class="nf">set_state_cutoffs</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">beta_low_max</span><span class="p">:</span> <span class="nb">float</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">beta_high_min</span><span class="p">:</span> <span class="nb">float</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">pmd_cutoffs</span><span class="p">:</span> <span class="nb">dict</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Simple manual state cutoff setter with clean pythonic defaults.</span>
+
+<span class="sd">        - If user does not provide pmd_cutoffs, defaults are used:</span>
+<span class="sd">            int_min = 0.56</span>
+<span class="sd">            std_max = 0.264</span>
+<span class="sd">            high_max = 0.246</span>
+<span class="sd">            low_max = 0.246</span>
+<span class="sd">        - Defaults apply to every window given in assigner.window_specs</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">int_min_default</span> <span class="o">=</span> <span class="mf">0.56</span>
+        <span class="n">std_max_default</span> <span class="o">=</span> <span class="mf">0.264</span>
+        <span class="n">high_max_default</span> <span class="o">=</span> <span class="mf">0.246</span>
+        <span class="n">low_max_default</span> <span class="o">=</span> <span class="mf">0.246</span>
+        <span class="n">beta_high_max_default</span> <span class="o">=</span> <span class="mf">0.694</span>
+        <span class="n">beta_low_max_default</span> <span class="o">=</span> <span class="mf">0.290</span>
+        <span class="k">if</span> <span class="n">beta_low_max</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">beta_low_max</span> <span class="o">=</span> <span class="n">beta_low_max_default</span>
+        <span class="k">if</span> <span class="n">beta_high_min</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">beta_high_min</span> <span class="o">=</span> <span class="n">beta_high_max_default</span>
+
+        <span class="n">final_pmd_cutoffs</span> <span class="o">=</span> <span class="p">{}</span>
+
+        <span class="k">for</span> <span class="n">_</span><span class="p">,</span> <span class="n">label</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">assigner</span><span class="o">.</span><span class="n">window_specs</span><span class="p">:</span>
+            <span class="n">cfg</span> <span class="o">=</span> <span class="p">(</span><span class="n">pmd_cutoffs</span> <span class="ow">or</span> <span class="p">{})</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">label</span><span class="p">,</span> <span class="p">{})</span>
+            <span class="n">final_pmd_cutoffs</span><span class="p">[</span><span class="n">label</span><span class="p">]</span> <span class="o">=</span> <span class="p">{</span>
+                <span class="s2">&quot;int_min&quot;</span><span class="p">:</span> <span class="n">cfg</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;int_min&quot;</span><span class="p">,</span> <span class="n">int_min_default</span><span class="p">),</span>
+                <span class="s2">&quot;std_max&quot;</span><span class="p">:</span> <span class="n">cfg</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;std_max&quot;</span><span class="p">,</span> <span class="n">std_max_default</span><span class="p">),</span>
+                <span class="s2">&quot;high_max&quot;</span><span class="p">:</span> <span class="n">cfg</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;high_max&quot;</span><span class="p">,</span> <span class="n">high_max_default</span><span class="p">),</span>
+                <span class="s2">&quot;low_max&quot;</span><span class="p">:</span> <span class="n">cfg</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;low_max&quot;</span><span class="p">,</span> <span class="n">low_max_default</span><span class="p">),</span>
+            <span class="p">}</span>
+
+        <span class="c1"># Save all cutoffs</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">state_cutoffs</span> <span class="o">=</span> <span class="p">{</span>
+            <span class="s2">&quot;beta_low_max&quot;</span><span class="p">:</span> <span class="nb">float</span><span class="p">(</span><span class="n">beta_low_max</span><span class="p">),</span>
+            <span class="s2">&quot;beta_high_min&quot;</span><span class="p">:</span> <span class="nb">float</span><span class="p">(</span><span class="n">beta_high_min</span><span class="p">),</span>
+            <span class="s2">&quot;pmd_cutoffs&quot;</span><span class="p">:</span> <span class="n">final_pmd_cutoffs</span><span class="p">,</span>
+        <span class="p">}</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">cutoffs_set_manually</span> <span class="o">=</span> <span class="kc">True</span></div>
+
+
+<div class="viewcode-block" id="MethylStateAnalyzer.pretty_print_rules">
+<a class="viewcode-back" href="../../generated/methylseg.MethylStateAnalyzer.html#methylseg.MethylStateAnalyzer.pretty_print_rules">[docs]</a>
+    <span class="k">def</span> <span class="nf">pretty_print_rules</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Print the active rule-based state definitions in a compact form.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">hasattr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="s2">&quot;state_cutoffs&quot;</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                <span class="s2">&quot;State cutoffs not defined. Please run optimization or set cutoffs manually.&quot;</span>
+            <span class="p">)</span>
+
+        <span class="n">c</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">state_cutoffs</span>
+        <span class="n">beta_low_max</span> <span class="o">=</span> <span class="n">c</span><span class="p">[</span><span class="s2">&quot;beta_low_max&quot;</span><span class="p">]</span>
+        <span class="n">beta_high_min</span> <span class="o">=</span> <span class="n">c</span><span class="p">[</span><span class="s2">&quot;beta_high_min&quot;</span><span class="p">]</span>
+        <span class="n">pmd_cutoffs</span> <span class="o">=</span> <span class="n">c</span><span class="p">[</span><span class="s2">&quot;pmd_cutoffs&quot;</span><span class="p">]</span>
+        <span class="n">regional_window_labels</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">assigner</span><span class="o">.</span><span class="n">get_regional_window_labels</span><span class="p">()</span>
+
+        <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;PMD:&quot;</span><span class="p">)</span>
+        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">beta_low_max</span><span class="si">:</span><span class="s2">.3f</span><span class="si">}</span><span class="s2"> &lt;= beta &lt;= </span><span class="si">{</span><span class="n">beta_high_min</span><span class="si">:</span><span class="s2">.3f</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+
+        <span class="n">regional_parts</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">label</span> <span class="ow">in</span> <span class="n">regional_window_labels</span><span class="p">:</span>
+            <span class="n">cfg</span> <span class="o">=</span> <span class="n">pmd_cutoffs</span><span class="p">[</span><span class="n">label</span><span class="p">]</span>
+            <span class="n">low_max</span> <span class="o">=</span> <span class="n">cfg</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;low_max&quot;</span><span class="p">,</span> <span class="n">cfg</span><span class="p">[</span><span class="s2">&quot;high_max&quot;</span><span class="p">])</span>
+            <span class="n">regional_parts</span><span class="o">.</span><span class="n">append</span><span class="p">(</span>
+                <span class="s2">&quot;(&quot;</span>
+                <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">label</span><span class="si">}</span><span class="s2">_int_pct &gt;= </span><span class="si">{</span><span class="n">cfg</span><span class="p">[</span><span class="s1">&#39;int_min&#39;</span><span class="p">]</span><span class="si">:</span><span class="s2">.3f</span><span class="si">}</span><span class="s2"> AND &quot;</span>
+                <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">label</span><span class="si">}</span><span class="s2">_std &lt;= </span><span class="si">{</span><span class="n">cfg</span><span class="p">[</span><span class="s1">&#39;std_max&#39;</span><span class="p">]</span><span class="si">:</span><span class="s2">.3f</span><span class="si">}</span><span class="s2"> AND &quot;</span>
+                <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">label</span><span class="si">}</span><span class="s2">_high_pct &lt;= </span><span class="si">{</span><span class="n">cfg</span><span class="p">[</span><span class="s1">&#39;high_max&#39;</span><span class="p">]</span><span class="si">:</span><span class="s2">.3f</span><span class="si">}</span><span class="s2"> AND &quot;</span>
+                <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">label</span><span class="si">}</span><span class="s2">_low_pct &lt;= </span><span class="si">{</span><span class="n">low_max</span><span class="si">:</span><span class="s2">.3f</span><span class="si">}</span><span class="s2">&quot;</span>
+                <span class="s2">&quot;)&quot;</span>
+            <span class="p">)</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;AND &quot;</span> <span class="o">+</span> <span class="s2">&quot; OR &quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">regional_parts</span><span class="p">)</span> <span class="o">+</span> <span class="s2">&quot;</span><span class="se">\n</span><span class="s2">&quot;</span><span class="p">)</span>
+
+        <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Low methylation:&quot;</span><span class="p">)</span>
+        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;beta &lt;= </span><span class="si">{</span><span class="n">beta_low_max</span><span class="si">:</span><span class="s2">.3f</span><span class="si">}</span><span class="s2"> AND NOT PMD</span><span class="se">\n</span><span class="s2">&quot;</span><span class="p">)</span>
+
+        <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Intermediate methylation:&quot;</span><span class="p">)</span>
+        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">beta_low_max</span><span class="si">:</span><span class="s2">.3f</span><span class="si">}</span><span class="s2"> &lt; beta &lt; </span><span class="si">{</span><span class="n">beta_high_min</span><span class="si">:</span><span class="s2">.3f</span><span class="si">}</span><span class="s2"> AND NOT PMD</span><span class="se">\n</span><span class="s2">&quot;</span><span class="p">)</span>
+
+        <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;High methylation:&quot;</span><span class="p">)</span>
+        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;beta &gt;= </span><span class="si">{</span><span class="n">beta_high_min</span><span class="si">:</span><span class="s2">.3f</span><span class="si">}</span><span class="s2"> AND NOT PMD</span><span class="se">\n</span><span class="s2">&quot;</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="MethylStateAnalyzer.evaluate_clustering_concordance">
+<a class="viewcode-back" href="../../generated/methylseg.MethylStateAnalyzer.html#methylseg.MethylStateAnalyzer.evaluate_clustering_concordance">[docs]</a>
+    <span class="k">def</span> <span class="nf">evaluate_clustering_concordance</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">use_train_data</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
+        <span class="n">sample_info</span><span class="p">:</span> <span class="n">SampleInfo</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">chrom</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Evaluate rule-based labels against KMeans cluster labels as ground truth.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">hasattr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="s2">&quot;state_cutoffs&quot;</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                <span class="s2">&quot;State cutoffs not defined. Please run optimization or set cutoffs manually.&quot;</span>
+            <span class="p">)</span>
+        <span class="k">if</span> <span class="n">use_train_data</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_build_train_joint</span><span class="p">()</span>
+            <span class="n">y_true</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">train_joint</span><span class="p">[</span><span class="s2">&quot;kmeans_label&quot;</span><span class="p">]</span>
+            <span class="n">y_pred</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">train_joint</span><span class="p">[</span><span class="s2">&quot;rule_based_label&quot;</span><span class="p">]</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">y_true</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">assigner</span><span class="o">.</span><span class="n">apply_kmeans_to_sample</span><span class="p">(</span>
+                <span class="n">sample_info</span><span class="o">=</span><span class="n">sample_info</span><span class="p">,</span> <span class="n">chrom</span><span class="o">=</span><span class="n">chrom</span>
+            <span class="p">)[</span><span class="mi">5</span><span class="p">]</span>
+            <span class="n">y_pred</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">define_states_by_rules</span><span class="p">(</span><span class="n">sample_info</span><span class="o">=</span><span class="n">sample_info</span><span class="p">,</span> <span class="n">chrom</span><span class="o">=</span><span class="n">chrom</span><span class="p">)</span>
+
+        <span class="c1"># --- Ensure numpy arrays ---</span>
+        <span class="n">y_true</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">y_true</span><span class="p">)</span>
+        <span class="n">y_pred</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">y_pred</span><span class="p">)</span>
+
+        <span class="c1"># --- Convert Enum → integer for sklearn ---</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">y_true</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">Enum</span><span class="p">):</span>
+            <span class="n">y_true</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="n">lbl</span><span class="o">.</span><span class="n">value</span> <span class="k">for</span> <span class="n">lbl</span> <span class="ow">in</span> <span class="n">y_true</span><span class="p">])</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">y_pred</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">Enum</span><span class="p">):</span>
+            <span class="n">y_pred_numeric</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="n">lbl</span><span class="o">.</span><span class="n">value</span> <span class="k">for</span> <span class="n">lbl</span> <span class="ow">in</span> <span class="n">y_pred</span><span class="p">])</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">y_pred_numeric</span> <span class="o">=</span> <span class="n">y_pred</span>
+
+        <span class="c1"># ⬇️ Detailed per-class performance</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;</span><span class="se">\n</span><span class="s2">Classification Report:&quot;</span><span class="p">)</span>
+        <span class="n">target_names</span> <span class="o">=</span> <span class="p">[</span><span class="n">s</span><span class="o">.</span><span class="n">name</span> <span class="k">for</span> <span class="n">s</span> <span class="ow">in</span> <span class="n">MethylationStates</span><span class="p">]</span>
+        <span class="nb">print</span><span class="p">(</span>
+            <span class="n">classification_report</span><span class="p">(</span>
+                <span class="n">y_true</span><span class="p">,</span> <span class="n">y_pred_numeric</span><span class="p">,</span> <span class="n">target_names</span><span class="o">=</span><span class="n">target_names</span><span class="p">,</span> <span class="n">zero_division</span><span class="o">=</span><span class="mi">0</span>
+            <span class="p">)</span>
+        <span class="p">)</span>
+
+        <span class="c1"># ⬇️ Confusion Matrix Heatmap</span>
+        <span class="n">cm</span> <span class="o">=</span> <span class="n">confusion_matrix</span><span class="p">(</span><span class="n">y_true</span><span class="p">,</span> <span class="n">y_pred_numeric</span><span class="p">)</span>
+        <span class="n">cm_df</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span>
+            <span class="n">cm</span><span class="p">,</span>
+            <span class="n">index</span><span class="o">=</span><span class="p">[</span><span class="n">label</span><span class="o">.</span><span class="n">name</span> <span class="k">for</span> <span class="n">label</span> <span class="ow">in</span> <span class="n">MethylationStates</span><span class="p">],</span>
+            <span class="n">columns</span><span class="o">=</span><span class="p">[</span><span class="n">label</span><span class="o">.</span><span class="n">name</span> <span class="k">for</span> <span class="n">label</span> <span class="ow">in</span> <span class="n">MethylationStates</span><span class="p">],</span>
+        <span class="p">)</span>
+
+        <span class="n">plt</span><span class="o">.</span><span class="n">figure</span><span class="p">(</span><span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">6</span><span class="p">,</span> <span class="mi">5</span><span class="p">))</span>
+        <span class="n">sns</span><span class="o">.</span><span class="n">heatmap</span><span class="p">(</span><span class="n">cm_df</span><span class="p">,</span> <span class="n">annot</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">fmt</span><span class="o">=</span><span class="s2">&quot;d&quot;</span><span class="p">,</span> <span class="n">cmap</span><span class="o">=</span><span class="s2">&quot;Blues&quot;</span><span class="p">)</span>
+        <span class="n">plt</span><span class="o">.</span><span class="n">title</span><span class="p">(</span><span class="s2">&quot;Confusion Matrix — KMeans (True) vs Rule-Based (Pred)&quot;</span><span class="p">)</span>
+        <span class="n">plt</span><span class="o">.</span><span class="n">ylabel</span><span class="p">(</span><span class="s2">&quot;True (KMeans)&quot;</span><span class="p">)</span>
+        <span class="n">plt</span><span class="o">.</span><span class="n">xlabel</span><span class="p">(</span><span class="s2">&quot;Predicted (Rule-Based)&quot;</span><span class="p">)</span>
+        <span class="n">plt</span><span class="o">.</span><span class="n">tight_layout</span><span class="p">()</span>
+        <span class="n">plt</span><span class="o">.</span><span class="n">show</span><span class="p">()</span>
+
+        <span class="k">return</span> <span class="n">cm_df</span></div>
+
+
+<div class="viewcode-block" id="MethylStateAnalyzer.plot_interactive_beta_by_label">
+<a class="viewcode-back" href="../../generated/methylseg.MethylStateAnalyzer.html#methylseg.MethylStateAnalyzer.plot_interactive_beta_by_label">[docs]</a>
+    <span class="k">def</span> <span class="nf">plot_interactive_beta_by_label</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">label_type</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;kmeans&quot;</span><span class="p">,</span>
+        <span class="n">use_train_data</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
+        <span class="n">chrom</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">sample_info</span><span class="p">:</span> <span class="n">SampleInfo</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">sample_info_removed</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">x_col</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;CpG_beg&quot;</span><span class="p">,</span>
+        <span class="n">y_col</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;beta&quot;</span><span class="p">,</span>
+        <span class="n">label_title</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">show_plot</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
+        <span class="n">max_points</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">120_000</span><span class="p">,</span>  <span class="c1"># ← added</span>
+        <span class="n">color_pmd_only</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+        <span class="n">color_regions_df</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Interactive scatter: genomic position vs beta, colored by label.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c1"># -----------------------</span>
+        <span class="c1"># Build plotting DataFrame</span>
+        <span class="c1"># -----------------------</span>
+        <span class="k">if</span> <span class="n">use_train_data</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_build_train_joint</span><span class="p">()</span>
+            <span class="n">df_plot</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">train_joint</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">sample_info</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                    <span class="s2">&quot;sample_info must be provided when use_train_data is False.&quot;</span>
+                <span class="p">)</span>
+
+            <span class="n">meth_data</span><span class="p">,</span> <span class="n">emission_df</span><span class="p">,</span> <span class="n">_</span><span class="p">,</span> <span class="n">_</span><span class="p">,</span> <span class="n">_</span><span class="p">,</span> <span class="n">labels</span> <span class="o">=</span> <span class="p">(</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">assigner</span><span class="o">.</span><span class="n">apply_kmeans_to_sample</span><span class="p">(</span>
+                    <span class="n">sample_info</span><span class="o">=</span><span class="n">sample_info</span><span class="p">,</span> <span class="n">chrom</span><span class="o">=</span><span class="n">chrom</span>
+                <span class="p">)</span>
+            <span class="p">)</span>
+
+            <span class="n">df_plot</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">concat</span><span class="p">([</span><span class="n">meth_data</span><span class="p">,</span> <span class="n">emission_df</span><span class="p">],</span> <span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+            <span class="n">df_plot</span> <span class="o">=</span> <span class="n">df_plot</span><span class="o">.</span><span class="n">loc</span><span class="p">[:,</span> <span class="o">~</span><span class="n">df_plot</span><span class="o">.</span><span class="n">columns</span><span class="o">.</span><span class="n">duplicated</span><span class="p">()]</span>
+            <span class="n">df_plot</span><span class="p">[</span><span class="s2">&quot;kmeans_label&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">labels</span>
+
+            <span class="k">if</span> <span class="n">label_type</span> <span class="o">==</span> <span class="s2">&quot;rule_based&quot;</span><span class="p">:</span>
+                <span class="n">rule_labels</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">define_states_by_rules</span><span class="p">(</span>
+                    <span class="n">sample_info</span><span class="o">=</span><span class="n">sample_info</span><span class="p">,</span>
+                    <span class="n">chrom</span><span class="o">=</span><span class="n">chrom</span><span class="p">,</span>
+                    <span class="n">sample_emissions</span><span class="o">=</span><span class="n">emission_df</span><span class="p">,</span>
+                <span class="p">)</span>
+                <span class="n">df_plot</span><span class="p">[</span><span class="s2">&quot;rule_based_label&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">rule_labels</span>
+        <span class="n">label_col</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">label_type</span><span class="si">}</span><span class="s2">_label&quot;</span>
+        <span class="k">return</span> <span class="n">plot_interactive_beta_scatter</span><span class="p">(</span>
+            <span class="n">df_plot</span><span class="o">=</span><span class="n">df_plot</span><span class="p">,</span>
+            <span class="n">sample_info</span><span class="o">=</span><span class="n">sample_info</span><span class="p">,</span>
+            <span class="n">sample_info_removed</span><span class="o">=</span><span class="n">sample_info_removed</span><span class="p">,</span>
+            <span class="n">chrom</span><span class="o">=</span><span class="n">chrom</span><span class="p">,</span>
+            <span class="n">out_dir</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">out_dir</span><span class="p">,</span>
+            <span class="n">label_col</span><span class="o">=</span><span class="n">label_col</span><span class="p">,</span>
+            <span class="n">x_col</span><span class="o">=</span><span class="n">x_col</span><span class="p">,</span>
+            <span class="n">y_col</span><span class="o">=</span><span class="n">y_col</span><span class="p">,</span>
+            <span class="n">label_title</span><span class="o">=</span><span class="n">label_title</span><span class="p">,</span>
+            <span class="n">show_plot</span><span class="o">=</span><span class="n">show_plot</span><span class="p">,</span>
+            <span class="n">max_points</span><span class="o">=</span><span class="n">max_points</span><span class="p">,</span>
+            <span class="n">color_pmd_only</span><span class="o">=</span><span class="n">color_pmd_only</span><span class="p">,</span>
+            <span class="n">color_regions_df</span><span class="o">=</span><span class="n">color_regions_df</span><span class="p">,</span>
+        <span class="p">)</span></div>
+</div>
+
+</pre></div>
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright .</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

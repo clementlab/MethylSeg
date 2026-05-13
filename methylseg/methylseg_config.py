@@ -1,3 +1,5 @@
+"""Serialization helpers for saving and restoring methylseg workflow settings."""
+
 from pathlib import Path
 
 import joblib
