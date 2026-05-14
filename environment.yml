@@ -21,3 +21,4 @@ dependencies:
   - pyyaml
   - conda-forge::panel
   - plotly
+  - gdown

@@ -25,19 +25,30 @@ from .helper_classes import (
     MethylStateAssignmentMethod,
     MethylationStates,
     SampleInfo,
+    HMMType,
 )
+from .data_manager import download_data_files, is_lfs_pointer
 
 
 class MethylSegPathway:
     """High-level API that coordinates preparation, training, and segmentation."""
 
     @classmethod
-    def get_pretrained_model(cls, out_dir, resolution="450k"):
-        pretrained_yaml = FILES / f"tcga_hm450k_model.yaml" if resolution == "450k" else FILES / f"wgbs_colon_model.yaml"
-        if not pretrained_yaml.exists():
-            raise FileNotFoundError(
-                f"Packaged pretrained config was not found: {pretrained_yaml}"
-            )
+    def get_pretrained_model(
+        cls, out_dir, resolution="450k", download_if_missing=False
+    ):
+        pretrained_yaml = (
+            FILES / f"tcga_hm450k_model.yaml"
+            if resolution == "450k"
+            else FILES / f"wgbs_colon_model.yaml"
+        )
+        if not pretrained_yaml.exists() or is_lfs_pointer(pretrained_yaml):
+            if download_if_missing:
+                download_data_files()
+            else:
+                raise FileNotFoundError(
+                    "Pretrained model not found, if you would like to download it, set download_if_missing=True."
+                )
         model = cls.from_yaml(pretrained_yaml)
         model.set_out_dir(out_dir)
         return model
@@ -102,7 +113,7 @@ class MethylSegPathway:
             meth_data=filtered_meth_data,
         )
 
-    #TODO: think about if train_sample* naming makes sense
+    # TODO: think about if train_sample* naming makes sense
     def __init__(
         self,
         n_states: int = 4,
@@ -121,11 +132,11 @@ class MethylSegPathway:
         state_assignment_method: MethylStateAssignmentMethod = MethylStateAssignmentMethod.KMEANS,
         out_dir: str = ".",
         random_state: int = 42,
-        #TODO: make cluster_space an enum
+        # TODO: make cluster_space an enum
         cluster_space: str = "pca",
         n_pca: int | None = 5,
-        #TODO: make hmm_type an enum
-        hmm_type: str = "ct",
+        # TODO: make hmm_type an enum
+        hmm_type: HMMType = HMMType.CT,
         hmm_params: dict = {},
         min_region_length: int = 0,
         min_region_cpgs: int = 6,
@@ -175,12 +186,12 @@ class MethylSegPathway:
                 HMMObservationMode.GAUSSIAN_EMISSIONS,
                 HMMObservationMode.PCA_EMISSIONS,
             }
-            and self.hmm_type != "gaussian"
+            and self.hmm_type != HMMType.GAUSSIAN
         ):
             raise ValueError(
                 "Gaussian-backed observation modes require " "hmm_type='gaussian'."
             )
-        if self.hmm_type == "gaussian" and self.hmm_observation_mode not in {
+        if self.hmm_type == HMMType.GAUSSIAN and self.hmm_observation_mode not in {
             HMMObservationMode.GAUSSIAN_EMISSIONS,
             HMMObservationMode.PCA_EMISSIONS,
         }:
@@ -311,24 +322,24 @@ class MethylSegPathway:
         return normalized_cutoffs
 
     def _init_hmm(self):
-        if self.hmm_type == "multinomial":
+        if self.hmm_type == HMMType.MULTINOMIAL:
             self.hmm_model = MultinomialSegHMM(
                 n_states=self.n_states,
                 random_state=self.random_state,
                 **self.hmm_params,
             )
-        elif self.hmm_type == "sticky":
+        elif self.hmm_type == HMMType.STICKY:
             self.hmm_model = StickyCategoricalMethylSegHMM(
                 n_states=self.n_states,
                 random_state=self.random_state,
                 **self.hmm_params,
             )
-        elif self.hmm_type == "ct":
+        elif self.hmm_type == HMMType.CT:
             self.hmm_model = CTMethylSegHMM(
                 n_states=self.n_states,
                 **self.hmm_params,
             )
-        elif self.hmm_type == "gaussian":
+        elif self.hmm_type == HMMType.GAUSSIAN:
             self.hmm_model = GaussianMethylSegHMM(
                 n_states=self.n_states,
                 random_state=self.random_state,
@@ -355,7 +366,8 @@ class MethylSegPathway:
             or force_optimize_rules
         ):
             self.analyzer.optimize_rule_params_random()
-    #TODO if keeping train sample parameters, make functions like this default to train sample.
+
+    # TODO if keeping train sample parameters, make functions like this default to train sample.
     def generate_regions(
         self,
         sample_info: SampleInfo | None = None,
@@ -605,7 +617,7 @@ class MethylSegPathway:
             .tolist()
         )
 
-        joint_hmm_types = {"sticky", "multinomial", "gaussian"}
+        joint_hmm_types = {HMMType.STICKY, HMMType.MULTINOMIAL, HMMType.GAUSSIAN}
         if self.hmm_type in joint_hmm_types:
             self.segmentor.segment_sample(
                 sample_info=filtered_sample_info,
@@ -639,7 +651,7 @@ class MethylSegPathway:
         else:
             combined_regions_df = self._empty_regions_df()
         self.segmentor.regions_df = combined_regions_df.copy()
-        #TODO: save combined regions to bed files by state here as well segments_HIGH.bed segments_PMD.bed etc.
+        # TODO: save combined regions to bed files by state here as well segments_HIGH.bed segments_PMD.bed etc.
         return combined_regions_df
 
     # TODO: fix this, it is not saving train_sample_info or train_sample_file and train_sample_name correctly
@@ -778,7 +790,9 @@ class MethylSegPathway:
 
         pathway_cfg = cfg.get("pathway", {})
         if not pathway_cfg:
-            raise ValueError("Serialized config is missing the required 'pathway' section.")
+            raise ValueError(
+                "Serialized config is missing the required 'pathway' section."
+            )
 
         n_states = pathway_cfg.get("n_states", 4)
         int_low_cutoff = pathway_cfg.get("int_low_cutoff", 0.2)

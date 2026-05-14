@@ -14,8 +14,36 @@ from sklearn.impute import SimpleImputer
 from sklearn.preprocessing import StandardScaler
 
 CODE_DIR = Path(__file__).resolve().parent.parent
-FILES = CODE_DIR / "data" / "reference_files"
+DATA_DIR = CODE_DIR / "data"
+FILES = DATA_DIR / "reference_files"
 CANONICAL_AUTOSOMES = tuple(f"chr{i}" for i in range(1, 23))
+
+
+class MethylEnum(Enum):
+    """Base class for methylseg enums with case-insensitive string parsing."""
+
+    @classmethod
+    def from_string(cls, s: str):
+        s = s.strip().lower()
+        for member in cls:
+            if member.name.lower() == s:
+                return member
+        raise ValueError(
+            f"Invalid {cls.__name__} value: {s}. "
+            f"Valid options are: {[m.name for m in cls]}"
+        )
+
+    def __eq__(self, other):
+        if isinstance(other, str):
+            try:
+                other = self.__class__.from_string(other)
+            except ValueError:
+                return NotImplemented
+        return super().__eq__(other)
+    
+ 
+    def __str__(self):
+        return self.name
 
 
 @dataclass
@@ -32,7 +60,7 @@ class KMeansMethylationModel:
     n_pca: Optional[int] = 5
 
 
-class MethylStateAssignmentMethod(Enum):
+class MethylStateAssignmentMethod(MethylEnum):
     """Strategies for mapping emissions to biological methylation states."""
 
     DEFINITION = "definition"
@@ -40,7 +68,16 @@ class MethylStateAssignmentMethod(Enum):
     AUTO = "auto"
 
 
-class HMMObservationMode(Enum):
+class HMMType(MethylEnum):
+    """Supported HMM model types for segmentation."""
+
+    CT = "continuous-time"
+    STICKY = "sticky"
+    GAUSSIAN = "gaussian"
+    MULTINOMIAL = "multinomial"
+
+
+class HMMObservationMode(MethylEnum):
     """Observation representations supported by the downstream HMM segmentor."""
 
     DISCRETE_STATES = "discrete_states"
@@ -115,7 +152,7 @@ class MethylDataPrep:
         "probe": {"probe", "probe_id", "cpg", "cpg_id"},
     }
 
-    #TODO: Add 27k resolution support
+    # TODO: Add 27k resolution support
     def __init__(
         self,
         meth_file,
@@ -337,7 +374,9 @@ class MethylDataPrep:
             sep="\t",
             header=None,
             low_memory=False,
-            compression="gzip" if self.meth_file.suffix in {".gz", ".gzip"} else "infer",
+            compression=(
+                "gzip" if self.meth_file.suffix in {".gz", ".gzip"} else "infer"
+            ),
         )
         if df.empty:
             return pd.DataFrame(
@@ -389,17 +428,13 @@ class MethylDataPrep:
         return out_file
 
 
-class MethylationStates(Enum):
+class MethylationStates(MethylEnum):
     """Canonical biological methylation states used throughout the package."""
 
     LOW = 0
     PMD = 1
     INTERMEDIATE = 2
     HIGH = 3
-
-    def __str__(self):
-        return self.name
-
     def __lt__(self, other):
         if isinstance(other, MethylationStates):
             return self.value < other.value

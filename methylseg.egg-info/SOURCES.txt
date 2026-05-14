@@ -1,6 +1,8 @@
 README.md
 pyproject.toml
 methylseg/__init__.py
+methylseg/cli.py
+methylseg/data_manager.py
 methylseg/helper_classes.py
 methylseg/methyl_segmentor.py
 methylseg/methyl_state_analyzer.py
@@ -12,5 +14,6 @@ methylseg/utils.py
 methylseg.egg-info/PKG-INFO
 methylseg.egg-info/SOURCES.txt
 methylseg.egg-info/dependency_links.txt
+methylseg.egg-info/entry_points.txt
 methylseg.egg-info/requires.txt
 methylseg.egg-info/top_level.txt
