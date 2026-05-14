@@ -64,6 +64,20 @@ class MethylStateAssigner:
             methylation context around each CpG.
         n_states
             Number of coarse methylation states to learn during clustering.
+        int_low_cutoff
+            Lower cutoff for intermediate methylation state.
+        int_high_cutoff
+            Upper cutoff for intermediate methylation state.
+        high_cutoff
+            Cutoff for high methylation state.
+        out_dir
+            Directory to save output files.
+        random_state
+            Random state for reproducibility.
+        cluster_space
+            Space in which to perform k-means clustering ('pca' or 'raw').
+        n_pca
+            Number of principal components to use if cluster_space is 'pca'.
         """
         self.window_specs = window_specs
         self.n_states = n_states
@@ -84,248 +98,6 @@ class MethylStateAssigner:
                 f"Received: {cluster_space!r}"
             )
         return normalized_cluster_space
-
-    def generate_multi_window_summary_centered(
-        self,
-        meth_data: pd.DataFrame,
-        chrom: Optional[str] = None,
-    ) -> pd.DataFrame:
-        """
-        Compute per-CpG multi-window summary statistics using windows centered on each CpG.
-
-        Parameters
-        ----------
-        meth_data : DataFrame
-        Must contain columns ['CpG_chrm', 'CpG_beg', 'CpG_end', 'beta'].
-        chrom : optional chromosome filter.
-
-        Returns
-        -------
-        DataFrame : one row per CpG with a 'summaries' dict per row.
-        """
-        df = meth_data.copy()
-
-        if chrom is not None:
-            df = df[df["CpG_chrm"] == chrom]
-
-        df["CpG_mid"] = ((df["CpG_beg"].values + df["CpG_end"].values) // 2).astype(
-            np.int64
-        )
-        df["summaries"] = [{} for _ in range(len(df))]
-
-        def prefix_interval_sum(cumsum_array, start_idx, end_idx):
-            if start_idx > end_idx:
-                return 0.0
-            if start_idx == 0:
-                return float(cumsum_array[end_idx])
-            return float(cumsum_array[end_idx] - cumsum_array[start_idx - 1])
-
-        for chrom_name, chrom_df in df.groupby("CpG_chrm", sort=False):
-            global_row_indices = chrom_df.index.to_numpy()
-            positions = chrom_df["CpG_mid"].to_numpy()
-            betas = chrom_df["beta"].to_numpy().astype(float)
-            n_cpgs = len(chrom_df)
-            if n_cpgs == 0:
-                continue
-
-            beta_cumsum = np.cumsum(betas)
-            beta_squared_cumsum = np.cumsum(betas**2)
-
-            int_cpgs = (
-                (betas >= self.int_low_cutoff) & (betas <= self.int_high_cutoff)
-            ).astype(np.int64)
-            high_cpgs = (betas > self.high_cutoff).astype(np.int64)
-            low_cpgs = (betas < self.int_low_cutoff).astype(np.int64)
-
-            intermediate_cumsum = np.cumsum(int_cpgs)
-            high_cumsum = np.cumsum(high_cpgs)
-            low_cumsum = np.cumsum(low_cpgs)
-
-            for window_size, label in self.window_specs:
-                window_start_idx = 0
-                window_end_idx = 0
-
-                for cpg_idx in range(n_cpgs):
-                    cpg_center = positions[cpg_idx]
-                    window_start_pos = cpg_center - window_size // 2
-                    window_end_pos = cpg_center + window_size // 2
-
-                    while (
-                        window_start_idx < n_cpgs
-                        and positions[window_start_idx] < window_start_pos
-                    ):
-                        window_start_idx += 1
-
-                    while (
-                        window_end_idx + 1 < n_cpgs
-                        and positions[window_end_idx + 1] <= window_end_pos
-                    ):
-                        window_end_idx += 1
-
-                    cpg_count = window_end_idx - window_start_idx + 1
-                    if cpg_count <= 0:
-                        continue
-
-                    sum_beta = prefix_interval_sum(
-                        beta_cumsum, window_start_idx, window_end_idx
-                    )
-                    sum_beta_squared = prefix_interval_sum(
-                        beta_squared_cumsum, window_start_idx, window_end_idx
-                    )
-
-                    mean_beta = sum_beta / cpg_count
-                    variance = (sum_beta_squared / cpg_count) - (mean_beta**2)
-                    variance = max(variance, 0.0)
-                    stddev_beta = float(np.sqrt(variance))
-
-                    intermediate_count = prefix_interval_sum(
-                        intermediate_cumsum, window_start_idx, window_end_idx
-                    )
-                    high_count = prefix_interval_sum(
-                        high_cumsum, window_start_idx, window_end_idx
-                    )
-                    low_count = prefix_interval_sum(
-                        low_cumsum, window_start_idx, window_end_idx
-                    )
-
-                    intermediate_fraction = intermediate_count / cpg_count
-                    high_fraction = high_count / cpg_count
-                    low_fraction = low_count / cpg_count
-
-                    median_beta = float(
-                        np.median(betas[window_start_idx : window_end_idx + 1])
-                    )
-
-                    summary = {
-                        "window_info": {
-                            "window_size": window_size,
-                            "window_start": int(window_start_pos),
-                            "window_end": int(window_end_pos),
-                            "CpG_count": int(cpg_count),
-                        },
-                        "avg_meth": float(mean_beta),
-                        "median_meth": median_beta,
-                        "std": float(stddev_beta),
-                        "high_pct": float(high_fraction),
-                        "int_pct": float(intermediate_fraction),
-                        "low_pct": float(low_fraction),
-                    }
-
-                    global_row = global_row_indices[cpg_idx]
-                    df.at[global_row, "summaries"][label] = summary
-
-        df = df.drop(columns=["CpG_mid"])
-        return df
-
-    def create_emission_df(
-        self,
-        summary_stats: pd.DataFrame,
-        windows_to_use: Optional[List[str]] = None,
-    ) -> pd.DataFrame:
-        """
-        Convert the `summaries` column into a flat emission feature matrix.
-
-        Parameters
-        ----------
-        windows_to_use : list of window labels to include (subset of summary keys).
-            If None, use all available windows.
-
-        Returns
-        -------
-        DataFrame with columns:
-        'beta' +
-        '{label}_avg_meth', '{label}_std', '{label}_high_pct', '{label}_int_pct',
-        '{label}_low_pct',
-        '{label}_n_cpg'
-        """
-        if "summaries" not in summary_stats.columns:
-            raise ValueError("summary_stats must have a 'summaries' column.")
-
-        first_non_empty = None
-        for idx, val in summary_stats["summaries"].items():
-            if isinstance(val, dict) and len(val) > 0:
-                first_non_empty = val
-                break
-
-        if first_non_empty is None:
-            # helpful debugging info
-            n_rows = len(summary_stats)
-            raise ValueError(
-                "create_emission_df: 'summaries' column contains no non-empty entries. "
-                f"summary_stats has {n_rows} rows. "
-                "This likely means load_sample_methylation returned zero CpGs for this sample/chrom. "
-                "Check that the sample exists and the methylation file contains entries for the requested chromosome."
-            )
-        all_labels = list(first_non_empty.keys())
-        if windows_to_use is None:
-            windows = all_labels
-        else:
-            missing = [w for w in windows_to_use if w not in all_labels]
-            if missing:
-                raise ValueError(f"Requested windows not found in summaries: {missing}")
-            windows = windows_to_use
-
-        emission_data: Dict[int, Dict[str, float]] = {}
-
-        for idx, row in summary_stats.iterrows():
-            emission_data[idx] = {}
-            emission_data[idx]["beta"] = float(row["beta"])
-            summaries = row["summaries"]
-            for label in windows:
-                window_summary = summaries[label]
-                emission_data[idx][f"{label}_avg_meth"] = window_summary["avg_meth"]
-                emission_data[idx][f"{label}_std"] = window_summary["std"]
-                emission_data[idx][f"{label}_high_pct"] = window_summary["high_pct"]
-                emission_data[idx][f"{label}_int_pct"] = window_summary["int_pct"]
-                emission_data[idx][f"{label}_low_pct"] = window_summary["low_pct"]
-                emission_data[idx][f"{label}_n_cpg"] = float(
-                    window_summary["window_info"]["CpG_count"]
-                )
-
-        emission_df = pd.DataFrame.from_dict(emission_data, orient="index")
-        emission_df.index = summary_stats.index
-        return emission_df
-
-    def _append_derived_emission_features(
-        self,
-        emission_df: pd.DataFrame,
-    ) -> pd.DataFrame:
-        emission_df = emission_df.copy()
-        sorted_window_specs = sorted(self.window_specs, key=lambda item: item[0])
-        active_window_labels = [
-            label
-            for _, label in sorted_window_specs
-            if f"{label}_avg_meth" in emission_df.columns
-        ]
-
-        if not active_window_labels:
-            emission_df["beta_vs_largest_window_avg_meth_abs_diff"] = 0.0
-            emission_df["smallest_vs_largest_window_avg_meth_abs_diff"] = 0.0
-            return emission_df
-
-        beta_values = pd.to_numeric(emission_df["beta"], errors="raise")
-        largest_window_label = active_window_labels[-1]
-        largest_window_avg = pd.to_numeric(
-            emission_df[f"{largest_window_label}_avg_meth"],
-            errors="raise",
-        )
-        emission_df["beta_vs_largest_window_avg_meth_abs_diff"] = (
-            beta_values - largest_window_avg
-        ).abs()
-
-        if len(active_window_labels) == 1:
-            emission_df["smallest_vs_largest_window_avg_meth_abs_diff"] = 0.0
-        else:
-            smallest_window_label = active_window_labels[0]
-            smallest_window_avg = pd.to_numeric(
-                emission_df[f"{smallest_window_label}_avg_meth"],
-                errors="raise",
-            )
-            emission_df["smallest_vs_largest_window_avg_meth_abs_diff"] = (
-                smallest_window_avg - largest_window_avg
-            ).abs()
-
-        return emission_df
 
     def build_emission_matrix(
         self,
@@ -511,11 +283,11 @@ class MethylStateAssigner:
         )
         raw_labels = kmeans.fit_predict(kmeans_input)
         relabeled = relabel_by_mean_emission(
-            raw_labels,
-            emission_df,
-            self.int_low_cutoff,
-            self.int_high_cutoff,
-            self.window_specs,
+            raw_labels=raw_labels,
+            emission_df=emission_df,
+            int_low_cutoff=self.int_low_cutoff,
+            int_high_cutoff=self.int_high_cutoff,
+            window_specs=self.window_specs,
         )
         model = KMeansMethylationModel(
             kmeans=kmeans,
@@ -557,11 +329,11 @@ class MethylStateAssigner:
 
         raw_labels = self.model.kmeans.predict(kmeans_input)
         relabeled = relabel_by_mean_emission(
-            raw_labels,
-            emission_df,
-            self.int_low_cutoff,
-            self.int_high_cutoff,
-            self.window_specs,
+            raw_labels=raw_labels,
+            emission_df=emission_df,
+            int_low_cutoff=self.int_low_cutoff,
+            int_high_cutoff=self.int_high_cutoff,
+            window_specs=self.window_specs,
         )
         return pca_scores, raw_distances, raw_labels, relabeled
 
@@ -1904,34 +1676,6 @@ class MethylStateAssigner:
         training_summary_df = pd.DataFrame(summary_rows)
 
         return train_meth_data, train_emission_df, training_summary_df
-
-    # def prepare_sample_for_clustering(
-    #     self,
-    #     sample_info: SampleInfo,
-    #     chrom: Optional[str] = None,
-    #     windows_to_use: Optional[List[str]] = None,
-    # ) -> Tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
-    #     """
-    #     Convenience wrapper to:
-    #     1. Load methylation for a sample (optionally filtered to `chrom`).
-    #     2. Compute multi-window summary stats (full chromosome).
-    #     3. Create emission_df with only selected windows.
-
-    #     Returns (meth_data, summary_stats, emission_df).
-    #     """
-    #     meth_data = sample_info.meth_data
-    #     if chrom is not None:
-    #         meth_data = meth_data[meth_data["CpG_chrm"] == chrom]
-
-    #     summary_stats = self.generate_multi_window_summary_centered(
-    #         meth_data,
-    #         chrom=chrom,
-    #     )
-
-    #     emission_df = self.create_emission_df(
-    #         summary_stats, windows_to_use=windows_to_use
-    #     )
-    #     return meth_data, summary_stats, emission_df
 
     def train_kmeans_for_sample(
         self,

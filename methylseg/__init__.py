@@ -5,13 +5,10 @@ from .helper_classes import (
     MethylStateAssignmentMethod,
     MethylationStates,
     MethylDataPrep,
-    MethylStateAssignmentMethod,
-    MethylationStates,
     SampleInfo,
 )
 from .methylseg_hmm import (
     CTMethylSegHMM,
-    DAMethylSegHMM,
     GaussianMethylSegHMM,
     MethylSegHMM,
     MultinomialSegHMM,
@@ -26,7 +23,6 @@ from .utils import get_biological_state_colors, get_cluster_colors
 
 __all__ = [
     "CTMethylSegHMM",
-    "DAMethylSegHMM",
     "GaussianMethylSegHMM",
     "HMMObservationMode",
     "MethylDataPrep",

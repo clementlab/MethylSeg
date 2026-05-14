@@ -1,0 +1,59 @@
+pathway:
+  n_states: 4
+  int_low_cutoff: 0.2
+  int_high_cutoff: 0.7
+  high_cutoff: 0.7
+  window_specs:
+  - - 40000
+    - 40kb
+  - - 450000
+    - 450kb
+  train_chroms: null
+  max_cpg_per_chrom: 50000
+  out_dir: wgbs_model_outdir
+  random_state: 42
+  cluster_space: pca
+  n_pca: 5
+  hmm_type: sticky
+  min_region_length: 0
+  min_region_cpgs: 6
+  merge_gap_bp: 100000
+  state_assignment_method: kmeans
+  hmm_observation_mode: discrete_states
+hmm_params: {}
+train_sample_info:
+  sample_id: colon-primary-tumor_1
+  meth_data_path: wgbs_colon_model_artifacts/train_sample_meth.feather
+trained_model:
+  kmeans: wgbs_colon_model_artifacts/models/kmeans.joblib
+  scaler: wgbs_colon_model_artifacts/models/scaler.joblib
+  pca: wgbs_colon_model_artifacts/models/pca.joblib
+  feature_cols:
+  - beta
+  - 40kb_avg_meth
+  - 40kb_std
+  - 40kb_high_pct
+  - 40kb_int_pct
+  - 40kb_low_pct
+  - 450kb_avg_meth
+  - 450kb_std
+  - 450kb_high_pct
+  - 450kb_int_pct
+  - 450kb_low_pct
+  n_states: 4
+  cluster_space: pca
+  n_pca: 5
+state_cutoffs:
+  beta_low_max: 0.13634270448841038
+  beta_high_min: 0.8377008789536127
+  pmd_cutoffs:
+    40kb:
+      int_min: 0.4270271558092996
+      std_max: 0.38675816025667764
+      high_max: 0.3932651137679233
+      low_max: 0.30867612015574436
+    450kb:
+      int_min: 0.6326062357817865
+      std_max: 0.1659980317981784
+      high_max: 0.3343807190867877
+      low_max: 0.3077239340014578

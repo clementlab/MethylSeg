@@ -32,13 +32,14 @@ class MethylSegPathway:
     """High-level API that coordinates preparation, training, and segmentation."""
 
     @classmethod
-    def get_pretrained_model(cls, out_dir, hmm_type="ct"):
-        pretrained_yaml = FILES / f"methyl_seg_config_{hmm_type}.yaml"
-
+    def get_pretrained_model(cls, out_dir, resolution="450k"):
+        pretrained_yaml = FILES / f"tcga_hm450k_model.yaml" if resolution == "450k" else FILES / f"wgbs_colon_model.yaml"
+        if not pretrained_yaml.exists():
+            raise FileNotFoundError(
+                f"Packaged pretrained config was not found: {pretrained_yaml}"
+            )
         model = cls.from_yaml(pretrained_yaml)
-
-        model.out_dir = out_dir
-
+        model.set_out_dir(out_dir)
         return model
 
     @staticmethod
@@ -101,6 +102,7 @@ class MethylSegPathway:
             meth_data=filtered_meth_data,
         )
 
+    #TODO: think about if train_sample* naming makes sense
     def __init__(
         self,
         n_states: int = 4,
@@ -119,8 +121,10 @@ class MethylSegPathway:
         state_assignment_method: MethylStateAssignmentMethod = MethylStateAssignmentMethod.KMEANS,
         out_dir: str = ".",
         random_state: int = 42,
+        #TODO: make cluster_space an enum
         cluster_space: str = "pca",
         n_pca: int | None = 5,
+        #TODO: make hmm_type an enum
         hmm_type: str = "ct",
         hmm_params: dict = {},
         min_region_length: int = 0,
@@ -211,6 +215,101 @@ class MethylSegPathway:
             random_state=self.random_state,
         )
 
+    def set_out_dir(self, out_dir: str | Path) -> None:
+        resolved_out_dir = str(Path(out_dir))
+        Path(resolved_out_dir).mkdir(parents=True, exist_ok=True)
+        self.out_dir = resolved_out_dir
+        self.assigner.out_dir = resolved_out_dir
+        self.analyzer.out_dir = resolved_out_dir
+        self.segmentor.out_dir = resolved_out_dir
+
+    @staticmethod
+    def _resolve_artifact_path(
+        yaml_dir: Path,
+        raw_path: str | Path,
+        field_name: str,
+    ) -> Path:
+        path = Path(raw_path)
+        if not path.is_absolute():
+            path = yaml_dir / path
+        path = path.resolve()
+        if not path.exists():
+            raise FileNotFoundError(
+                f"Serialized artifact for '{field_name}' was not found: {path}"
+            )
+        return path
+
+    @staticmethod
+    def _relativize_artifact_path(base_dir: Path, path: Path) -> str:
+        try:
+            return str(path.relative_to(base_dir))
+        except ValueError:
+            return str(path)
+
+    @staticmethod
+    def _normalize_train_chroms(train_chroms) -> list[str] | None:
+        if train_chroms is None:
+            return None
+        if isinstance(train_chroms, str):
+            return [train_chroms]
+        return [str(chrom) for chrom in train_chroms]
+
+    @staticmethod
+    def _normalize_window_specs(window_specs) -> list[tuple[int, str]]:
+        normalized_specs = []
+        for spec in window_specs:
+            if not isinstance(spec, (list, tuple)) or len(spec) != 2:
+                raise ValueError(
+                    "window_specs entries must be two-item sequences of "
+                    "(window_size_bp, label)."
+                )
+            window_size, label = spec
+            normalized_specs.append((int(window_size), str(label)))
+        return normalized_specs
+
+    @staticmethod
+    def _validate_state_cutoffs(state_cutoffs: dict) -> dict:
+        if not isinstance(state_cutoffs, dict):
+            raise ValueError("state_cutoffs must be a dictionary.")
+        required_top_level = {"beta_low_max", "beta_high_min", "pmd_cutoffs"}
+        missing_top_level = required_top_level.difference(state_cutoffs)
+        if missing_top_level:
+            raise ValueError(
+                "state_cutoffs is missing required keys: "
+                f"{sorted(missing_top_level)}"
+            )
+        pmd_cutoffs = state_cutoffs["pmd_cutoffs"]
+        if not isinstance(pmd_cutoffs, dict) or not pmd_cutoffs:
+            raise ValueError("state_cutoffs['pmd_cutoffs'] must be a non-empty dict.")
+
+        normalized_cutoffs = {
+            "beta_low_max": float(state_cutoffs["beta_low_max"]),
+            "beta_high_min": float(state_cutoffs["beta_high_min"]),
+            "pmd_cutoffs": {},
+        }
+        for label, cutoff_cfg in pmd_cutoffs.items():
+            if not isinstance(cutoff_cfg, dict):
+                raise ValueError(
+                    f"state_cutoffs['pmd_cutoffs']['{label}'] must be a dict."
+                )
+            required_cutoff_keys = {"int_min", "std_max", "high_max"}
+            missing_cutoff_keys = required_cutoff_keys.difference(cutoff_cfg)
+            if missing_cutoff_keys:
+                raise ValueError(
+                    "PMD cutoff config is missing required keys for "
+                    f"'{label}': {sorted(missing_cutoff_keys)}"
+                )
+            normalized_cutoffs["pmd_cutoffs"][str(label)] = {
+                "int_min": float(cutoff_cfg["int_min"]),
+                "std_max": float(cutoff_cfg["std_max"]),
+                "high_max": float(cutoff_cfg["high_max"]),
+            }
+            if "low_max" in cutoff_cfg and cutoff_cfg["low_max"] is not None:
+                normalized_cutoffs["pmd_cutoffs"][str(label)]["low_max"] = float(
+                    cutoff_cfg["low_max"]
+                )
+        return normalized_cutoffs
+
     def _init_hmm(self):
         if self.hmm_type == "multinomial":
             self.hmm_model = MultinomialSegHMM(
@@ -256,7 +355,7 @@ class MethylSegPathway:
             or force_optimize_rules
         ):
             self.analyzer.optimize_rule_params_random()
-
+    #TODO if keeping train sample parameters, make functions like this default to train sample.
     def generate_regions(
         self,
         sample_info: SampleInfo | None = None,
@@ -540,6 +639,7 @@ class MethylSegPathway:
         else:
             combined_regions_df = self._empty_regions_df()
         self.segmentor.regions_df = combined_regions_df.copy()
+        #TODO: save combined regions to bed files by state here as well segments_HIGH.bed segments_PMD.bed etc.
         return combined_regions_df
 
     # TODO: fix this, it is not saving train_sample_info or train_sample_file and train_sample_name correctly
@@ -547,9 +647,10 @@ class MethylSegPathway:
         """
         Serialize pathway configuration and optionally learned artifacts.
         """
-
-        base_dir = Path(self.out_dir or ".")
-        base_dir.mkdir(parents=True, exist_ok=True)
+        yaml_path = Path(yaml_path)
+        yaml_path.parent.mkdir(parents=True, exist_ok=True)
+        bundle_dir = yaml_path.parent / f"{yaml_path.stem}_artifacts"
+        bundle_dir.mkdir(parents=True, exist_ok=True)
 
         cfg = {
             "pathway": {
@@ -560,7 +661,7 @@ class MethylSegPathway:
                 "window_specs": self.window_specs,
                 "train_chroms": self.train_chroms,
                 "max_cpg_per_chrom": self.max_cpg_per_chrom,
-                "out_dir": str(base_dir),
+                "out_dir": str(self.out_dir),
                 "random_state": self.random_state,
                 "cluster_space": self.assigner.cluster_space,
                 "n_pca": self.assigner.n_pca,
@@ -575,14 +676,18 @@ class MethylSegPathway:
 
         # --- Serialize hmm_params safely ---
         safe_hmm_params = {}
-        hmm_param_dir = base_dir / "hmm_params"
+        hmm_param_dir = bundle_dir / "hmm_params"
         hmm_param_dir.mkdir(exist_ok=True)
 
         for k, v in (self.hmm_params or {}).items():
             if isinstance(v, np.ndarray):
                 path = hmm_param_dir / f"{k}.npy"
                 np.save(path, v)
-                safe_hmm_params[k] = {"__npy_path__": str(path)}
+                safe_hmm_params[k] = {
+                    "__npy_path__": self._relativize_artifact_path(
+                        yaml_path.parent, path
+                    )
+                }
             elif isinstance(v, (int, float, str, bool)) or v is None:
                 safe_hmm_params[k] = v
             elif isinstance(v, (list, tuple)):
@@ -594,20 +699,22 @@ class MethylSegPathway:
 
         # --- Save SampleInfo ---
         if self.train_sample_info is not None:
-            sample_path = base_dir / "train_sample_meth.feather"
+            sample_path = bundle_dir / "train_sample_meth.feather"
             self.train_sample_info.meth_data.reset_index(drop=True).to_feather(
                 sample_path
             )
 
             cfg["train_sample_info"] = {
                 "sample_id": self.train_sample_info.sample_id,
-                "meth_data_path": str(sample_path),
+                "meth_data_path": self._relativize_artifact_path(
+                    yaml_path.parent, sample_path
+                ),
             }
 
         # --- Save learned artifacts ---
         if include_learned and hasattr(self.assigner, "model"):
 
-            model_dir = base_dir / "models"
+            model_dir = bundle_dir / "models"
             model_dir.mkdir(exist_ok=True)
 
             model_cfg = {}
@@ -615,22 +722,30 @@ class MethylSegPathway:
             if self.assigner.model.kmeans is not None:
                 kmeans_path = model_dir / "kmeans.joblib"
                 joblib.dump(self.assigner.model.kmeans, kmeans_path)
-                model_cfg["kmeans"] = str(kmeans_path)
+                model_cfg["kmeans"] = self._relativize_artifact_path(
+                    yaml_path.parent, kmeans_path
+                )
 
             if self.assigner.model.scaler is not None:
                 scaler_path = model_dir / "scaler.joblib"
                 joblib.dump(self.assigner.model.scaler, scaler_path)
-                model_cfg["scaler"] = str(scaler_path)
+                model_cfg["scaler"] = self._relativize_artifact_path(
+                    yaml_path.parent, scaler_path
+                )
 
             if self.assigner.model.imputer is not None:
                 imputer_path = model_dir / "imputer.joblib"
                 joblib.dump(self.assigner.model.imputer, imputer_path)
-                model_cfg["imputer"] = str(imputer_path)
+                model_cfg["imputer"] = self._relativize_artifact_path(
+                    yaml_path.parent, imputer_path
+                )
 
             if self.assigner.model.pca is not None:
                 pca_path = model_dir / "pca.joblib"
                 joblib.dump(self.assigner.model.pca, pca_path)
-                model_cfg["pca"] = str(pca_path)
+                model_cfg["pca"] = self._relativize_artifact_path(
+                    yaml_path.parent, pca_path
+                )
 
             model_cfg["feature_cols"] = self.assigner.model.feature_cols
             model_cfg["n_states"] = self.assigner.model.n_states
@@ -641,10 +756,9 @@ class MethylSegPathway:
 
         # --- Save rule cutoffs ---
         if hasattr(self.analyzer, "state_cutoffs"):
-            cfg["state_cutoffs"] = self.analyzer.state_cutoffs
-
-        yaml_path = Path(yaml_path)
-        yaml_path.parent.mkdir(parents=True, exist_ok=True)
+            cfg["state_cutoffs"] = self._validate_state_cutoffs(
+                self.analyzer.state_cutoffs
+            )
 
         with open(yaml_path, "w") as fh:
             yaml.safe_dump(cfg, fh, sort_keys=False)
@@ -654,23 +768,26 @@ class MethylSegPathway:
         """
         Reconstruct MethylSegPathway from YAML file.
         """
+        yaml_path = Path(yaml_path)
+        yaml_dir = yaml_path.parent.resolve()
 
         with open(yaml_path, "r") as fh:
             cfg = yaml.safe_load(fh)
+        if not isinstance(cfg, dict):
+            raise ValueError("Serialized methylseg config must be a YAML mapping.")
 
         pathway_cfg = cfg.get("pathway", {})
+        if not pathway_cfg:
+            raise ValueError("Serialized config is missing the required 'pathway' section.")
 
         n_states = pathway_cfg.get("n_states", 4)
         int_low_cutoff = pathway_cfg.get("int_low_cutoff", 0.2)
         int_high_cutoff = pathway_cfg.get("int_high_cutoff", 0.7)
         high_cutoff = pathway_cfg.get("high_cutoff", 0.8)
-        window_specs = pathway_cfg.get("window_specs", [(500_000, "500kb")])
-        train_chroms = pathway_cfg.get("train_chroms", None)
-        if train_chroms is None and "train_chrom" in pathway_cfg:
-            legacy_train_chrom = pathway_cfg.get("train_chrom")
-            train_chroms = (
-                [legacy_train_chrom] if legacy_train_chrom is not None else None
-            )
+        window_specs = cls._normalize_window_specs(
+            pathway_cfg.get("window_specs", [(500_000, "500kb")])
+        )
+        train_chroms = cls._normalize_train_chroms(pathway_cfg.get("train_chroms"))
         max_cpg_per_chrom = pathway_cfg.get("max_cpg_per_chrom", 50_000)
         out_dir = pathway_cfg.get("out_dir", ".")
         random_state = pathway_cfg.get("random_state", 42)
@@ -695,7 +812,12 @@ class MethylSegPathway:
 
         for k, v in hmm_params_cfg.items():
             if isinstance(v, dict) and "__npy_path__" in v:
-                loaded_hmm_params[k] = np.load(v["__npy_path__"], allow_pickle=False)
+                npy_path = cls._resolve_artifact_path(
+                    yaml_dir,
+                    v["__npy_path__"],
+                    field_name=f"hmm_params.{k}",
+                )
+                loaded_hmm_params[k] = np.load(npy_path, allow_pickle=False)
             else:
                 loaded_hmm_params[k] = v
 
@@ -703,10 +825,25 @@ class MethylSegPathway:
         train_sample_info = None
         if "train_sample_info" in cfg:
             sample_cfg = cfg["train_sample_info"]
+            if not isinstance(sample_cfg, dict):
+                raise ValueError("train_sample_info must be a dictionary.")
+            if "sample_id" not in sample_cfg or "meth_data_path" not in sample_cfg:
+                raise ValueError(
+                    "train_sample_info must contain 'sample_id' and 'meth_data_path'."
+                )
             sample_id = sample_cfg["sample_id"]
-            meth_path = sample_cfg["meth_data_path"]
+            meth_path = cls._resolve_artifact_path(
+                yaml_dir,
+                sample_cfg["meth_data_path"],
+                field_name="train_sample_info.meth_data_path",
+            )
             meth_df = pd.read_feather(meth_path)
             train_sample_info = SampleInfo(sample_id=sample_id, meth_data=meth_df)
+        else:
+            raise ValueError(
+                "Serialized config is missing 'train_sample_info'. Modern configs "
+                "must include a packaged training sample."
+            )
 
         # --- Create instance ---
         inst = cls(
@@ -734,13 +871,53 @@ class MethylSegPathway:
         # --- Restore trained model ---
         if load_learned and "trained_model" in cfg:
             model_cfg = cfg["trained_model"]
+            if not isinstance(model_cfg, dict):
+                raise ValueError("trained_model must be a dictionary.")
 
-            kmeans = joblib.load(model_cfg["kmeans"]) if "kmeans" in model_cfg else None
-            scaler = joblib.load(model_cfg["scaler"]) if "scaler" in model_cfg else None
-            imputer = (
-                joblib.load(model_cfg["imputer"]) if "imputer" in model_cfg else None
+            kmeans = (
+                joblib.load(
+                    cls._resolve_artifact_path(
+                        yaml_dir,
+                        model_cfg["kmeans"],
+                        field_name="trained_model.kmeans",
+                    )
+                )
+                if "kmeans" in model_cfg
+                else None
             )
-            pca = joblib.load(model_cfg["pca"]) if "pca" in model_cfg else None
+            scaler = (
+                joblib.load(
+                    cls._resolve_artifact_path(
+                        yaml_dir,
+                        model_cfg["scaler"],
+                        field_name="trained_model.scaler",
+                    )
+                )
+                if "scaler" in model_cfg
+                else None
+            )
+            imputer = (
+                joblib.load(
+                    cls._resolve_artifact_path(
+                        yaml_dir,
+                        model_cfg["imputer"],
+                        field_name="trained_model.imputer",
+                    )
+                )
+                if "imputer" in model_cfg
+                else None
+            )
+            pca = (
+                joblib.load(
+                    cls._resolve_artifact_path(
+                        yaml_dir,
+                        model_cfg["pca"],
+                        field_name="trained_model.pca",
+                    )
+                )
+                if "pca" in model_cfg
+                else None
+            )
             model_cluster_space = model_cfg.get("cluster_space")
             if model_cluster_space is None:
                 model_cluster_space = "pca" if pca is not None else "raw"
@@ -765,7 +942,9 @@ class MethylSegPathway:
 
         # --- Restore rule cutoffs ---
         if "state_cutoffs" in cfg:
-            inst.analyzer.state_cutoffs = cfg["state_cutoffs"]
+            inst.analyzer.state_cutoffs = cls._validate_state_cutoffs(
+                cfg["state_cutoffs"]
+            )
 
         inst._loaded_config = cfg
         return inst

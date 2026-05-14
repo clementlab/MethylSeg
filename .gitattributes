@@ -1,2 +1,4 @@
 data/reference_files/*.gz filter=lfs diff=lfs merge=lfs -text
 test_cov_cutoffs.ipynb filter=lfs diff=lfs merge=lfs -text
+*.joblib filter=lfs diff=lfs merge=lfs -text
+*.feather filter=lfs diff=lfs merge=lfs -text

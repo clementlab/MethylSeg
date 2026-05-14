@@ -26,9 +26,7 @@ from .helper_classes import (
     MethylationStates,
     SampleInfo,
 )
-from .utils import (
-    plot_interactive_beta_scatter,
-)
+from .utils import plot_interactive_beta_scatter, get_regional_window_labels
 
 
 class MethylStateAnalyzer:
@@ -109,7 +107,7 @@ class MethylStateAnalyzer:
         window_labels = [label for _, label in self.assigner.window_specs]
         if not window_labels:
             raise ValueError("No window_specs found on assigner.")
-        regional_window_labels = self.assigner.get_regional_window_labels()
+        regional_window_labels = get_regional_window_labels(self.window_specs)
 
         pmd_window_masks = []
 
@@ -368,13 +366,19 @@ class MethylStateAnalyzer:
     def __set_from_config(self, config: MethylSegConfig):
         state_cfg = config.get("state_cutoffs", None)
         if state_cfg is not None:
-            cutoffs = state_cfg.get("cutoffs", {})
+            if "cutoffs" in state_cfg and isinstance(state_cfg.get("cutoffs"), dict):
+                cutoffs = state_cfg.get("cutoffs", {})
+                self.cutoffs_set_manually = bool(state_cfg.get("set_manually", False))
+            else:
+                cutoffs = state_cfg
+                self.cutoffs_set_manually = bool(
+                    state_cfg.get("set_manually", False)
+                ) if isinstance(state_cfg, dict) else False
             self.set_state_cutoffs(
                 beta_low_max=cutoffs.get("beta_low_max"),
                 beta_high_min=cutoffs.get("beta_high_min"),
                 pmd_cutoffs=cutoffs.get("pmd_cutoffs"),
             )
-            self.cutoffs_set_manually = bool(state_cfg.get("set_manually", False))
 
     def set_state_cutoffs_from_yaml(self, yaml_file: str):
         """
@@ -443,7 +447,7 @@ class MethylStateAnalyzer:
         beta_low_max = c["beta_low_max"]
         beta_high_min = c["beta_high_min"]
         pmd_cutoffs = c["pmd_cutoffs"]
-        regional_window_labels = self.assigner.get_regional_window_labels()
+        regional_window_labels = get_regional_window_labels(self.window_specs)
 
         print("PMD:")
         print(f"{beta_low_max:.3f} <= beta <= {beta_high_min:.3f}")
