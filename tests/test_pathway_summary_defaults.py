@@ -9,14 +9,14 @@ import pandas as pd
 
 sys.modules.setdefault("gdown", SimpleNamespace())
 
-from analysis.shared_utils.methylseg.methylseg import (
+from methylseg import (
     HMMObservationMode,
     MethylSegPathway,
     MethylSegmentor,
     MethylationStates,
     SampleInfo,
 )
-from analysis.shared_utils.methylseg.methylseg.helper_classes import HMMType
+from methylseg.helper_classes import HMMType
 
 
 def _sample_info(sample_id: str = "train_sample") -> SampleInfo:

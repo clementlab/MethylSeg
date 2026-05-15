@@ -10,7 +10,7 @@ import pandas as pd
 
 sys.modules.setdefault("gdown", SimpleNamespace())
 
-from analysis.shared_utils.methylseg.methylseg import (  # noqa: E402
+from methylseg import (  # noqa: E402
     HMMObservationMode,
     MethylSegPathway,
     MethylSegmentor,
@@ -19,7 +19,7 @@ from analysis.shared_utils.methylseg.methylseg import (  # noqa: E402
     MethylationStates,
     SampleInfo,
 )
-from analysis.shared_utils.methylseg.methylseg.utils import (  # noqa: E402
+from methylseg.utils import (  # noqa: E402
     plot_interactive_beta_scatter,
 )
 
