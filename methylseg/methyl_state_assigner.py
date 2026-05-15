@@ -444,6 +444,147 @@ class MethylStateAssigner:
         plot_scores = pca.fit_transform(X_scaled)
         return pca, plot_scores, feature_names, False
 
+    def plot_embedding(
+        self,
+        emission_df: pd.DataFrame,
+        labels: np.ndarray,
+        meth_data: pd.DataFrame | None = None,
+        *,
+        method: str = "pca",
+        sample_info: SampleInfo | None = None,
+        chrom: str | None = None,
+        n_components: int = 2,
+        top_n_loadings: int = 5,
+        hexbin: bool = False,
+        interactive: bool = False,
+        include_metrics: bool = True,
+        include_biplot: bool = False,
+        label_title: str = "State",
+        region_start: int | None = None,
+        region_end: int | None = None,
+        region_chrom: str | None = None,
+        use_pca_features: bool = False,
+        use_parallel: bool = True,
+        show_plot: bool = True,
+    ):
+        method = str(method).lower()
+        sample_name = None if sample_info is None else sample_info.sample_id
+
+        if method == "pca":
+            region_requested = any(
+                value is not None for value in (region_start, region_end, region_chrom)
+            )
+            if region_requested:
+                if meth_data is None:
+                    raise ValueError(
+                        "meth_data must be provided when requesting PCA region highlighting."
+                    )
+                if region_start is None or region_end is None:
+                    raise ValueError(
+                        "region_start and region_end must both be provided when "
+                        "requesting PCA region highlighting."
+                    )
+                return self.plot_pca_clusters_with_region(
+                    meth_data=meth_data,
+                    emission_df=emission_df,
+                    labels=labels,
+                    region_start=region_start,
+                    region_end=region_end,
+                    region_chrom=region_chrom,
+                    n_pca_plot=n_components,
+                    top_n_loadings=top_n_loadings,
+                    pca_hexbin=hexbin,
+                    interactive=interactive,
+                    include_kmeans_metrics=include_metrics,
+                    include_biplot=include_biplot,
+                    label_title=label_title,
+                    sample_name=sample_name,
+                    chrom=chrom,
+                    show_plot=show_plot,
+                )
+            return self.plot_pca_clusters(
+                emission_df=emission_df,
+                labels=labels,
+                n_pca_plot=n_components,
+                top_n_loadings=top_n_loadings,
+                pca_hexbin=hexbin,
+                interactive=interactive,
+                include_kmeans_metrics=include_metrics,
+                include_biplot=include_biplot,
+                label_title=label_title,
+                sample_name=sample_name,
+                chrom=chrom,
+                show_plot=show_plot,
+            )
+
+        if method == "umap":
+            return self.plot_umap_clusters(
+                emission_df=emission_df,
+                labels=labels,
+                chrom=chrom,
+                sample_name=sample_name,
+                use_pca=use_pca_features,
+                use_parallel=use_parallel,
+                show_plot=show_plot,
+            )
+
+        raise ValueError(
+            "method must be either 'pca' or 'umap'. "
+            f"Received: {method!r}"
+        )
+
+    #TODO: remove this and make the plot embedding default to plotting training embedding
+    def plot_training_embedding(
+        self,
+        *,
+        method: str = "pca",
+        n_components: int = 2,
+        top_n_loadings: int = 5,
+        hexbin: bool = False,
+        interactive: bool = False,
+        include_metrics: bool = True,
+        include_biplot: bool = False,
+        label_title: str = "State",
+        region_start: int | None = None,
+        region_end: int | None = None,
+        region_chrom: str | None = None,
+        use_pca_features: bool = False,
+        use_parallel: bool = True,
+        show_plot: bool = True,
+    ):
+        required_attrs = ["train_emission_df", "train_labels", "train_sample_info"]
+        if any(value is not None for value in (region_start, region_end, region_chrom)):
+            required_attrs.append("train_meth")
+
+        missing = [attr for attr in required_attrs if not hasattr(self, attr)]
+        if missing:
+            raise ValueError(
+                "No saved training clustering artifacts found. "
+                f"Missing attributes: {missing}. Train k-means first."
+            )
+
+        return self.plot_embedding(
+            emission_df=self.train_emission_df,
+            labels=self.train_labels,
+            meth_data=getattr(self, "train_meth", None),
+            method=method,
+            sample_info=self.train_sample_info,
+            chrom=self._format_train_chrom_label(),
+            n_components=n_components,
+            top_n_loadings=top_n_loadings,
+            hexbin=hexbin,
+            interactive=interactive,
+            include_metrics=include_metrics,
+            include_biplot=include_biplot,
+            label_title=label_title,
+            region_start=region_start,
+            region_end=region_end,
+            region_chrom=region_chrom,
+            use_pca_features=use_pca_features,
+            use_parallel=use_parallel,
+            show_plot=show_plot,
+        )
+
     def plot_umap_clusters(
         self,
         emission_df: pd.DataFrame,
@@ -451,14 +592,15 @@ class MethylStateAssigner:
         chrom: Optional[str] = None,
         sample_name: Optional[str] = None,
         use_pca: bool = False,
-        use_parrallel: bool = True,
+        use_parallel: bool = True,
+        show_plot: bool = True,
     ):
         if not hasattr(self, "model"):
             raise ValueError("No trained model found. Please train a model first.")
-        random_state = None if use_parrallel else self.random_state
-        if use_parrallel:
+        random_state = None if use_parallel else self.random_state
+        if use_parallel:
             print(
-                "UMAP parralellisation cannot work with random seed, setting random_state to None for UMAP."
+                "UMAP parallelisation cannot work with random seed, setting random_state to None for UMAP."
             )
 
         X_scaled = self.preprocess_emission_features(
@@ -495,7 +637,7 @@ class MethylStateAssigner:
             title_parts.append(str(chrom))
         title_prefix = " ".join(title_parts) if title_parts else "Sample"
 
-        plt.figure(figsize=(10, 6))
+        fig = plt.figure(figsize=(10, 6))
         scatter = plt.scatter(
             embedding[:, 0],
             embedding[:, 1],
@@ -523,7 +665,9 @@ class MethylStateAssigner:
         if legend_handles:
             plt.legend(handles=legend_handles, title="State", loc="best")
         plt.tight_layout()
-        plt.show()
+        if show_plot:
+            plt.show()
+        return fig
 
     def plot_kmeans_clusters(
         self,
@@ -658,6 +802,7 @@ class MethylStateAssigner:
         label_title: str = "State",
         sample_name: str | None = None,
         chrom: str | None = None,
+        show_plot: bool = True,
     ):
         """
         PCA embedding + loadings, using consistent colors per state.
@@ -678,6 +823,7 @@ class MethylStateAssigner:
             sample_name=sample_name,
             chrom=chrom,
             highlight_mask=None,
+            show_plot=show_plot,
         )
 
     def _wrap_pca_loading_feature_name(
@@ -1008,6 +1154,7 @@ class MethylStateAssigner:
         sample_name: str | None = None,
         chrom: str | None = None,
         highlight_mask: Optional[np.ndarray] = None,
+        show_plot: bool = True,
     ):
         if not hasattr(self, "model"):
             raise ValueError("No trained model found. Please train a model first.")
@@ -1211,7 +1358,9 @@ class MethylStateAssigner:
                 )
                 self._add_pca_metrics_annotation_plotly(fig_plotly, metrics_text)
                 fig_plotly.update_traces(marker=dict(size=3))
-                fig_plotly.show(renderer="notebook")
+                if show_plot:
+                    fig_plotly.show(renderer="notebook")
+                return fig_plotly
             else:
                 ax0 = fig.add_subplot(gs[0], projection="3d")
                 sc0 = ax0.scatter(
@@ -1268,7 +1417,9 @@ class MethylStateAssigner:
         ax1.set_title(f"Top {top_n_loadings} Absolute Loadings", pad=10)
 
         plt.tight_layout()
-        plt.show()
+        if show_plot:
+            plt.show()
+        return fig
 
     def plot_pca_clusters_with_region(
         self,
@@ -1287,6 +1438,7 @@ class MethylStateAssigner:
         label_title: str = "State",
         sample_name: str | None = None,
         chrom: str | None = None,
+        show_plot: bool = True,
     ):
         required_cols = {"CpG_chrm", "CpG_beg", "CpG_end"}
         missing_cols = sorted(required_cols - set(meth_data.columns))
@@ -1353,6 +1505,7 @@ class MethylStateAssigner:
             sample_name=sample_name,
             chrom=chrom,
             highlight_mask=highlight_mask,
+            show_plot=show_plot,
         )
 
     def _format_train_chrom_label(
@@ -1390,6 +1543,7 @@ class MethylStateAssigner:
         region_start: Optional[int] = None,
         region_end: Optional[int] = None,
         region_chrom: Optional[str] = None,
+        show_plot: bool = True,
     ):
         """
         Convenience wrapper to plot the PCA embedding saved from k-means training.
@@ -1433,6 +1587,7 @@ class MethylStateAssigner:
                 include_biplot=include_biplot,
                 sample_name=resolved_sample_name,
                 chrom=resolved_chrom_label,
+                show_plot=show_plot,
             )
 
         return self.plot_pca_clusters(
@@ -1446,6 +1601,7 @@ class MethylStateAssigner:
             include_biplot=include_biplot,
             sample_name=resolved_sample_name,
             chrom=resolved_chrom_label,
+            show_plot=show_plot,
         )
 
     def _subset_emission_features(

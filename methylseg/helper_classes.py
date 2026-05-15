@@ -28,6 +28,8 @@ class MethylEnum(Enum):
         for member in cls:
             if member.name.lower() == s:
                 return member
+            if member.value.lower() == s:
+                return member
         raise ValueError(
             f"Invalid {cls.__name__} value: {s}. "
             f"Valid options are: {[m.name for m in cls]}"
@@ -75,6 +77,8 @@ class HMMType(MethylEnum):
     STICKY = "sticky"
     GAUSSIAN = "gaussian"
     MULTINOMIAL = "multinomial"
+
+
 
 
 class HMMObservationMode(MethylEnum):

@@ -9,8 +9,12 @@ import pandas as pd
 from sklearn.cluster import KMeans
 from sklearn.decomposition import PCA
 
-
-from .utils import plot_interactive_beta_scatter, relabel_by_mean_emission
+from .utils import (
+    plot_interactive_beta_scatter,
+    relabel_by_mean_emission,
+    resolve_overlay_plot_args,
+    resolve_region_overlay_df,
+)
 from .helper_classes import (
     HMMObservationMode,
     MethylStateAssignmentMethod,
@@ -46,6 +50,7 @@ class MethylSegmentor:
         self.out_dir = out_dir
         self.random_state = random_state
         self.segment_results = {}
+        self.default_sample_info: SampleInfo | None = None
 
     def _encode_states_for_hmm(self, states: np.ndarray) -> np.ndarray:
         numeric_states = MethylationStates.convert_to_numeric(states)
@@ -380,7 +385,7 @@ class MethylSegmentor:
 
     def segment_sample(
         self,
-        sample_info: SampleInfo,
+        sample_info: SampleInfo | None = None,
         chrom: str | None = None,
         force_resegment: bool = False,
     ) -> Tuple[pd.DataFrame, object]:
@@ -390,6 +395,12 @@ class MethylSegmentor:
         Returns the segmented probe-level methylation table and fitted HMM
         object. Raw contiguous regions are stored on ``self.regions_df``.
         """
+        if sample_info is None:
+            sample_info = self.default_sample_info
+        if sample_info is None:
+            raise ValueError(
+                "No sample_info provided and no default_sample_info configured."
+            )
         chrom_segmented_on_sample = (
             sample_info.sample_id in self.segment_results
             and chrom in self.segment_results[sample_info.sample_id]
@@ -573,13 +584,11 @@ class MethylSegmentor:
                 state_bed_path = bed_path.replace(".bed", f"_{state.name}.bed")
                 bed_df.to_csv(state_bed_path, sep="\t", header=False, index=False)
 
-    # TODO: move to utils to share with MethylStateAnalyzer
     def plot_interactive_beta_by_label(
         self,
-        sample_info: SampleInfo,
+        sample_info: SampleInfo | None = None,
         sample_info_removed: pd.DataFrame | None = None,
         label_type: str = "hmm",
-        use_train_data: bool = True,
         chrom: str | None = None,
         x_col: str = "CpG_beg",
         y_col: str = "beta",
@@ -589,27 +598,71 @@ class MethylSegmentor:
         color_pmd_only: bool = False,
         color_regions_df: pd.DataFrame | None = None,
     ):
-        """
-        Interactive scatter: genomic position vs beta, colored by label.
-        """
-        meth_data, _ = self.segment_sample(sample_info=sample_info, chrom=chrom)
-        df_plot = meth_data.copy()
-        if label_type == "hmm":
-            label_col = f"{label_type}_state_readable"
-        else:
-            label_col = "state_readable"
-        return plot_interactive_beta_scatter(
-            df_plot=df_plot,
+        overlay_regions_df, overlay_style = resolve_overlay_plot_args(
+            color_pmd_only=color_pmd_only,
+            color_regions_df=color_regions_df,
+        )
+        return self.plot_labels(
             sample_info=sample_info,
-            sample_info_removed=sample_info_removed,
             chrom=chrom,
-            out_dir=self.out_dir,
-            label_col=label_col,
+            sample_info_removed=sample_info_removed,
+            overlay_regions_df=overlay_regions_df,
+            overlay_style=overlay_style,
             x_col=x_col,
             y_col=y_col,
             label_title=label_title,
             show_plot=show_plot,
             max_points=max_points,
-            color_pmd_only=color_pmd_only,
-            color_regions_df=color_regions_df,
+        )
+
+    def plot_labels(
+        self,
+        sample_info: SampleInfo | None = None,
+        chrom: str | None = None,
+        sample_info_removed: pd.DataFrame | None = None,
+        overlay_regions_df: pd.DataFrame | None = None,
+        overlay_style: str = "state",
+        region_start: int | None = None,
+        region_end: int | None = None,
+        region_chrom: str | None = None,
+        x_col: str = "CpG_beg",
+        y_col: str = "beta",
+        label_title: str | None = None,
+        show_plot: bool = True,
+        max_points: int = 120_000,
+    ):
+        """
+        Plot genomic-position vs beta for HMM labels.
+        """
+        meth_data, _ = self.segment_sample(sample_info=sample_info, chrom=chrom)
+        resolved_sample_info = (
+            self.default_sample_info if sample_info is None else sample_info
+        )
+        overlay_regions_df, resolved_overlay_style = resolve_region_overlay_df(
+            overlay_regions_df=overlay_regions_df,
+            region_start=region_start,
+            region_end=region_end,
+            region_chrom=region_chrom,
+        )
+        return plot_interactive_beta_scatter(
+            df_plot=meth_data.copy(),
+            sample_info=resolved_sample_info,
+            sample_info_removed=sample_info_removed,
+            chrom=chrom,
+            out_dir=self.out_dir,
+            label_col="hmm_state_readable",
+            x_col=x_col,
+            y_col=y_col,
+            label_title=label_title if label_title is not None else "HMM state",
+            show_plot=show_plot,
+            max_points=max_points,
+            overlay_regions_df=overlay_regions_df,
+            overlay_style=(
+                resolved_overlay_style
+                if overlay_regions_df is not None
+                else overlay_style
+            ),
+            region_start=region_start,
+            region_end=region_end,
+            region_chrom=region_chrom,
         )

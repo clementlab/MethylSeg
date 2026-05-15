@@ -1,33 +1,66 @@
 pathway:
-  n_states: 4
-  int_low_cutoff: 0.2
-  int_high_cutoff: 0.7
-  high_cutoff: 0.7
+  data_path: null
+  meth_ref_path: null
+  samples_info_path: null
+  out_dir: .
+  train_sample: colon-primary-tumor_1
+  train_sample_file: null
+  train_chroms: null
+  max_cpg_per_chrom: 50000
+  random_state: 42
+  cluster_space: pca
+  n_pca: 5
+  min_region_length: 0
+  min_region_cpgs: 6
+  merge_gap_bp: 100000
+state_assigner:
   window_specs:
   - - 40000
     - 40kb
   - - 450000
     - 450kb
-  train_chroms: null
-  max_cpg_per_chrom: 50000
-  out_dir: wgbs_model_outdir
-  random_state: 42
-  cluster_space: pca
-  n_pca: 5
-  hmm_type: sticky
-  min_region_length: 0
-  min_region_cpgs: 6
-  merge_gap_bp: 100000
+  n_states: 4
+  int_low_cutoff: 0.2
+  int_high_cutoff: 0.7
+  high_cutoff: 0.7
+state_cutoffs:
+  beta_low_max: 0.13634270448841038
+  beta_high_min: 0.8377008789536127
+  pmd_cutoffs:
+    40kb:
+      int_min: 0.4270271558092996
+      std_max: 0.38675816025667764
+      high_max: 0.3932651137679233
+      low_max: 0.30867612015574436
+    450kb:
+      int_min: 0.6326062357817865
+      std_max: 0.1659980317981784
+      high_max: 0.3343807190867877
+      low_max: 0.3077239340014578
+state_cutoffs_set_manually: false
+hmm:
+  type: sticky
+  params: {}
+  observation_mode: discrete_states
+segmenter:
   state_assignment_method: kmeans
   hmm_observation_mode: discrete_states
-hmm_params: {}
+  out_dir: .
+saved_tables:
+  train_meth: train_meth.feather
+  training_summary_df: training_summary_df.feather
+  train_emission_df: train_emission_df.feather
+  train_joint: train_joint.feather
 train_sample_info:
   sample_id: colon-primary-tumor_1
-  meth_data_path: wgbs_colon_model_artifacts/train_sample_meth.feather
-trained_model:
-  kmeans: wgbs_colon_model_artifacts/models/kmeans.joblib
-  scaler: wgbs_colon_model_artifacts/models/scaler.joblib
-  pca: wgbs_colon_model_artifacts/models/pca.joblib
+  meth_data_path: train_sample_meth.feather
+train_sample:
+  name: colon-primary-tumor_1
+  file: null
+models:
+  kmeans: models/kmeans.joblib
+  pca: models/pca.joblib
+  scaler: models/scaler.joblib
   feature_cols:
   - beta
   - 40kb_avg_meth
@@ -43,17 +76,10 @@ trained_model:
   n_states: 4
   cluster_space: pca
   n_pca: 5
-state_cutoffs:
-  beta_low_max: 0.13634270448841038
-  beta_high_min: 0.8377008789536127
-  pmd_cutoffs:
-    40kb:
-      int_min: 0.4270271558092996
-      std_max: 0.38675816025667764
-      high_max: 0.3932651137679233
-      low_max: 0.30867612015574436
-    450kb:
-      int_min: 0.6326062357817865
-      std_max: 0.1659980317981784
-      high_max: 0.3343807190867877
-      low_max: 0.3077239340014578
+training_artifacts:
+  train_meth: training_artifacts/train_meth.feather
+  train_emission_df: training_artifacts/train_emission_df.feather
+  training_summary_df: training_artifacts/training_summary_df.feather
+  train_joint: training_artifacts/train_joint.feather
+  train_labels: training_artifacts/train_labels.npy
+  train_pca_scores: training_artifacts/train_pca_scores.npy

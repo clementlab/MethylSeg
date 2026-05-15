@@ -1,7 +1,7 @@
 from .data_manager import download_data_files
 import argparse
 
-
+#TODO - add subcommands for pathway running, segmentation and plotting
 def main():
     parser = argparse.ArgumentParser(prog="methylseg")
 

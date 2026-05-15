@@ -9,6 +9,7 @@ import pandas as pd
 import yaml
 
 from .methyl_state_analyzer import MethylStateAnalyzer
+from .methylseg_config import MethylSegConfig
 from .methylseg_hmm import (
     CTMethylSegHMM,
     GaussianMethylSegHMM,
@@ -28,6 +29,7 @@ from .helper_classes import (
     HMMType,
 )
 from .data_manager import download_data_files, is_lfs_pointer
+from .utils import resolve_region_overlay_df
 
 
 class MethylSegPathway:
@@ -165,6 +167,14 @@ class MethylSegPathway:
             raise ValueError(
                 "Must provide either train_sample_info or train_sample_file and train_sample_name."
             )
+        self.train_sample_file = (
+            str(train_sample_file) if train_sample_file is not None else None
+        )
+        self.train_sample_name = (
+            str(train_sample_name)
+            if train_sample_name is not None
+            else str(self.train_sample_info.sample_id)
+        )
         self.train_chroms = train_chroms
         self.max_cpg_per_chrom = max_cpg_per_chrom
         self.random_state = random_state
@@ -182,19 +192,19 @@ class MethylSegPathway:
         self.hmm_observation_mode = HMMObservationMode(hmm_observation_mode)
         if (
             self.hmm_observation_mode
-            in {
+            in (
                 HMMObservationMode.GAUSSIAN_EMISSIONS,
                 HMMObservationMode.PCA_EMISSIONS,
-            }
+            )
             and self.hmm_type != HMMType.GAUSSIAN
         ):
             raise ValueError(
                 "Gaussian-backed observation modes require " "hmm_type='gaussian'."
             )
-        if self.hmm_type == HMMType.GAUSSIAN and self.hmm_observation_mode not in {
+        if self.hmm_type == HMMType.GAUSSIAN and self.hmm_observation_mode not in (
             HMMObservationMode.GAUSSIAN_EMISSIONS,
             HMMObservationMode.PCA_EMISSIONS,
-        }:
+        ):
             raise ValueError(
                 "hmm_type='gaussian' requires " "a Gaussian-backed observation mode."
             )
@@ -213,6 +223,8 @@ class MethylSegPathway:
         )
         self.cluster_space = self.assigner.cluster_space
         self.n_pca = self.assigner.n_pca
+        self.assigner.train_sample_info = self.train_sample_info
+        self.assigner.train_sample = self.train_sample_name
         self.analyzer = MethylStateAnalyzer(
             assigner=self.assigner,
             out_dir=out_dir,
@@ -225,6 +237,7 @@ class MethylSegPathway:
             out_dir=out_dir,
             random_state=self.random_state,
         )
+        self.segmentor.default_sample_info = self.train_sample_info
 
     def set_out_dir(self, out_dir: str | Path) -> None:
         resolved_out_dir = str(Path(out_dir))
@@ -233,6 +246,103 @@ class MethylSegPathway:
         self.assigner.out_dir = resolved_out_dir
         self.analyzer.out_dir = resolved_out_dir
         self.segmentor.out_dir = resolved_out_dir
+
+    def _resolve_sample_info(
+        self,
+        sample_info: SampleInfo | None = None,
+        sample_name: str | None = None,
+        sample_file: str | Path | None = None,
+    ) -> SampleInfo:
+        if sample_info is not None:
+            return sample_info
+        if sample_file is not None and sample_name is not None:
+            resolved_sample_info, _ = self.prepare_sample_info(
+                sample_name=sample_name,
+                sample_file=sample_file,
+                resolution="auto",
+            )
+            return resolved_sample_info
+        if self.train_sample_info is not None:
+            return self.train_sample_info
+        raise ValueError(
+            "Must provide either sample_info, sample_file and sample_name, "
+            "or configure train_sample_info."
+        )
+
+    @staticmethod
+    def _resolve_region_chrom(
+        sample_info: SampleInfo,
+        chrom: str | None = None,
+        region_chrom: str | None = None,
+    ) -> str:
+        if region_chrom is not None:
+            return str(region_chrom)
+        if chrom is not None:
+            return str(chrom)
+
+        chrom_values = sample_info.meth_data["CpG_chrm"].dropna().astype(str).unique()
+        if len(chrom_values) != 1:
+            raise ValueError(
+                "region_chrom must be provided when plotting multiple chromosomes."
+            )
+        return str(chrom_values[0])
+
+    def _resolve_overlay_regions(
+        self,
+        *,
+        sample_info: SampleInfo,
+        chrom: str | None = None,
+        overlay_regions_df: pd.DataFrame | None = None,
+        overlay_state: MethylationStates | str | None = None,
+        clean_regions: bool = False,
+        region_start: int | None = None,
+        region_end: int | None = None,
+        region_chrom: str | None = None,
+        force_resegment: bool = False,
+        min_probes: int = 3,
+        min_region_length: int | None = None,
+        min_cpgs: int | None = None,
+        merge_gap_bp: int | None = None,
+    ) -> tuple[pd.DataFrame | None, str]:
+        direct_overlay_df, direct_overlay_style = resolve_region_overlay_df(
+            overlay_regions_df=overlay_regions_df,
+        )
+        if direct_overlay_df is not None:
+            return direct_overlay_df, direct_overlay_style
+
+        if not clean_regions and overlay_state is None:
+            return None, "state"
+
+        target_state = MethylationStates.PMD if overlay_state is None else overlay_state
+
+        if chrom is None:
+            self.run_on_all_chroms(
+                sample_info=sample_info,
+                chroms=None,
+                min_probes=min_probes,
+                force_resegment=force_resegment,
+                clean_regions=False,
+            )
+            raw_regions_df = getattr(self.segmentor, "regions_df", None)
+        else:
+            raw_regions_df = self.generate_regions(
+                sample_info=sample_info,
+                chrom=chrom,
+                min_probes=min_probes,
+                force_resegment=force_resegment,
+            )
+
+        clean_df = self.get_clean_regions(
+            regions_df=raw_regions_df,
+            state=target_state,
+            merge_gap_bp=merge_gap_bp,
+            min_region_length=min_region_length,
+            min_cpgs=min_cpgs,
+            sample_id=sample_info.sample_id,
+            chrom=chrom,
+            force_resegment=force_resegment,
+        )
+        return clean_df, "state"
 
     @staticmethod
     def _resolve_artifact_path(
@@ -322,6 +432,14 @@ class MethylSegPathway:
         return normalized_cutoffs
 
     def _init_hmm(self):
+        if isinstance(self.hmm_type, str):
+            try:
+                self.hmm_type = HMMType.from_string(self.hmm_type)
+            except ValueError:
+                raise ValueError(
+                    f"Invalid hmm_type string: {self.hmm_type}. "
+                    f"Valid options are: {[e.value for e in HMMType]}"
+                )
         if self.hmm_type == HMMType.MULTINOMIAL:
             self.hmm_model = MultinomialSegHMM(
                 n_states=self.n_states,
@@ -367,7 +485,6 @@ class MethylSegPathway:
         ):
             self.analyzer.optimize_rule_params_random()
 
-    # TODO if keeping train sample parameters, make functions like this default to train sample.
     def generate_regions(
         self,
         sample_info: SampleInfo | None = None,
@@ -376,18 +493,12 @@ class MethylSegPathway:
         sample_name: str | None = None,
         sample_file: str | None = None,
         force_resegment: bool = False,
-    ):
-        if sample_info is None:
-            if sample_file is not None and sample_name is not None:
-                sample_info, _ = self.prepare_sample_info(
-                    sample_name=sample_name,
-                    sample_file=sample_file,
-                    resolution="auto",
-                )
-            else:
-                raise ValueError(
-                    "Must provide either sample_info or sample_file and sample_name."
-                )
+    ) -> pd.DataFrame:
+        sample_info = self._resolve_sample_info(
+            sample_info=sample_info,
+            sample_name=sample_name,
+            sample_file=sample_file,
+        )
         meth_data, hmm_model = self.segmentor.segment_sample(
             sample_info=sample_info, chrom=chrom, force_resegment=force_resegment
         )
@@ -423,6 +534,102 @@ class MethylSegPathway:
             ]
         )
 
+    def _clean_region_cache_path(
+        self,
+        *,
+        sample_id: str,
+        chrom: str,
+        state: MethylationStates,
+        merge_gap_bp: int,
+        min_region_length: int,
+        min_cpgs: int,
+    ) -> Path:
+        return Path(self.out_dir) / (
+            "segments_cleaned_"
+            f"{chrom}_{sample_id}_{state.name}_"
+            f"gap{merge_gap_bp}_len{min_region_length}_cpg{min_cpgs}.bed"
+        )
+
+    @staticmethod
+    def _write_clean_region_cache(
+        clean_df: pd.DataFrame,
+        out_path: Path,
+    ) -> Path:
+        out_path.parent.mkdir(parents=True, exist_ok=True)
+        if clean_df is None or clean_df.empty:
+            bed_df = pd.DataFrame(
+                columns=[
+                    "CpG_chrm",
+                    "start",
+                    "end",
+                    "avg_beta",
+                    "probe_count",
+                    "state",
+                    "length",
+                ]
+            )
+        else:
+            bed_df = clean_df.loc[
+                :,
+                [
+                    "CpG_chrm",
+                    "start",
+                    "end",
+                    "avg_beta",
+                    "probe_count",
+                    "state",
+                    "length",
+                ],
+            ].copy()
+            bed_df["state"] = bed_df["state"].astype(str)
+        bed_df.to_csv(out_path, sep="\t", header=False, index=False)
+        return out_path
+
+    def _read_clean_region_cache(
+        self,
+        cache_path: Path,
+        *,
+        state: MethylationStates,
+    ) -> pd.DataFrame:
+        if not cache_path.exists():
+            return self._empty_clean_regions_df()
+
+        try:
+            clean_df = pd.read_csv(
+                cache_path,
+                sep="\t",
+                header=None,
+                names=[
+                    "CpG_chrm",
+                    "start",
+                    "end",
+                    "avg_beta",
+                    "probe_count",
+                    "state",
+                    "length",
+                ],
+            )
+        except pd.errors.EmptyDataError:
+            return self._empty_clean_regions_df()
+        if clean_df.empty:
+            return self._empty_clean_regions_df()
+
+        clean_df["CpG_chrm"] = clean_df["CpG_chrm"].astype(str)
+        clean_df["start"] = pd.to_numeric(clean_df["start"], errors="raise").astype(int)
+        clean_df["end"] = pd.to_numeric(clean_df["end"], errors="raise").astype(int)
+        clean_df["avg_beta"] = pd.to_numeric(clean_df["avg_beta"], errors="raise")
+        clean_df["probe_count"] = pd.to_numeric(
+            clean_df["probe_count"], errors="raise"
+        ).astype(int)
+        clean_df["state"] = clean_df["state"].apply(self._coerce_region_state)
+        clean_df["length"] = pd.to_numeric(clean_df["length"], errors="raise").astype(
+            int
+        )
+        clean_df = clean_df.loc[clean_df["state"] == state].copy()
+        if clean_df.empty:
+            return self._empty_clean_regions_df()
+        return clean_df.reset_index(drop=True)
+
     @staticmethod
     def _coerce_region_state(state: MethylationStates | str) -> MethylationStates:
         if isinstance(state, MethylationStates):
@@ -446,6 +653,9 @@ class MethylSegPathway:
         merge_gap_bp: int | None = None,
         min_region_length: int | None = None,
         min_cpgs: int | None = None,
+        sample_id: str | None = None,
+        chrom: str | None = None,
+        force_resegment: bool = False,
     ) -> pd.DataFrame:
         target_state = self._coerce_region_state(state)
         merge_gap_bp = self.merge_gap_bp if merge_gap_bp is None else int(merge_gap_bp)
@@ -455,6 +665,28 @@ class MethylSegPathway:
             else int(min_region_length)
         )
         min_cpgs = self.min_region_cpgs if min_cpgs is None else int(min_cpgs)
+
+        resolved_chrom = str(chrom) if chrom is not None else None
+        cache_path = None
+        if sample_id is not None:
+            if regions_df is not None and not regions_df.empty and resolved_chrom is None:
+                chrom_values = regions_df["CpG_chrm"].dropna().astype(str).unique().tolist()
+                if len(chrom_values) == 1:
+                    resolved_chrom = chrom_values[0]
+            if resolved_chrom is not None:
+                cache_path = self._clean_region_cache_path(
+                    sample_id=str(sample_id),
+                    chrom=resolved_chrom,
+                    state=target_state,
+                    merge_gap_bp=merge_gap_bp,
+                    min_region_length=min_region_length,
+                    min_cpgs=min_cpgs,
+                )
+                if cache_path.exists() and not force_resegment:
+                    return self._read_clean_region_cache(
+                        cache_path,
+                        state=target_state,
+                    )
 
         if regions_df is None:
             regions_df = getattr(self.segmentor, "regions_df", None)
@@ -487,6 +719,10 @@ class MethylSegPathway:
             clean_df["probe_count"], errors="raise"
         ).astype(int)
         clean_df["state"] = clean_df["state"].apply(self._coerce_region_state)
+        if resolved_chrom is not None:
+            clean_df = clean_df.loc[
+                clean_df["CpG_chrm"].astype(str) == resolved_chrom
+            ].copy()
         clean_df = clean_df.loc[clean_df["state"] == target_state].copy()
 
         if clean_df.empty:
@@ -550,12 +786,83 @@ class MethylSegPathway:
         ].copy()
 
         if merged_df.empty:
+            if cache_path is not None:
+                self._write_clean_region_cache(self._empty_clean_regions_df(), cache_path)
             return self._empty_clean_regions_df()
 
-        return merged_df.loc[
+        merged_df = merged_df.loc[
             :,
             ["CpG_chrm", "start", "end", "avg_beta", "probe_count", "state", "length"],
         ].reset_index(drop=True)
+        if cache_path is not None:
+            self._write_clean_region_cache(merged_df, cache_path)
+        return merged_df
+
+    def _normalize_regions_for_bed(
+        self,
+        regions_df: pd.DataFrame | None,
+    ) -> pd.DataFrame:
+        if regions_df is None or regions_df.empty:
+            return self._empty_regions_df()
+
+        normalized_df = regions_df.copy()
+        normalized_df["CpG_chrm"] = normalized_df["CpG_chrm"].astype(str)
+        normalized_df["start"] = pd.to_numeric(
+            normalized_df["start"], errors="raise"
+        ).astype(int)
+        normalized_df["end"] = pd.to_numeric(
+            normalized_df["end"], errors="raise"
+        ).astype(int)
+        return normalized_df
+
+    def _write_bed(
+        self,
+        regions_df: pd.DataFrame | None,
+        out_path: str | Path,
+    ) -> Path:
+        out_path = Path(out_path)
+        out_path.parent.mkdir(parents=True, exist_ok=True)
+        bed_df = self._normalize_regions_for_bed(regions_df)
+        bed_df = bed_df.loc[:, ["CpG_chrm", "start", "end", "state"]].copy()
+        bed_df.to_csv(out_path, sep="\t", header=False, index=False)
+        return out_path
+
+    def _get_state_regions(
+        self,
+        regions_df: pd.DataFrame | None,
+        state: MethylationStates,
+    ) -> pd.DataFrame:
+        normalized_df = self._normalize_regions_for_bed(regions_df)
+        if normalized_df.empty:
+            return normalized_df
+
+        state_names = normalized_df["state"].astype(str)
+        state_mask = (normalized_df["state"] == state) | (state_names == state.name)
+        return normalized_df.loc[state_mask].copy()
+
+    def _write_summary_files(
+        self,
+        raw_regions_df: pd.DataFrame | None,
+        clean_regions: bool = True,
+    ) -> list[str]:
+        summary_dir = Path(self.out_dir) / "summary_files"
+        summary_dir.mkdir(parents=True, exist_ok=True)
+
+        written_paths: list[str] = []
+        for state in MethylationStates:
+            raw_state_df = self._get_state_regions(raw_regions_df, state)
+            raw_path = summary_dir / f"segments_raw_{state.name}.bed"
+            written_paths.append(str(self._write_bed(raw_state_df, raw_path)))
+
+            if clean_regions:
+                clean_state_df = self.get_clean_regions(
+                    regions_df=raw_regions_df,
+                    state=state,
+                )
+                clean_path = summary_dir / f"segments_cleaned_{state.name}.bed"
+                written_paths.append(str(self._write_bed(clean_state_df, clean_path)))
+
+        return written_paths
 
     def _write_regions_by_chrom_and_state(
         self,
@@ -596,16 +903,17 @@ class MethylSegPathway:
                     state_df = chrom_regions.loc[state_mask].copy()
 
                 bed_path = output_dir / f"segments_{chrom}_{sample_id}_{state.name}.bed"
-                bed_df = state_df[["CpG_chrm", "start", "end", "state"]].copy()
-                bed_df.to_csv(bed_path, sep="\t", header=False, index=False)
+                self._write_bed(state_df, bed_path)
 
     def run_on_all_chroms(
         self,
-        sample_info: SampleInfo,
+        sample_info: SampleInfo | None = None,
         chroms: Optional[List[str]] = None,
         min_probes: int = 3,
         force_resegment: bool = False,
-    ) -> pd.DataFrame:
+        clean_regions: bool = True,
+    ) -> list[str]:
+        sample_info = self._resolve_sample_info(sample_info=sample_info)
         filtered_sample_info = self.subset_sample_info_by_chroms(
             sample_info=sample_info,
             chroms=chroms,
@@ -617,7 +925,11 @@ class MethylSegPathway:
             .tolist()
         )
 
-        joint_hmm_types = {HMMType.STICKY, HMMType.MULTINOMIAL, HMMType.GAUSSIAN}
+        joint_hmm_types = (
+            HMMType.STICKY,
+            HMMType.MULTINOMIAL,
+            HMMType.GAUSSIAN,
+        )
         if self.hmm_type in joint_hmm_types:
             self.segmentor.segment_sample(
                 sample_info=filtered_sample_info,
@@ -633,7 +945,11 @@ class MethylSegPathway:
                 sample_id=filtered_sample_info.sample_id,
                 chroms=resolved_chroms,
             )
-            return regions_df
+            self.segmentor.regions_df = regions_df.copy()
+            return self._write_summary_files(
+                raw_regions_df=regions_df,
+                clean_regions=clean_regions,
+            )
 
         region_frames = []
         for chrom in resolved_chroms:
@@ -651,314 +967,260 @@ class MethylSegPathway:
         else:
             combined_regions_df = self._empty_regions_df()
         self.segmentor.regions_df = combined_regions_df.copy()
-        # TODO: save combined regions to bed files by state here as well segments_HIGH.bed segments_PMD.bed etc.
-        return combined_regions_df
+        return self._write_summary_files(
+            raw_regions_df=combined_regions_df,
+            clean_regions=clean_regions,
+        )
 
-    # TODO: fix this, it is not saving train_sample_info or train_sample_file and train_sample_name correctly
+    def run_pathway(
+        self,
+        sample_info: SampleInfo | None = None,
+        chroms: Optional[List[str]] = None,
+        min_probes: int = 3,
+        force_optimize_rules: bool = False,
+        force_resegment: bool = False,
+        clean_regions: bool = True,
+        verbose: bool = True,
+    ) -> list[str]:
+        sample_info = self._resolve_sample_info(sample_info=sample_info)
+        if verbose:
+            print("Fitting pathway...")
+        self.fit_pathway(force_optimize_rules=force_optimize_rules)
+        if verbose:
+            print("Generating regions ...")
+        return self.run_on_all_chroms(
+            sample_info=sample_info,
+            chroms=chroms,
+            min_probes=min_probes,
+            force_resegment=force_resegment,
+            clean_regions=clean_regions,
+        )
+
+    # TODO fix region highlighting so that it adds verticle lines and zooms in on the region but still colors by state
+    # TODO fix this so that it does not need to recalculate cleaned reagions for every plot if they are already calculated
+    def plot_labels(
+        self,
+        *,
+        label_source: str = "hmm",
+        sample_info: SampleInfo | None = None,
+        chrom: str | None = None,
+        sample_info_removed: pd.DataFrame | None = None,
+        overlay_regions_df: pd.DataFrame | None = None,
+        overlay_state: MethylationStates | str | None = None,
+        clean_regions: bool = False,
+        region_start: int | None = None,
+        region_end: int | None = None,
+        region_chrom: str | None = None,
+        x_col: str = "CpG_beg",
+        y_col: str = "beta",
+        label_title: str | None = None,
+        show_plot: bool = True,
+        max_points: int = 120_000,
+        min_probes: int = 3,
+        force_resegment: bool = False,
+        min_region_length: int | None = None,
+        min_cpgs: int | None = None,
+        merge_gap_bp: int | None = None,
+    ):
+        resolved_sample_info = self._resolve_sample_info(sample_info=sample_info)
+        overlay_df, overlay_style = self._resolve_overlay_regions(
+            sample_info=resolved_sample_info,
+            chrom=chrom,
+            overlay_regions_df=overlay_regions_df,
+            overlay_state=overlay_state,
+            clean_regions=clean_regions,
+            region_start=region_start,
+            region_end=region_end,
+            region_chrom=region_chrom,
+            force_resegment=force_resegment,
+            min_probes=min_probes,
+            min_region_length=min_region_length,
+            min_cpgs=min_cpgs,
+            merge_gap_bp=merge_gap_bp,
+        )
+
+        label_source = str(label_source).lower()
+        if label_source == "hmm":
+            return self.segmentor.plot_labels(
+                sample_info=resolved_sample_info,
+                chrom=chrom,
+                sample_info_removed=sample_info_removed,
+                overlay_regions_df=overlay_df,
+                overlay_style=overlay_style,
+                region_start=region_start,
+                region_end=region_end,
+                region_chrom=(
+                    self._resolve_region_chrom(
+                        sample_info=resolved_sample_info,
+                        chrom=chrom,
+                        region_chrom=region_chrom,
+                    )
+                    if any(
+                        value is not None
+                        for value in (region_start, region_end, region_chrom)
+                    )
+                    else None
+                ),
+                x_col=x_col,
+                y_col=y_col,
+                label_title=label_title if label_title is not None else "HMM state",
+                show_plot=show_plot,
+                max_points=max_points,
+            )
+        if label_source in {"kmeans", "rule_based"}:
+            return self.analyzer.plot_labels(
+                sample_info=resolved_sample_info,
+                chrom=chrom,
+                sample_info_removed=sample_info_removed,
+                label_source=label_source,
+                overlay_regions_df=overlay_df,
+                overlay_style=overlay_style,
+                region_start=region_start,
+                region_end=region_end,
+                region_chrom=(
+                    self._resolve_region_chrom(
+                        sample_info=resolved_sample_info,
+                        chrom=chrom,
+                        region_chrom=region_chrom,
+                    )
+                    if any(
+                        value is not None
+                        for value in (region_start, region_end, region_chrom)
+                    )
+                    else None
+                ),
+                x_col=x_col,
+                y_col=y_col,
+                label_title=label_title,
+                show_plot=show_plot,
+                max_points=max_points,
+            )
+
+        raise ValueError(
+            "label_source must be one of 'kmeans', 'hmm', or 'rule_based'. "
+            f"Received: {label_source!r}"
+        )
+
+    def plot_embedding(
+        self,
+        *,
+        label_source: str = "kmeans",
+        sample_info: SampleInfo | None = None,
+        chrom: str | None = None,
+        method: str = "pca",
+        n_components: int = 2,
+        top_n_loadings: int = 5,
+        hexbin: bool = True,
+        interactive: bool = False,
+        include_metrics: bool = True,
+        include_biplot: bool = False,
+        label_title: str = "State",
+        region_start: int | None = None,
+        region_end: int | None = None,
+        region_chrom: str | None = None,
+        use_pca_features: bool = False,
+        use_parallel: bool = True,
+        show_plot: bool = True,
+        force_resegment: bool = False,
+    ):
+        label_source = str(label_source).lower()
+        if label_source == "kmeans" and sample_info is None:
+            return self.assigner.plot_training_embedding(
+                method=method,
+                n_components=n_components,
+                top_n_loadings=top_n_loadings,
+                hexbin=hexbin,
+                interactive=interactive,
+                include_metrics=include_metrics,
+                include_biplot=include_biplot,
+                label_title=label_title,
+                region_start=region_start,
+                region_end=region_end,
+                region_chrom=region_chrom,
+                use_pca_features=use_pca_features,
+                use_parallel=use_parallel,
+                show_plot=show_plot,
+            )
+
+        resolved_sample_info = self._resolve_sample_info(sample_info=sample_info)
+
+        if label_source == "kmeans":
+            meth_data, emission_df, _, _, _, labels = (
+                self.assigner.apply_kmeans_to_sample(
+                    sample_info=resolved_sample_info,
+                    chrom=chrom,
+                )
+            )
+            return self.assigner.plot_embedding(
+                emission_df=emission_df,
+                labels=labels,
+                meth_data=meth_data,
+                method=method,
+                sample_info=resolved_sample_info,
+                chrom=chrom,
+                n_components=n_components,
+                top_n_loadings=top_n_loadings,
+                hexbin=hexbin,
+                interactive=interactive,
+                include_metrics=include_metrics,
+                include_biplot=include_biplot,
+                label_title=label_title,
+                region_start=region_start,
+                region_end=region_end,
+                region_chrom=region_chrom,
+                use_pca_features=use_pca_features,
+                use_parallel=use_parallel,
+                show_plot=show_plot,
+            )
+
+        if label_source == "hmm":
+            meth_data, _ = self.segmentor.segment_sample(
+                sample_info=resolved_sample_info,
+                chrom=chrom,
+                force_resegment=force_resegment,
+            )
+            return self.assigner.plot_embedding(
+                emission_df=self.segmentor.emissions_df,
+                labels=meth_data["hmm_state_readable"].to_numpy(),
+                meth_data=meth_data,
+                method=method,
+                sample_info=resolved_sample_info,
+                chrom=chrom,
+                n_components=n_components,
+                top_n_loadings=top_n_loadings,
+                hexbin=hexbin,
+                interactive=interactive,
+                include_metrics=include_metrics,
+                include_biplot=include_biplot,
+                label_title=label_title,
+                region_start=region_start,
+                region_end=region_end,
+                region_chrom=region_chrom,
+                use_pca_features=use_pca_features,
+                use_parallel=use_parallel,
+                show_plot=show_plot,
+            )
+
+        raise ValueError(
+            "label_source must be either 'kmeans' or 'hmm' for embedding plots. "
+            f"Received: {label_source!r}"
+        )
+
     def to_yaml(self, yaml_path: str, include_learned: bool = True):
         """
         Serialize pathway configuration and optionally learned artifacts.
         """
-        yaml_path = Path(yaml_path)
-        yaml_path.parent.mkdir(parents=True, exist_ok=True)
-        bundle_dir = yaml_path.parent / f"{yaml_path.stem}_artifacts"
-        bundle_dir.mkdir(parents=True, exist_ok=True)
-
-        cfg = {
-            "pathway": {
-                "n_states": self.n_states,
-                "int_low_cutoff": self.int_low_cutoff,
-                "int_high_cutoff": self.int_high_cutoff,
-                "high_cutoff": self.high_cutoff,
-                "window_specs": self.window_specs,
-                "train_chroms": self.train_chroms,
-                "max_cpg_per_chrom": self.max_cpg_per_chrom,
-                "out_dir": str(self.out_dir),
-                "random_state": self.random_state,
-                "cluster_space": self.assigner.cluster_space,
-                "n_pca": self.assigner.n_pca,
-                "hmm_type": self.hmm_type,
-                "min_region_length": self.min_region_length,
-                "min_region_cpgs": self.min_region_cpgs,
-                "merge_gap_bp": self.merge_gap_bp,
-                "state_assignment_method": self.state_assignment_method.value,
-                "hmm_observation_mode": self.hmm_observation_mode.value,
-            }
-        }
-
-        # --- Serialize hmm_params safely ---
-        safe_hmm_params = {}
-        hmm_param_dir = bundle_dir / "hmm_params"
-        hmm_param_dir.mkdir(exist_ok=True)
-
-        for k, v in (self.hmm_params or {}).items():
-            if isinstance(v, np.ndarray):
-                path = hmm_param_dir / f"{k}.npy"
-                np.save(path, v)
-                safe_hmm_params[k] = {
-                    "__npy_path__": self._relativize_artifact_path(
-                        yaml_path.parent, path
-                    )
-                }
-            elif isinstance(v, (int, float, str, bool)) or v is None:
-                safe_hmm_params[k] = v
-            elif isinstance(v, (list, tuple)):
-                safe_hmm_params[k] = list(v)
-            else:
-                safe_hmm_params[k] = str(v)
-
-        cfg["hmm_params"] = safe_hmm_params
-
-        # --- Save SampleInfo ---
-        if self.train_sample_info is not None:
-            sample_path = bundle_dir / "train_sample_meth.feather"
-            self.train_sample_info.meth_data.reset_index(drop=True).to_feather(
-                sample_path
-            )
-
-            cfg["train_sample_info"] = {
-                "sample_id": self.train_sample_info.sample_id,
-                "meth_data_path": self._relativize_artifact_path(
-                    yaml_path.parent, sample_path
-                ),
-            }
-
-        # --- Save learned artifacts ---
-        if include_learned and hasattr(self.assigner, "model"):
-
-            model_dir = bundle_dir / "models"
-            model_dir.mkdir(exist_ok=True)
-
-            model_cfg = {}
-
-            if self.assigner.model.kmeans is not None:
-                kmeans_path = model_dir / "kmeans.joblib"
-                joblib.dump(self.assigner.model.kmeans, kmeans_path)
-                model_cfg["kmeans"] = self._relativize_artifact_path(
-                    yaml_path.parent, kmeans_path
-                )
-
-            if self.assigner.model.scaler is not None:
-                scaler_path = model_dir / "scaler.joblib"
-                joblib.dump(self.assigner.model.scaler, scaler_path)
-                model_cfg["scaler"] = self._relativize_artifact_path(
-                    yaml_path.parent, scaler_path
-                )
-
-            if self.assigner.model.imputer is not None:
-                imputer_path = model_dir / "imputer.joblib"
-                joblib.dump(self.assigner.model.imputer, imputer_path)
-                model_cfg["imputer"] = self._relativize_artifact_path(
-                    yaml_path.parent, imputer_path
-                )
-
-            if self.assigner.model.pca is not None:
-                pca_path = model_dir / "pca.joblib"
-                joblib.dump(self.assigner.model.pca, pca_path)
-                model_cfg["pca"] = self._relativize_artifact_path(
-                    yaml_path.parent, pca_path
-                )
-
-            model_cfg["feature_cols"] = self.assigner.model.feature_cols
-            model_cfg["n_states"] = self.assigner.model.n_states
-            model_cfg["cluster_space"] = self.assigner.model.cluster_space
-            model_cfg["n_pca"] = self.assigner.model.n_pca
-
-            cfg["trained_model"] = model_cfg
-
-        # --- Save rule cutoffs ---
-        if hasattr(self.analyzer, "state_cutoffs"):
-            cfg["state_cutoffs"] = self._validate_state_cutoffs(
-                self.analyzer.state_cutoffs
-            )
-
-        with open(yaml_path, "w") as fh:
-            yaml.safe_dump(cfg, fh, sort_keys=False)
+        MethylSegConfig.from_instance(
+            self,
+            out_dir=str(Path(yaml_path).parent),
+            include_learned=include_learned,
+        ).to_yaml(yaml_path)
 
     @classmethod
     def from_yaml(cls, yaml_path: str, load_learned: bool = True):
         """
         Reconstruct MethylSegPathway from YAML file.
         """
-        yaml_path = Path(yaml_path)
-        yaml_dir = yaml_path.parent.resolve()
-
-        with open(yaml_path, "r") as fh:
-            cfg = yaml.safe_load(fh)
-        if not isinstance(cfg, dict):
-            raise ValueError("Serialized methylseg config must be a YAML mapping.")
-
-        pathway_cfg = cfg.get("pathway", {})
-        if not pathway_cfg:
-            raise ValueError(
-                "Serialized config is missing the required 'pathway' section."
-            )
-
-        n_states = pathway_cfg.get("n_states", 4)
-        int_low_cutoff = pathway_cfg.get("int_low_cutoff", 0.2)
-        int_high_cutoff = pathway_cfg.get("int_high_cutoff", 0.7)
-        high_cutoff = pathway_cfg.get("high_cutoff", 0.8)
-        window_specs = cls._normalize_window_specs(
-            pathway_cfg.get("window_specs", [(500_000, "500kb")])
+        return MethylSegConfig.from_yaml(yaml_path).build_pathway(
+            load_learned=load_learned,
         )
-        train_chroms = cls._normalize_train_chroms(pathway_cfg.get("train_chroms"))
-        max_cpg_per_chrom = pathway_cfg.get("max_cpg_per_chrom", 50_000)
-        out_dir = pathway_cfg.get("out_dir", ".")
-        random_state = pathway_cfg.get("random_state", 42)
-        cluster_space = pathway_cfg.get("cluster_space", "pca")
-        n_pca = pathway_cfg.get("n_pca", 5)
-        hmm_type = pathway_cfg.get("hmm_type", "ct")
-        min_region_length = pathway_cfg.get("min_region_length", 10_000)
-        min_region_cpgs = pathway_cfg.get("min_region_cpgs", 1)
-        merge_gap_bp = pathway_cfg.get("merge_gap_bp", 0)
-        state_assignment_method = pathway_cfg.get(
-            "state_assignment_method",
-            MethylStateAssignmentMethod.DEFINITION.value,
-        )
-        hmm_observation_mode = pathway_cfg.get(
-            "hmm_observation_mode",
-            HMMObservationMode.DISCRETE_STATES.value,
-        )
-
-        # --- Load hmm_params ---
-        hmm_params_cfg = cfg.get("hmm_params", {})
-        loaded_hmm_params = {}
-
-        for k, v in hmm_params_cfg.items():
-            if isinstance(v, dict) and "__npy_path__" in v:
-                npy_path = cls._resolve_artifact_path(
-                    yaml_dir,
-                    v["__npy_path__"],
-                    field_name=f"hmm_params.{k}",
-                )
-                loaded_hmm_params[k] = np.load(npy_path, allow_pickle=False)
-            else:
-                loaded_hmm_params[k] = v
-
-        # --- Load SampleInfo ---
-        train_sample_info = None
-        if "train_sample_info" in cfg:
-            sample_cfg = cfg["train_sample_info"]
-            if not isinstance(sample_cfg, dict):
-                raise ValueError("train_sample_info must be a dictionary.")
-            if "sample_id" not in sample_cfg or "meth_data_path" not in sample_cfg:
-                raise ValueError(
-                    "train_sample_info must contain 'sample_id' and 'meth_data_path'."
-                )
-            sample_id = sample_cfg["sample_id"]
-            meth_path = cls._resolve_artifact_path(
-                yaml_dir,
-                sample_cfg["meth_data_path"],
-                field_name="train_sample_info.meth_data_path",
-            )
-            meth_df = pd.read_feather(meth_path)
-            train_sample_info = SampleInfo(sample_id=sample_id, meth_data=meth_df)
-        else:
-            raise ValueError(
-                "Serialized config is missing 'train_sample_info'. Modern configs "
-                "must include a packaged training sample."
-            )
-
-        # --- Create instance ---
-        inst = cls(
-            n_states=n_states,
-            int_low_cutoff=int_low_cutoff,
-            int_high_cutoff=int_high_cutoff,
-            high_cutoff=high_cutoff,
-            window_specs=window_specs,
-            train_sample_info=train_sample_info,
-            train_chroms=train_chroms,
-            max_cpg_per_chrom=max_cpg_per_chrom,
-            out_dir=out_dir,
-            random_state=random_state,
-            cluster_space=cluster_space,
-            n_pca=n_pca,
-            hmm_type=hmm_type,
-            hmm_params=loaded_hmm_params,
-            min_region_length=min_region_length,
-            min_region_cpgs=min_region_cpgs,
-            merge_gap_bp=merge_gap_bp,
-            state_assignment_method=state_assignment_method,
-            hmm_observation_mode=hmm_observation_mode,
-        )
-
-        # --- Restore trained model ---
-        if load_learned and "trained_model" in cfg:
-            model_cfg = cfg["trained_model"]
-            if not isinstance(model_cfg, dict):
-                raise ValueError("trained_model must be a dictionary.")
-
-            kmeans = (
-                joblib.load(
-                    cls._resolve_artifact_path(
-                        yaml_dir,
-                        model_cfg["kmeans"],
-                        field_name="trained_model.kmeans",
-                    )
-                )
-                if "kmeans" in model_cfg
-                else None
-            )
-            scaler = (
-                joblib.load(
-                    cls._resolve_artifact_path(
-                        yaml_dir,
-                        model_cfg["scaler"],
-                        field_name="trained_model.scaler",
-                    )
-                )
-                if "scaler" in model_cfg
-                else None
-            )
-            imputer = (
-                joblib.load(
-                    cls._resolve_artifact_path(
-                        yaml_dir,
-                        model_cfg["imputer"],
-                        field_name="trained_model.imputer",
-                    )
-                )
-                if "imputer" in model_cfg
-                else None
-            )
-            pca = (
-                joblib.load(
-                    cls._resolve_artifact_path(
-                        yaml_dir,
-                        model_cfg["pca"],
-                        field_name="trained_model.pca",
-                    )
-                )
-                if "pca" in model_cfg
-                else None
-            )
-            model_cluster_space = model_cfg.get("cluster_space")
-            if model_cluster_space is None:
-                model_cluster_space = "pca" if pca is not None else "raw"
-            model_n_pca = model_cfg.get("n_pca")
-            if model_n_pca is None:
-                model_n_pca = n_pca if model_cluster_space == "pca" else None
-
-            inst.assigner.model = KMeansMethylationModel(
-                kmeans=kmeans,
-                scaler=scaler,
-                imputer=imputer,
-                pca=pca,
-                feature_cols=model_cfg.get("feature_cols", []),
-                n_states=model_cfg.get("n_states", n_states),
-                cluster_space=model_cluster_space,
-                n_pca=model_n_pca,
-            )
-            inst.assigner.cluster_space = model_cluster_space
-            inst.assigner.n_pca = model_n_pca
-            inst.cluster_space = model_cluster_space
-            inst.n_pca = model_n_pca
-
-        # --- Restore rule cutoffs ---
-        if "state_cutoffs" in cfg:
-            inst.analyzer.state_cutoffs = cls._validate_state_cutoffs(
-                cfg["state_cutoffs"]
-            )
-
-        inst._loaded_config = cfg
-        return inst

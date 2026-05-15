@@ -6,6 +6,7 @@ from .helper_classes import (
     MethylationStates,
     MethylDataPrep,
     SampleInfo,
+    HMMType,
 )
 from .methylseg_hmm import (
     CTMethylSegHMM,
@@ -35,6 +36,7 @@ __all__ = [
     "MethylStateAssignmentMethod",
     "MethylationStates",
     "MultinomialSegHMM",
+    "HMMType",
     "SampleInfo",
     "StickyCategoricalMethylSegHMM",
     "get_biological_state_colors",

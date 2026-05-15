@@ -74,29 +74,119 @@ def normalize_state_label(value) -> str | None:
     return str(value)
 
 
+def build_region_overlay_df(
+    *,
+    region_start: int,
+    region_end: int,
+    region_chrom: str,
+    label: str = "Selected region",
+) -> pd.DataFrame:
+    resolved_region_start = int(region_start)
+    resolved_region_end = int(region_end)
+    if resolved_region_end < resolved_region_start:
+        raise ValueError("region_end must be greater than or equal to region_start.")
+
+    return pd.DataFrame(
+        [
+            {
+                "CpG_chrm": str(region_chrom),
+                "start": resolved_region_start,
+                "end": resolved_region_end,
+                "state": str(label),
+            }
+        ]
+    )
+
+
+def resolve_region_overlay_df(
+    *,
+    overlay_regions_df: pd.DataFrame | None = None,
+    region_start: int | None = None,
+    region_end: int | None = None,
+    region_chrom: str | None = None,
+    label: str = "Selected region",
+) -> tuple[pd.DataFrame | None, str]:
+    overlay_style = "state"
+
+    region_requested = any(
+        value is not None for value in (region_start, region_end, region_chrom)
+    )
+    if overlay_regions_df is not None:
+        return overlay_regions_df.copy(), overlay_style
+
+    if region_requested:
+        if region_start is None or region_end is None:
+            raise ValueError(
+                "region_start and region_end must both be provided when "
+                "requesting region highlighting."
+            )
+        if region_chrom is None:
+            raise ValueError(
+                "region_chrom must be provided when requesting region highlighting."
+            )
+        overlay_style = "highlight"
+        return (
+            build_region_overlay_df(
+                region_start=region_start,
+                region_end=region_end,
+                region_chrom=region_chrom,
+                label=label,
+            ),
+            overlay_style,
+        )
+
+    return None, overlay_style
+
+
+def resolve_overlay_plot_args(
+    *,
+    color_pmd_only: bool = False,
+    color_regions_df: pd.DataFrame | None = None,
+) -> tuple[pd.DataFrame | None, str]:
+    """Normalize convenience plotting options into overlay args.
+
+    This keeps the public API friendly while allowing plotting callers
+    to consistently pass ``overlay_regions_df`` and ``overlay_style``.
+    """
+    overlay_style = "highlight" if bool(color_pmd_only) else "state"
+    return color_regions_df, overlay_style
+
+
 def annotate_plot_df_with_regions(
     df_plot: pd.DataFrame,
     regions_df: pd.DataFrame,
     *,
     chrom_col: str,
     pos_col: str,
-    color_pmd_only: bool,
+    overlay_style: str = "state",
     region_label_col: str = "state",
 ) -> tuple[pd.DataFrame, str, dict[str, str], dict[str, list[str]], str, str]:
     plot_df = df_plot.copy()
     outside_region_color = "#7E7E7E"
-    plot_df["__region_color__"] = "non-PMD" if color_pmd_only else "Outside regions"
+    highlight_color = "#d62728"
+
+    if overlay_style not in {"state", "highlight"}:
+        raise ValueError(
+            "overlay_style must be either 'state' or 'highlight'. "
+            f"Received: {overlay_style!r}"
+        )
+
+    plot_df["__region_color__"] = (
+        "Outside region" if overlay_style == "highlight" else "Outside regions"
+    )
 
     if regions_df is None or regions_df.empty:
-        if color_pmd_only:
-            plot_df["__region_color__"] = "non-PMD"
+        if overlay_style == "highlight":
             return (
                 plot_df,
                 "__region_color__",
-                {"PMD": "#d62728", "non-PMD": "#1f77b4"},
-                {"__region_color__": ["PMD", "non-PMD"]},
-                "PMD status",
-                "PMD status",
+                {
+                    "Selected region": highlight_color,
+                    "Outside region": outside_region_color,
+                },
+                {"__region_color__": ["Selected region", "Outside region"]},
+                "Highlighted region",
+                "Highlighted region",
             )
         return (
             plot_df,
@@ -143,26 +233,25 @@ def annotate_plot_df_with_regions(
             )
             if not region_mask.any():
                 continue
-            if color_pmd_only:
-                color_label = (
-                    "PMD"
-                    if normalize_state_label(getattr(region, region_label_col)) == "PMD"
-                    else "non-PMD"
-                )
+            if overlay_style == "highlight":
+                color_label = "Selected region"
             else:
                 color_label = normalize_state_label(getattr(region, region_label_col))
                 if color_label is None:
                     color_label = "Region"
             plot_df.loc[chrom_indices[region_mask], "__region_color__"] = color_label
 
-    if color_pmd_only:
+    if overlay_style == "highlight":
         return (
             plot_df,
             "__region_color__",
-            {"PMD": "#d62728", "non-PMD": "#1f77b4"},
-            {"__region_color__": ["PMD", "non-PMD"]},
-            "PMD status",
-            "PMD status",
+            {
+                "Selected region": highlight_color,
+                "Outside region": outside_region_color,
+            },
+            {"__region_color__": ["Selected region", "Outside region"]},
+            "Highlighted region",
+            "Highlighted region",
         )
 
     present_labels = plot_df["__region_color__"].dropna().astype(str).unique().tolist()
@@ -202,9 +291,12 @@ def plot_interactive_beta_scatter(
     label_title: str | None = None,
     show_plot: bool = True,
     max_points: int = 120_000,
-    color_pmd_only: bool = False,
-    color_regions_df: pd.DataFrame | None = None,
-    region_label_col: str = "state",
+    overlay_regions_df: pd.DataFrame | None = None,
+    overlay_style: str = "state",
+    overlay_label_col: str = "state",
+    region_start: int | None = None,
+    region_end: int | None = None,
+    region_chrom: str | None = None,
 ) -> object | None:
     df_plot = df_plot.copy()
     df_plot = df_plot.loc[:, ~df_plot.columns.duplicated()]
@@ -274,7 +366,7 @@ def plot_interactive_beta_scatter(
             keep_idx = np.sort(rng.choice(removed_n, size=removed_keep, replace=False))
             removed_plot = removed_plot.iloc[keep_idx].reset_index(drop=True)
 
-    if color_regions_df is not None:
+    if overlay_regions_df is not None:
         (
             df_plot,
             plot_color_col,
@@ -284,50 +376,42 @@ def plot_interactive_beta_scatter(
             legend_title,
         ) = annotate_plot_df_with_regions(
             df_plot=df_plot,
-            regions_df=color_regions_df,
+            regions_df=overlay_regions_df,
             chrom_col="CpG_chrm",
             pos_col=x_col,
-            color_pmd_only=color_pmd_only,
-            region_label_col=region_label_col,
+            overlay_style=overlay_style,
+            region_label_col=overlay_label_col,
         )
     else:
         if label_col not in df_plot.columns:
             raise ValueError(
                 f"Label column '{label_col}' not found in plotting DataFrame."
             )
-        if isinstance(df_plot[label_col].iloc[0], Enum):
-            df_plot[label_col] = df_plot[label_col].apply(lambda x: x.value)
-        df_plot[label_col] = df_plot[label_col].astype(int)
+        plot_color_col = "__plot_label__"
+        df_plot[plot_color_col] = df_plot[label_col].apply(normalize_state_label)
+        if df_plot[plot_color_col].isna().any():
+            raise ValueError(
+                f"Label column '{label_col}' contains empty values that cannot be plotted."
+            )
 
-        if color_pmd_only:
-            plot_color_col = f"{label_col}_pmd_status"
-            df_plot[plot_color_col] = np.where(
-                df_plot[label_col] == MethylationStates.PMD.value,
-                "PMD",
-                "non-PMD",
-            )
-            color_map = {"PMD": "#d62728", "non-PMD": "#1f77b4"}
-            category_orders = {plot_color_col: ["PMD", "non-PMD"]}
-            color_label = "PMD status"
-            legend_title = "PMD status"
-        else:
-            df_plot[label_col] = df_plot[label_col].astype(str)
-            plot_color_col = label_col
-            _, _, _, state_colors_hex = get_biological_state_colors()
-            present_state_values = get_present_biological_states(
-                df_plot[label_col].astype(int).to_numpy()
-            )
-            color_map = {
-                str(state_value): state_colors_hex[state_value]
-                for state_value in present_state_values
-            }
-            category_orders = {
-                plot_color_col: [
-                    str(state_value) for state_value in present_state_values
-                ]
-            }
-            color_label = label_title if label_title is not None else label_col
-            legend_title = "State"
+        _, _, _, state_colors_hex = get_biological_state_colors()
+        ordered_state_names = [
+            state.name
+            for state in MethylationStates
+            if state.name in set(df_plot[plot_color_col].tolist())
+        ]
+        for label_name in df_plot[plot_color_col].tolist():
+            if label_name not in ordered_state_names:
+                ordered_state_names.append(label_name)
+
+        color_map = {
+            state.name: state_colors_hex[state.value] for state in MethylationStates
+        }
+        for label_name in ordered_state_names:
+            color_map.setdefault(label_name, "#9e9e9e")
+        category_orders = {plot_color_col: ordered_state_names}
+        color_label = label_title if label_title is not None else label_col
+        legend_title = label_title if label_title is not None else "State"
 
     title_parts = []
     if sample_info is not None:
@@ -382,17 +466,55 @@ def plot_interactive_beta_scatter(
         paper_bgcolor="white",
     )
 
-    if color_regions_df is None and not color_pmd_only:
-        state_names = {str(s.value): s.name for s in MethylationStates}
-        fig.for_each_trace(lambda t: t.update(name=state_names.get(t.name, t.name)))
+    region_requested = any(
+        value is not None for value in (region_start, region_end, region_chrom)
+    )
+    if region_requested:
+        if region_start is None or region_end is None:
+            raise ValueError(
+                "region_start and region_end must both be provided when "
+                "requesting region highlighting."
+            )
+        if region_chrom is None:
+            raise ValueError(
+                "region_chrom must be provided when requesting region highlighting."
+            )
+
+        resolved_region_chrom = str(region_chrom)
+        should_highlight = chrom is None or str(chrom) == resolved_region_chrom
+        if should_highlight:
+            resolved_region_start = int(region_start)
+            resolved_region_end = int(region_end)
+            flank_bp = max(
+                1000,
+                int(np.ceil(max(resolved_region_end - resolved_region_start, 1) * 0.1)),
+            )
+            fig.add_vline(
+                x=resolved_region_start,
+                line_color="#111111",
+                line_dash="dash",
+                opacity=0.8,
+            )
+            fig.add_vline(
+                x=resolved_region_end,
+                line_color="#111111",
+                line_dash="dash",
+                opacity=0.8,
+            )
+            fig.update_xaxes(
+                range=[
+                    resolved_region_start - flank_bp,
+                    resolved_region_end + flank_bp,
+                ]
+            )
 
     if show_plot:
         fig.show(renderer="notebook")
 
     if out_dir is not None:
-        suffix = "_pmd_only" if color_pmd_only else ""
-        if color_regions_df is not None:
-            suffix += "_region_coloring"
+        suffix = ""
+        if overlay_regions_df is not None:
+            suffix += f"_{overlay_style}_overlay"
         fig.write_html(f"{out_dir}/interactive_beta_by_{label_col}{suffix}.html")
 
     return fig

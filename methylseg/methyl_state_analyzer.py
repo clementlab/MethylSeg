@@ -26,7 +26,14 @@ from .helper_classes import (
     MethylationStates,
     SampleInfo,
 )
-from .utils import plot_interactive_beta_scatter, get_regional_window_labels
+from .utils import (
+    get_regional_window_labels,
+    normalize_state_label,
+    plot_interactive_beta_scatter,
+    relabel_by_mean_emission,
+    resolve_overlay_plot_args,
+    resolve_region_overlay_df,
+)
 
 
 class MethylStateAnalyzer:
@@ -38,8 +45,36 @@ class MethylStateAnalyzer:
         self.train_joint = None
         self.window_specs = assigner.window_specs
 
+    def _populate_kmeans_state_display(self, train_joint: pd.DataFrame) -> pd.DataFrame:
+        train_joint = train_joint.copy()
+        if "kmeans_label" not in train_joint.columns:
+            train_joint["kmeans_label"] = self.assigner.train_labels
+        if hasattr(self.assigner, "model"):
+            _, _, raw_labels, _ = self.assigner.apply_kmeans_to_emissions(
+                self.assigner.train_emission_df.copy()
+            )
+            train_joint["kmeans_state_display"] = relabel_by_mean_emission(
+                raw_labels=raw_labels,
+                emission_df=self.assigner.train_emission_df.copy(),
+                state_cutoffs=getattr(self, "state_cutoffs", None),
+                int_low_cutoff=self.assigner.int_low_cutoff,
+                int_high_cutoff=self.assigner.int_high_cutoff,
+                window_specs=self.assigner.window_specs,
+            )
+        else:
+            train_joint["kmeans_state_display"] = train_joint["kmeans_label"]
+        train_joint["kmeans_state_display"] = train_joint["kmeans_state_display"].apply(
+            normalize_state_label
+        )
+        return train_joint
+
     def _build_train_joint(self):
         if self.train_joint is not None:
+            if (
+                "kmeans_label" not in self.train_joint.columns
+                or "kmeans_state_display" not in self.train_joint.columns
+            ):
+                self.train_joint = self._populate_kmeans_state_display(self.train_joint)
             return
         if not hasattr(self.assigner, "model"):
             raise ValueError("No trained model found. Please train a model first.")
@@ -48,14 +83,13 @@ class MethylStateAnalyzer:
             axis=1,
         )
         train_joint = train_joint.loc[:, ~train_joint.columns.duplicated()]
-        train_joint["kmeans_label"] = self.assigner.train_labels
-        self.train_joint = train_joint
+        self.train_joint = self._populate_kmeans_state_display(train_joint)
 
     def plot_feature_distributions_by_kmeans_state(self, show_plots=True):
         self._build_train_joint()
         train_loadings = self.assigner.get_pca_loadings()
         for emission in train_loadings["PC2"].abs().sort_values(ascending=False).index:
-            for state, df in self.train_joint.groupby("kmeans_label"):
+            for state, df in self.train_joint.groupby("kmeans_state_display"):
                 df[emission].hist(bins=50, alpha=0.5, label=f"{state}")
             plt.xlabel(emission)
             plt.ylabel("Count")
@@ -363,17 +397,9 @@ class MethylStateAnalyzer:
         )
         return states_by_rules
 
-    def __set_from_config(self, config: MethylSegConfig):
-        state_cfg = config.get("state_cutoffs", None)
+    def __set_from_config(self, state_cfg: dict | None):
         if state_cfg is not None:
-            if "cutoffs" in state_cfg and isinstance(state_cfg.get("cutoffs"), dict):
-                cutoffs = state_cfg.get("cutoffs", {})
-                self.cutoffs_set_manually = bool(state_cfg.get("set_manually", False))
-            else:
-                cutoffs = state_cfg
-                self.cutoffs_set_manually = bool(
-                    state_cfg.get("set_manually", False)
-                ) if isinstance(state_cfg, dict) else False
+            cutoffs = state_cfg
             self.set_state_cutoffs(
                 beta_low_max=cutoffs.get("beta_low_max"),
                 beta_high_min=cutoffs.get("beta_high_min"),
@@ -384,8 +410,11 @@ class MethylStateAnalyzer:
         """
         Load rule cutoffs from a YAML file written by ``MethylSegConfig``.
         """
-        config = MethylSegConfig.from_yaml(yaml_file).config
-        self.__set_from_config(config)
+        config = MethylSegConfig.from_yaml(yaml_file)
+        self.__set_from_config(config.get_state_cutoffs())
+        self.cutoffs_set_manually = bool(
+            config.config.get("state_cutoffs_set_manually", False)
+        )
 
     def set_state_cutoffs(
         self,
@@ -548,25 +577,72 @@ class MethylStateAnalyzer:
         y_col: str = "beta",
         label_title: str | None = None,
         show_plot: bool = True,
-        max_points: int = 120_000,  # ← added
+        max_points: int = 120_000,
         color_pmd_only: bool = False,
         color_regions_df: pd.DataFrame | None = None,
     ):
+        overlay_regions_df, overlay_style = resolve_overlay_plot_args(
+            color_pmd_only=color_pmd_only,
+            color_regions_df=color_regions_df,
+        )
+        return self.plot_labels(
+            sample_info=None if use_train_data else sample_info,
+            chrom=chrom,
+            sample_info_removed=sample_info_removed,
+            label_source=label_type,
+            overlay_regions_df=overlay_regions_df,
+            x_col=x_col,
+            y_col=y_col,
+            label_title=label_title,
+            show_plot=show_plot,
+            max_points=max_points,
+            overlay_style=overlay_style,
+        )
+
+    def plot_labels(
+        self,
+        sample_info: SampleInfo | None = None,
+        chrom: str | None = None,
+        sample_info_removed: pd.DataFrame | None = None,
+        label_source: str = "kmeans",
+        overlay_regions_df: pd.DataFrame | None = None,
+        overlay_style: str = "state",
+        region_start: int | None = None,
+        region_end: int | None = None,
+        region_chrom: str | None = None,
+        x_col: str = "CpG_beg",
+        y_col: str = "beta",
+        label_title: str | None = None,
+        show_plot: bool = True,
+        max_points: int = 120_000,
+    ):
         """
-        Interactive scatter: genomic position vs beta, colored by label.
+        Plot genomic-position vs beta for analyzer-owned labels.
         """
-        # -----------------------
-        # Build plotting DataFrame
-        # -----------------------
-        if use_train_data:
+        label_source = str(label_source).lower()
+        if label_source not in {"kmeans", "rule_based"}:
+            raise ValueError(
+                "label_source must be either 'kmeans' or 'rule_based' for "
+                f"{self.__class__.__name__}. Received: {label_source!r}"
+            )
+
+        if sample_info is None:
             self._build_train_joint()
             df_plot = self.train_joint.copy()
-        else:
-            if sample_info is None:
-                raise ValueError(
-                    "sample_info must be provided when use_train_data is False."
+            resolved_sample_info = getattr(self.assigner, "train_sample_info", None)
+            if (
+                label_source == "rule_based"
+                and "rule_based_label" not in df_plot.columns
+            ):
+                if resolved_sample_info is None:
+                    raise ValueError(
+                        "No train_sample_info is available to compute rule-based labels."
+                    )
+                df_plot["rule_based_label"] = self.define_states_by_rules(
+                    sample_info=resolved_sample_info,
+                    sample_emissions=self.assigner.train_emission_df,
                 )
-
+        else:
             meth_data, emission_df, _, _, _, labels = (
                 self.assigner.apply_kmeans_to_sample(
                     sample_info=sample_info, chrom=chrom
@@ -577,17 +653,24 @@ class MethylStateAnalyzer:
             df_plot = df_plot.loc[:, ~df_plot.columns.duplicated()]
             df_plot["kmeans_label"] = labels
 
-            if label_type == "rule_based":
-                rule_labels = self.define_states_by_rules(
+            if label_source == "rule_based":
+                df_plot["rule_based_label"] = self.define_states_by_rules(
                     sample_info=sample_info,
                     chrom=chrom,
                     sample_emissions=emission_df,
                 )
-                df_plot["rule_based_label"] = rule_labels
-        label_col = f"{label_type}_label"
+            resolved_sample_info = sample_info
+
+        overlay_regions_df, resolved_overlay_style = resolve_region_overlay_df(
+            overlay_regions_df=overlay_regions_df,
+            region_start=region_start,
+            region_end=region_end,
+            region_chrom=region_chrom,
+        )
+        label_col = f"{label_source}_label"
         return plot_interactive_beta_scatter(
             df_plot=df_plot,
-            sample_info=sample_info,
+            sample_info=resolved_sample_info,
             sample_info_removed=sample_info_removed,
             chrom=chrom,
             out_dir=self.out_dir,
@@ -597,6 +680,13 @@ class MethylStateAnalyzer:
             label_title=label_title,
             show_plot=show_plot,
             max_points=max_points,
-            color_pmd_only=color_pmd_only,
-            color_regions_df=color_regions_df,
+            overlay_regions_df=overlay_regions_df,
+            overlay_style=(
+                resolved_overlay_style
+                if overlay_regions_df is not None
+                else overlay_style
+            ),
+            region_start=region_start,
+            region_end=region_end,
+            region_chrom=region_chrom,
         )
