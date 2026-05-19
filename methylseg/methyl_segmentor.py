@@ -85,7 +85,7 @@ class MethylSegmentor:
         sample_info: SampleInfo,
         chrom: str | None = None,
     ) -> Tuple[pd.DataFrame, pd.DataFrame]:
-        meth_data, _emission_matrix, emissions_df = (
+        meth_data, emissions_df = (
             self.analyzer.assigner.prepare_sample_for_clustering(
                 sample_info=sample_info,
                 chrom=chrom,

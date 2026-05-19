@@ -143,6 +143,8 @@ class MethylSegPathway:
         min_region_length: int = 0,
         min_region_cpgs: int = 6,
         merge_gap_bp: int = 100_000,
+        allow_pmd_expansion: bool = True,
+        expansion_merge_bp: int = 100_000,
         hmm_observation_mode: HMMObservationMode = HMMObservationMode.DISCRETE_STATES,
     ):
         self.window_specs = window_specs
@@ -189,6 +191,8 @@ class MethylSegPathway:
         )
         self.min_region_cpgs = int(min_region_cpgs)
         self.merge_gap_bp = int(merge_gap_bp)
+        self.allow_pmd_expansion = bool(allow_pmd_expansion)
+        self.expansion_merge_bp = int(expansion_merge_bp)
         self.hmm_observation_mode = HMMObservationMode(hmm_observation_mode)
         if (
             self.hmm_observation_mode
@@ -294,15 +298,7 @@ class MethylSegPathway:
         chrom: str | None = None,
         overlay_regions_df: pd.DataFrame | None = None,
         overlay_state: MethylationStates | str | None = None,
-        clean_regions: bool = False,
-        region_start: int | None = None,
-        region_end: int | None = None,
-        region_chrom: str | None = None,
-        force_resegment: bool = False,
-        min_probes: int = 3,
-        min_region_length: int | None = None,
-        min_cpgs: int | None = None,
-        merge_gap_bp: int | None = None,
+        use_cleaned_regions: bool = False,
     ) -> tuple[pd.DataFrame | None, str]:
         direct_overlay_df, direct_overlay_style = resolve_region_overlay_df(
             overlay_regions_df=overlay_regions_df,
@@ -310,38 +306,28 @@ class MethylSegPathway:
         if direct_overlay_df is not None:
             return direct_overlay_df, direct_overlay_style
 
-        if not clean_regions and overlay_state is None:
+        if not use_cleaned_regions and overlay_state is None:
             return None, "state"
 
         target_state = MethylationStates.PMD if overlay_state is None else overlay_state
-
-        if chrom is None:
-            self.run_on_all_chroms(
-                sample_info=sample_info,
-                chroms=None,
-                min_probes=min_probes,
-                force_resegment=force_resegment,
-                clean_regions=False,
-            )
-            raw_regions_df = getattr(self.segmentor, "regions_df", None)
-        else:
-            raw_regions_df = self.generate_regions(
-                sample_info=sample_info,
-                chrom=chrom,
-                min_probes=min_probes,
-                force_resegment=force_resegment,
-            )
-
-        clean_df = self.get_clean_regions(
-            regions_df=raw_regions_df,
-            state=target_state,
-            merge_gap_bp=merge_gap_bp,
-            min_region_length=min_region_length,
-            min_cpgs=min_cpgs,
-            sample_id=sample_info.sample_id,
+        target_state = self._coerce_region_state(target_state)
+        resolved_chrom = self._resolve_region_chrom(
+            sample_info=sample_info,
             chrom=chrom,
-            force_resegment=force_resegment,
+            region_chrom=None,
         )
+        metadata_path = self._clean_region_metadata_path(
+            chrom=resolved_chrom,
+            sample_id=sample_info.sample_id,
+            state=target_state,
+        )
+        if not metadata_path.exists():
+            raise ValueError(
+                "Clean regions must be generated first using get_clean_regions()."
+            )
+        clean_df = pd.read_csv(metadata_path, sep="\t")
+        if not clean_df.empty and "state" in clean_df.columns:
+            clean_df["state"] = clean_df["state"].apply(self._coerce_region_state)
         return clean_df, "state"
 
     @staticmethod
@@ -531,104 +517,68 @@ class MethylSegPathway:
                 "probe_count",
                 "state",
                 "length",
+                "contains_intermediate",
+                "n_segments",
+                "n_pmd_segments",
+                "n_intermediate_segments",
             ]
         )
 
-    def _clean_region_cache_path(
-        self,
-        *,
-        sample_id: str,
-        chrom: str,
-        state: MethylationStates,
-        merge_gap_bp: int,
-        min_region_length: int,
-        min_cpgs: int,
-    ) -> Path:
-        return Path(self.out_dir) / (
-            "segments_cleaned_"
-            f"{chrom}_{sample_id}_{state.name}_"
-            f"gap{merge_gap_bp}_len{min_region_length}_cpg{min_cpgs}.bed"
-        )
-
     @staticmethod
-    def _write_clean_region_cache(
-        clean_df: pd.DataFrame,
-        out_path: Path,
-    ) -> Path:
-        out_path.parent.mkdir(parents=True, exist_ok=True)
-        if clean_df is None or clean_df.empty:
-            bed_df = pd.DataFrame(
-                columns=[
-                    "CpG_chrm",
-                    "start",
-                    "end",
-                    "avg_beta",
-                    "probe_count",
-                    "state",
-                    "length",
-                ]
-            )
-        else:
-            bed_df = clean_df.loc[
-                :,
-                [
-                    "CpG_chrm",
-                    "start",
-                    "end",
-                    "avg_beta",
-                    "probe_count",
-                    "state",
-                    "length",
-                ],
-            ].copy()
-            bed_df["state"] = bed_df["state"].astype(str)
-        bed_df.to_csv(out_path, sep="\t", header=False, index=False)
-        return out_path
+    def _clean_metadata_columns(state: MethylationStates) -> list[str]:
+        base_columns = [
+            "CpG_chrm",
+            "start",
+            "end",
+            "avg_beta",
+            "probe_count",
+            "state",
+            "length",
+            "n_segments",
+        ]
+        if state == MethylationStates.PMD:
+            return base_columns + [
+                "contains_intermediate",
+                "n_pmd_segments",
+                "n_intermediate_segments",
+            ]
+        return base_columns
 
-    def _read_clean_region_cache(
+    def _clean_regions_dir(self) -> Path:
+        return Path(self.out_dir) / "clean_regions"
+
+    def _resolve_clean_sample_id(self, sample_id: str | None = None) -> str:
+        if sample_id is not None:
+            return str(sample_id)
+        default_sample = getattr(self.segmentor, "default_sample_info", None)
+        if default_sample is not None and getattr(default_sample, "sample_id", None):
+            return str(default_sample.sample_id)
+        train_sample = getattr(self, "train_sample_info", None)
+        if train_sample is not None and getattr(train_sample, "sample_id", None):
+            return str(train_sample.sample_id)
+        return "sample"
+
+    def _clean_region_bed_path(
         self,
-        cache_path: Path,
         *,
+        chrom: str,
+        sample_id: str,
         state: MethylationStates,
-    ) -> pd.DataFrame:
-        if not cache_path.exists():
-            return self._empty_clean_regions_df()
-
-        try:
-            clean_df = pd.read_csv(
-                cache_path,
-                sep="\t",
-                header=None,
-                names=[
-                    "CpG_chrm",
-                    "start",
-                    "end",
-                    "avg_beta",
-                    "probe_count",
-                    "state",
-                    "length",
-                ],
-            )
-        except pd.errors.EmptyDataError:
-            return self._empty_clean_regions_df()
-        if clean_df.empty:
-            return self._empty_clean_regions_df()
-
-        clean_df["CpG_chrm"] = clean_df["CpG_chrm"].astype(str)
-        clean_df["start"] = pd.to_numeric(clean_df["start"], errors="raise").astype(int)
-        clean_df["end"] = pd.to_numeric(clean_df["end"], errors="raise").astype(int)
-        clean_df["avg_beta"] = pd.to_numeric(clean_df["avg_beta"], errors="raise")
-        clean_df["probe_count"] = pd.to_numeric(
-            clean_df["probe_count"], errors="raise"
-        ).astype(int)
-        clean_df["state"] = clean_df["state"].apply(self._coerce_region_state)
-        clean_df["length"] = pd.to_numeric(clean_df["length"], errors="raise").astype(
-            int
+    ) -> Path:
+        return self._clean_regions_dir() / (
+            f"segments_cleaned_{chrom}_{sample_id}_{state.name}.bed"
         )
-        clean_df = clean_df.loc[clean_df["state"] == state].copy()
-        if clean_df.empty:
-            return self._empty_clean_regions_df()
-        return clean_df.reset_index(drop=True)
+
+    def _clean_region_metadata_path(
+        self,
+        *,
+        chrom: str,
+        sample_id: str,
+        state: MethylationStates,
+    ) -> Path:
+        return self._clean_regions_dir() / (
+            f"metadata_cleaned_{chrom}_{sample_id}_{state.name}.tsv"
+        )
 
     @staticmethod
     def _coerce_region_state(state: MethylationStates | str) -> MethylationStates:
@@ -646,18 +596,279 @@ class MethylSegPathway:
                 pass
         raise ValueError(f"Unknown methylation state: {state}")
 
+    def _merge_clean_region_records(
+        self,
+        records: list[dict[str, object]],
+        *,
+        gap_bp: int,
+        state: MethylationStates,
+    ) -> list[dict[str, object]]:
+        if not records:
+            return []
+
+        sorted_records = sorted(
+            records,
+            key=lambda record: (
+                str(record["CpG_chrm"]),
+                int(record["start"]),
+                int(record["end"]),
+            ),
+        )
+        merged_records: list[dict[str, object]] = []
+        current = sorted_records[0].copy()
+
+        for record in sorted_records[1:]:
+            same_chrom = str(record["CpG_chrm"]) == str(current["CpG_chrm"])
+            current_end = int(current["end"])
+            record_start = int(record["start"])
+            if same_chrom and (record_start - current_end) <= int(gap_bp):
+                current["end"] = max(current_end, int(record["end"]))
+                current["beta_weighted_sum"] = float(
+                    current["beta_weighted_sum"]
+                ) + float(record["beta_weighted_sum"])
+                current["probe_count"] = int(current["probe_count"]) + int(
+                    record["probe_count"]
+                )
+                current["n_segments"] = int(current["n_segments"]) + int(
+                    record["n_segments"]
+                )
+                current["contains_intermediate"] = bool(
+                    current["contains_intermediate"]
+                ) or bool(record["contains_intermediate"])
+                current["n_pmd_segments"] = int(current["n_pmd_segments"]) + int(
+                    record["n_pmd_segments"]
+                )
+                current["n_intermediate_segments"] = int(
+                    current["n_intermediate_segments"]
+                ) + int(record["n_intermediate_segments"])
+                continue
+
+            merged_records.append(
+                {
+                    "CpG_chrm": str(current["CpG_chrm"]),
+                    "start": int(current["start"]),
+                    "end": int(current["end"]),
+                    "avg_beta": float(current["beta_weighted_sum"])
+                    / int(current["probe_count"]),
+                    "probe_count": int(current["probe_count"]),
+                    "state": state,
+                    "length": int(current["end"]) - int(current["start"]),
+                    "contains_intermediate": bool(current["contains_intermediate"]),
+                    "n_segments": int(current["n_segments"]),
+                    "n_pmd_segments": int(current["n_pmd_segments"]),
+                    "n_intermediate_segments": int(current["n_intermediate_segments"]),
+                }
+            )
+            current = record.copy()
+
+        merged_records.append(
+            {
+                "CpG_chrm": str(current["CpG_chrm"]),
+                "start": int(current["start"]),
+                "end": int(current["end"]),
+                "avg_beta": float(current["beta_weighted_sum"])
+                / int(current["probe_count"]),
+                "probe_count": int(current["probe_count"]),
+                "state": state,
+                "length": int(current["end"]) - int(current["start"]),
+                "contains_intermediate": bool(current["contains_intermediate"]),
+                "n_segments": int(current["n_segments"]),
+                "n_pmd_segments": int(current["n_pmd_segments"]),
+                "n_intermediate_segments": int(current["n_intermediate_segments"]),
+            }
+        )
+        return merged_records
+
+    def _build_expanded_pmd_records(
+        self,
+        chrom_rows: list[object],
+        *,
+        expansion_merge_bp: int,
+    ) -> list[dict[str, object]]:
+        if not chrom_rows:
+            return []
+
+        expanded_records: list[dict[str, object]] = []
+        block_rows: list[object] = []
+
+        def flush_block() -> None:
+            nonlocal block_rows
+            if not block_rows:
+                return
+
+            has_pmd = any(row.state == MethylationStates.PMD for row in block_rows)
+            if not has_pmd:
+                block_rows = []
+                return
+
+            first_row = block_rows[0]
+            record = {
+                "CpG_chrm": str(first_row.CpG_chrm),
+                "start": int(first_row.start),
+                "end": int(first_row.end),
+                "beta_weighted_sum": float(first_row.avg_beta)
+                * int(first_row.probe_count),
+                "probe_count": int(first_row.probe_count),
+                "contains_intermediate": (
+                    first_row.state == MethylationStates.INTERMEDIATE
+                ),
+                "n_segments": 1,
+                "n_pmd_segments": (
+                    1 if first_row.state == MethylationStates.PMD else 0
+                ),
+                "n_intermediate_segments": (
+                    1 if first_row.state == MethylationStates.INTERMEDIATE else 0
+                ),
+            }
+            for row in block_rows[1:]:
+                record["end"] = max(int(record["end"]), int(row.end))
+                record["beta_weighted_sum"] = float(record["beta_weighted_sum"]) + (
+                    float(row.avg_beta) * int(row.probe_count)
+                )
+                record["probe_count"] = int(record["probe_count"]) + int(
+                    row.probe_count
+                )
+                record["n_segments"] = int(record["n_segments"]) + 1
+                if row.state == MethylationStates.PMD:
+                    record["n_pmd_segments"] = int(record["n_pmd_segments"]) + 1
+                elif row.state == MethylationStates.INTERMEDIATE:
+                    record["contains_intermediate"] = True
+                    record["n_intermediate_segments"] = (
+                        int(record["n_intermediate_segments"]) + 1
+                    )
+            expanded_records.append(record)
+            block_rows = []
+
+        for row in chrom_rows:
+            if row.state in (MethylationStates.PMD, MethylationStates.INTERMEDIATE):
+                if block_rows:
+                    gap_bp = int(row.start) - int(block_rows[-1].end)
+                    if gap_bp <= int(expansion_merge_bp):
+                        block_rows.append(row)
+                        continue
+                    flush_block()
+                block_rows = [row]
+                continue
+
+            flush_block()
+
+        flush_block()
+        return expanded_records
+
+    def _records_to_clean_state_df(
+        self,
+        records: list[dict[str, object]],
+        *,
+        state: MethylationStates,
+        min_region_length: int,
+        min_cpgs: int,
+    ) -> pd.DataFrame:
+        clean_columns = self._empty_clean_regions_df().columns.tolist()
+        if not records:
+            return self._empty_clean_regions_df()
+
+        state_df = pd.DataFrame(records)
+        state_df = state_df.loc[
+            (state_df["length"] >= int(min_region_length))
+            & (state_df["probe_count"] >= int(min_cpgs))
+        ].copy()
+        if state_df.empty:
+            return self._empty_clean_regions_df()
+
+        state_df["state"] = state_df["state"].astype(str)
+        state_df["n_segments"] = pd.to_numeric(
+            state_df["n_segments"], errors="raise"
+        ).astype(int)
+        if state == MethylationStates.PMD:
+            state_df["contains_intermediate"] = state_df[
+                "contains_intermediate"
+            ].astype("boolean")
+            state_df["n_pmd_segments"] = pd.to_numeric(
+                state_df["n_pmd_segments"], errors="raise"
+            ).astype("Int64")
+            state_df["n_intermediate_segments"] = pd.to_numeric(
+                state_df["n_intermediate_segments"], errors="raise"
+            ).astype("Int64")
+        else:
+            state_df["contains_intermediate"] = pd.Series(
+                pd.NA,
+                index=state_df.index,
+                dtype="boolean",
+            )
+            state_df["n_pmd_segments"] = pd.Series(
+                pd.NA,
+                index=state_df.index,
+                dtype="Int64",
+            )
+            state_df["n_intermediate_segments"] = pd.Series(
+                pd.NA,
+                index=state_df.index,
+                dtype="Int64",
+            )
+        return state_df.loc[:, clean_columns].reset_index(drop=True)
+
     def get_clean_regions(
         self,
         regions_df: pd.DataFrame | None = None,
-        state: MethylationStates | str = MethylationStates.PMD,
         merge_gap_bp: int | None = None,
         min_region_length: int | None = None,
         min_cpgs: int | None = None,
         sample_id: str | None = None,
         chrom: str | None = None,
-        force_resegment: bool = False,
-    ) -> pd.DataFrame:
-        target_state = self._coerce_region_state(state)
+        allow_pmd_expansion: bool | None = None,
+        expansion_merge_bp: int | None = None,
+        generate_summary_files: bool = True,
+    ) -> tuple[dict[MethylationStates, Path], Path]:
+        """
+        Build cleaned region tracks from the raw segmentation and write them to disk.
+
+        The cleaning logic is chromosome-local and proceeds left-to-right over the
+        full sorted segmentation table. Per-chromosome cleaned outputs are written
+        to ``clean_regions/`` as chromosome-local BED and metadata TSV artifacts.
+        When ``chrom`` is omitted, optional combined summary files can also be
+        written to ``summary_files/segments_cleaned_{STATE}.bed`` and
+        ``summary_files/metadata_cleaned_{STATE}.tsv``.
+
+        The metadata TSV is the full cleaned record used by plotting; the BED is
+        the slim interval export.
+
+        PMD cleanup is the only cross-state expansion rule. When
+        ``allow_pmd_expansion`` is true, PMD regions may absorb adjacent
+        ``Intermediate`` segments if they are close enough under
+        ``expansion_merge_bp``. ``LOW`` and ``HIGH`` always stop PMD expansion.
+        Raw state labels are never relabeled in ``regions_df``; only the cleaned
+        PMD output reflects the absorbed transitional segments.
+
+        Parameters
+        ----------
+        regions_df
+            Raw segmentation table. If omitted, uses ``self.segmentor.regions_df``.
+        merge_gap_bp
+            Maximum gap for ordinary same-state merging.
+        min_region_length
+            Minimum cleaned region length retained after merging.
+        min_cpgs
+            Minimum cleaned region probe count retained after merging.
+        sample_id
+            Optional sample identifier used in per-chrom cleaned filenames.
+        chrom
+            If provided, clean only this chromosome and write only chromosome-local
+            cleaned artifacts for it.
+        allow_pmd_expansion
+            Whether PMD clean regions may absorb ``Intermediate`` segments.
+        expansion_merge_bp
+            Maximum gap allowed when PMD expands through ``Intermediate``.
+        generate_summary_files
+            When ``chrom`` is ``None``, also build combined cleaned summary files.
+
+        Returns
+        -------
+        tuple[dict[MethylationStates, Path], Path]
+            A mapping of combined cleaned summary BED paths plus the directory that
+            holds the per-chromosome cleaned artifacts. The summary mapping is empty
+            when summary generation is skipped.
+        """
+        # Resolve cleaning parameters from explicit inputs or pathway defaults.
         merge_gap_bp = self.merge_gap_bp if merge_gap_bp is None else int(merge_gap_bp)
         min_region_length = (
             self.min_region_length
@@ -665,34 +876,67 @@ class MethylSegPathway:
             else int(min_region_length)
         )
         min_cpgs = self.min_region_cpgs if min_cpgs is None else int(min_cpgs)
+        allow_pmd_expansion = (
+            getattr(self, "allow_pmd_expansion", True)
+            if allow_pmd_expansion is None
+            else bool(allow_pmd_expansion)
+        )
+        expansion_merge_bp = (
+            getattr(self, "expansion_merge_bp", 100_000)
+            if expansion_merge_bp is None
+            else int(expansion_merge_bp)
+        )
 
-        resolved_chrom = str(chrom) if chrom is not None else None
-        cache_path = None
-        if sample_id is not None:
-            if regions_df is not None and not regions_df.empty and resolved_chrom is None:
-                chrom_values = regions_df["CpG_chrm"].dropna().astype(str).unique().tolist()
-                if len(chrom_values) == 1:
-                    resolved_chrom = chrom_values[0]
-            if resolved_chrom is not None:
-                cache_path = self._clean_region_cache_path(
-                    sample_id=str(sample_id),
-                    chrom=resolved_chrom,
-                    state=target_state,
-                    merge_gap_bp=merge_gap_bp,
-                    min_region_length=min_region_length,
-                    min_cpgs=min_cpgs,
-                )
-                if cache_path.exists() and not force_resegment:
-                    return self._read_clean_region_cache(
-                        cache_path,
-                        state=target_state,
-                    )
-
+        # Resolve the source regions and output location for this cleaning pass.
         if regions_df is None:
             regions_df = getattr(self.segmentor, "regions_df", None)
-        if regions_df is None or regions_df.empty:
-            return self._empty_clean_regions_df()
+        resolved_sample_id = self._resolve_clean_sample_id(sample_id)
+        clean_dir = self._clean_regions_dir()
+        clean_dir.mkdir(parents=True, exist_ok=True)
+        resolved_chrom = str(chrom) if chrom is not None else None
 
+        # If there is nothing to clean, still write empty artifacts so downstream
+        # plotting/export code can rely on the expected files being present.
+        if regions_df is None or regions_df.empty:
+            summary_paths = {}
+            if resolved_chrom is not None:
+                for state in MethylationStates:
+                    empty_df = self._empty_clean_regions_df()
+                    self._write_bed(
+                        empty_df,
+                        self._clean_region_bed_path(
+                            chrom=resolved_chrom,
+                            sample_id=resolved_sample_id,
+                            state=state,
+                        ),
+                    )
+                    empty_df.to_csv(
+                        self._clean_region_metadata_path(
+                            chrom=resolved_chrom,
+                            sample_id=resolved_sample_id,
+                            state=state,
+                        ),
+                        sep="\t",
+                        index=False,
+                    )
+            elif generate_summary_files:
+                self._write_summary_files(
+                    raw_regions_df=None,
+                    sample_id=resolved_sample_id,
+                    clean_regions=True,
+                    chroms=[],
+                    write_raw_summaries=False,
+                )
+                summary_paths = {
+                    state: Path(self.out_dir)
+                    / "summary_files"
+                    / f"segments_cleaned_{state.name}.bed"
+                    for state in MethylationStates
+                }
+            return summary_paths, clean_dir
+
+        # Validate and normalize the raw region table into one consistent schema
+        # before running any chromosome-local cleaning stages.
         required_columns = [
             "CpG_chrm",
             "start",
@@ -723,80 +967,126 @@ class MethylSegPathway:
             clean_df = clean_df.loc[
                 clean_df["CpG_chrm"].astype(str) == resolved_chrom
             ].copy()
-        clean_df = clean_df.loc[clean_df["state"] == target_state].copy()
-
-        if clean_df.empty:
-            return self._empty_clean_regions_df()
-
         clean_df = clean_df.sort_values(["CpG_chrm", "start", "end"]).reset_index(
             drop=True
         )
 
-        merged_regions = []
-        current_region = None
-
-        for row in clean_df.itertuples(index=False):
-            if current_region is None:
-                current_region = {
-                    "CpG_chrm": row.CpG_chrm,
-                    "start": int(row.start),
-                    "end": int(row.end),
-                    "beta_weighted_sum": float(row.avg_beta) * int(row.probe_count),
-                    "probe_count": int(row.probe_count),
-                    "state": target_state,
-                }
-                continue
-
-            gap_bp = int(row.start) - int(current_region["end"])
-            can_merge = (
-                merge_gap_bp > 0
-                and row.CpG_chrm == current_region["CpG_chrm"]
-                and gap_bp <= merge_gap_bp
-            )
-
-            if can_merge:
-                current_region["end"] = max(int(current_region["end"]), int(row.end))
-                current_region["beta_weighted_sum"] += float(row.avg_beta) * int(
-                    row.probe_count
-                )
-                current_region["probe_count"] += int(row.probe_count)
-            else:
-                merged_regions.append(current_region)
-                current_region = {
-                    "CpG_chrm": row.CpG_chrm,
-                    "start": int(row.start),
-                    "end": int(row.end),
-                    "beta_weighted_sum": float(row.avg_beta) * int(row.probe_count),
-                    "probe_count": int(row.probe_count),
-                    "state": target_state,
-                }
-
-        if current_region is not None:
-            merged_regions.append(current_region)
-        # pylint: disable=unsubscriptable-object,unsupported-assignment-operation
-        merged_df: pd.DataFrame = pd.DataFrame(merged_regions)
-        merged_df["avg_beta"] = (
-            merged_df["beta_weighted_sum"] / merged_df["probe_count"]
+        # Decide which chromosomes need outputs. In chromosome-scoped mode we still
+        # emit empty files even if the selected chromosome has no rows after filtering.
+        target_chroms = (
+            clean_df["CpG_chrm"].dropna().astype(str).drop_duplicates().tolist()
         )
-        merged_df: pd.DataFrame = merged_df.drop(columns=["beta_weighted_sum"])
-        merged_df["length"] = merged_df["end"] - merged_df["start"]
-        merged_df = merged_df.loc[
-            (merged_df["length"] >= int(min_region_length))
-            & (merged_df["probe_count"] >= int(min_cpgs))
-        ].copy()
+        if not target_chroms and resolved_chrom is not None:
+            target_chroms = [resolved_chrom]
 
-        if merged_df.empty:
-            if cache_path is not None:
-                self._write_clean_region_cache(self._empty_clean_regions_df(), cache_path)
-            return self._empty_clean_regions_df()
+        # Stage 1: split the normalized rows into per-chromosome streams so each
+        # chromosome can be cleaned independently.
+        grouped_rows = {
+            str(chrom_name): list(chrom_df.itertuples(index=False))
+            for chrom_name, chrom_df in clean_df.groupby("CpG_chrm", sort=False)
+        }
+        merged_records_by_chrom = {
+            str(chrom_name): {state: [] for state in MethylationStates}
+            for chrom_name in target_chroms
+        }
+        for chrom_name in target_chroms:
+            chrom_rows = grouped_rows.get(str(chrom_name), [])
+            raw_records_by_state: dict[MethylationStates, list[dict[str, object]]] = {
+                state: [] for state in MethylationStates
+            }
 
-        merged_df = merged_df.loc[
-            :,
-            ["CpG_chrm", "start", "end", "avg_beta", "probe_count", "state", "length"],
-        ].reset_index(drop=True)
-        if cache_path is not None:
-            self._write_clean_region_cache(merged_df, cache_path)
-        return merged_df
+            # Stage 2: if PMD expansion is enabled, build the PMD candidates first.
+            # Otherwise PMD is treated like the other states in the ordinary raw pass.
+            if allow_pmd_expansion:
+                raw_records_by_state[MethylationStates.PMD] = (
+                    self._build_expanded_pmd_records(
+                        chrom_rows,
+                        expansion_merge_bp=expansion_merge_bp,
+                    )
+                )
+
+            # Stage 3: build the ordinary same-state inputs directly from the raw
+            # rows. When PMD expansion is disabled, raw PMD rows are included here too.
+            for row in chrom_rows:
+                if allow_pmd_expansion and row.state == MethylationStates.PMD:
+                    continue
+                raw_records_by_state[row.state].append(
+                    {
+                        "CpG_chrm": str(row.CpG_chrm),
+                        "start": int(row.start),
+                        "end": int(row.end),
+                        "beta_weighted_sum": float(row.avg_beta) * int(row.probe_count),
+                        "probe_count": int(row.probe_count),
+                        "contains_intermediate": (
+                            row.state == MethylationStates.INTERMEDIATE
+                        ),
+                        "n_segments": 1,
+                        "n_pmd_segments": (
+                            1 if row.state == MethylationStates.PMD else 0
+                        ),
+                        "n_intermediate_segments": (
+                            1 if row.state == MethylationStates.INTERMEDIATE else 0
+                        ),
+                    }
+                )
+
+            # Stage 4: once PMD expansion is done, every state goes through the same
+            # ordinary same-state merge rule.
+            for state in MethylationStates:
+                merged_records_by_chrom[str(chrom_name)][state] = (
+                    self._merge_clean_region_records(
+                        raw_records_by_state[state],
+                        gap_bp=merge_gap_bp,
+                        state=state,
+                    )
+                )
+
+        # Stage 5: apply the shared filtering/formatting step and write the
+        # chromosome-local BED/metadata outputs for each state.
+        for chrom_name in target_chroms:
+            for state in MethylationStates:
+                state_df = self._records_to_clean_state_df(
+                    merged_records_by_chrom[str(chrom_name)][state],
+                    state=state,
+                    min_region_length=min_region_length,
+                    min_cpgs=min_cpgs,
+                )
+                self._write_bed(
+                    state_df,
+                    self._clean_region_bed_path(
+                        chrom=chrom_name,
+                        sample_id=resolved_sample_id,
+                        state=state,
+                    ),
+                )
+                state_df.loc[:, self._clean_metadata_columns(state)].to_csv(
+                    self._clean_region_metadata_path(
+                        chrom=chrom_name,
+                        sample_id=resolved_sample_id,
+                        state=state,
+                    ),
+                    sep="\t",
+                    index=False,
+                )
+
+        summary_paths: dict[MethylationStates, Path] = {}
+        # When running across all chromosomes, also build the combined summary
+        # artifacts from the chromosome-local cleaned outputs written above.
+        if resolved_chrom is None and generate_summary_files:
+            self._write_summary_files(
+                raw_regions_df=None,
+                sample_id=resolved_sample_id,
+                clean_regions=True,
+                chroms=target_chroms,
+                write_raw_summaries=False,
+            )
+            summary_paths = {
+                state: Path(self.out_dir)
+                / "summary_files"
+                / f"segments_cleaned_{state.name}.bed"
+                for state in MethylationStates
+            }
+        return summary_paths, clean_dir
 
     def _normalize_regions_for_bed(
         self,
@@ -843,24 +1133,71 @@ class MethylSegPathway:
     def _write_summary_files(
         self,
         raw_regions_df: pd.DataFrame | None,
+        sample_id: str,
         clean_regions: bool = True,
+        chroms: list[str] | None = None,
+        write_raw_summaries: bool = True,
     ) -> list[str]:
         summary_dir = Path(self.out_dir) / "summary_files"
         summary_dir.mkdir(parents=True, exist_ok=True)
 
         written_paths: list[str] = []
-        for state in MethylationStates:
-            raw_state_df = self._get_state_regions(raw_regions_df, state)
-            raw_path = summary_dir / f"segments_raw_{state.name}.bed"
-            written_paths.append(str(self._write_bed(raw_state_df, raw_path)))
+        if write_raw_summaries:
+            for state in MethylationStates:
+                raw_state_df = self._get_state_regions(raw_regions_df, state)
+                raw_path = summary_dir / f"segments_raw_{state.name}.bed"
+                written_paths.append(str(self._write_bed(raw_state_df, raw_path)))
 
-            if clean_regions:
-                clean_state_df = self.get_clean_regions(
-                    regions_df=raw_regions_df,
-                    state=state,
-                )
+        if clean_regions:
+            clean_columns = self._empty_clean_regions_df().columns.tolist()
+            resolved_chroms = chroms
+            if resolved_chroms is None:
+                resolved_chroms = []
+                for metadata_path in sorted(
+                    self._clean_regions_dir().glob(
+                        f"metadata_cleaned_*_{sample_id}_{MethylationStates.PMD.name}.tsv"
+                    )
+                ):
+                    stem = metadata_path.stem.removeprefix("metadata_cleaned_")
+                    resolved_chroms.append(
+                        stem[: -len(f"_{sample_id}_{MethylationStates.PMD.name}")]
+                    )
+            for state in MethylationStates:
+                frames = []
+                for chrom_name in resolved_chroms:
+                    metadata_path = self._clean_region_metadata_path(
+                        chrom=str(chrom_name),
+                        sample_id=sample_id,
+                        state=state,
+                    )
+                    if not metadata_path.exists():
+                        continue
+                    state_df = pd.read_csv(metadata_path, sep="\t")
+                    if not state_df.empty:
+                        frames.append(state_df)
+                if frames:
+                    combined_df = pd.concat(frames, ignore_index=True)
+                    combined_df["CpG_chrm"] = combined_df["CpG_chrm"].astype(str)
+                    combined_df["start"] = pd.to_numeric(
+                        combined_df["start"], errors="raise"
+                    ).astype(int)
+                    combined_df["end"] = pd.to_numeric(
+                        combined_df["end"], errors="raise"
+                    ).astype(int)
+                    combined_df = combined_df.sort_values(
+                        ["CpG_chrm", "start", "end"]
+                    ).reset_index(drop=True)
+                    combined_df = combined_df.reindex(columns=clean_columns)
+                else:
+                    combined_df = self._empty_clean_regions_df()
                 clean_path = summary_dir / f"segments_cleaned_{state.name}.bed"
-                written_paths.append(str(self._write_bed(clean_state_df, clean_path)))
+                self._write_bed(combined_df, clean_path)
+                combined_df.loc[:, self._clean_metadata_columns(state)].to_csv(
+                    summary_dir / f"metadata_cleaned_{state.name}.tsv",
+                    sep="\t",
+                    index=False,
+                )
+                written_paths.append(str(clean_path))
 
         return written_paths
 
@@ -946,9 +1283,18 @@ class MethylSegPathway:
                 chroms=resolved_chroms,
             )
             self.segmentor.regions_df = regions_df.copy()
+            if clean_regions:
+                self.get_clean_regions(
+                    regions_df=regions_df,
+                    sample_id=filtered_sample_info.sample_id,
+                    chrom=None,
+                    generate_summary_files=False,
+                )
             return self._write_summary_files(
                 raw_regions_df=regions_df,
+                sample_id=filtered_sample_info.sample_id,
                 clean_regions=clean_regions,
+                chroms=resolved_chroms,
             )
 
         region_frames = []
@@ -967,9 +1313,18 @@ class MethylSegPathway:
         else:
             combined_regions_df = self._empty_regions_df()
         self.segmentor.regions_df = combined_regions_df.copy()
+        if clean_regions:
+            self.get_clean_regions(
+                regions_df=combined_regions_df,
+                sample_id=filtered_sample_info.sample_id,
+                chrom=None,
+                generate_summary_files=False,
+            )
         return self._write_summary_files(
             raw_regions_df=combined_regions_df,
+            sample_id=filtered_sample_info.sample_id,
             clean_regions=clean_regions,
+            chroms=resolved_chroms,
         )
 
     def run_pathway(
@@ -997,7 +1352,6 @@ class MethylSegPathway:
         )
 
     # TODO fix region highlighting so that it adds verticle lines and zooms in on the region but still colors by state
-    # TODO fix this so that it does not need to recalculate cleaned reagions for every plot if they are already calculated
     def plot_labels(
         self,
         *,
@@ -1007,7 +1361,7 @@ class MethylSegPathway:
         sample_info_removed: pd.DataFrame | None = None,
         overlay_regions_df: pd.DataFrame | None = None,
         overlay_state: MethylationStates | str | None = None,
-        clean_regions: bool = False,
+        use_cleaned_regions: bool = False,
         region_start: int | None = None,
         region_end: int | None = None,
         region_chrom: str | None = None,
@@ -1016,27 +1370,24 @@ class MethylSegPathway:
         label_title: str | None = None,
         show_plot: bool = True,
         max_points: int = 120_000,
-        min_probes: int = 3,
-        force_resegment: bool = False,
-        min_region_length: int | None = None,
-        min_cpgs: int | None = None,
-        merge_gap_bp: int | None = None,
     ):
+        """
+        Plot genomic labels for one chromosome with optional region overlays.
+
+        ``use_cleaned_regions=True`` is a read-only plotting mode. It loads the
+        prebuilt chromosome-local cleaned metadata TSV for ``overlay_state`` from
+        ``clean_regions/metadata_cleaned_{chrom}_{sample_id}_{STATE}.tsv``.
+        It does not generate cleaned regions on demand; call
+        ``get_clean_regions(..., chrom=...)`` first when you want cleaned
+        overlays.
+        """
         resolved_sample_info = self._resolve_sample_info(sample_info=sample_info)
         overlay_df, overlay_style = self._resolve_overlay_regions(
             sample_info=resolved_sample_info,
             chrom=chrom,
             overlay_regions_df=overlay_regions_df,
             overlay_state=overlay_state,
-            clean_regions=clean_regions,
-            region_start=region_start,
-            region_end=region_end,
-            region_chrom=region_chrom,
-            force_resegment=force_resegment,
-            min_probes=min_probes,
-            min_region_length=min_region_length,
-            min_cpgs=min_cpgs,
-            merge_gap_bp=merge_gap_bp,
+            use_cleaned_regions=use_cleaned_regions,
         )
 
         label_source = str(label_source).lower()

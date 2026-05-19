@@ -519,7 +519,7 @@ def plot_interactive_beta_scatter(
 
     return fig
 
-
+#TODO: Maybe bin inside of windows for average to prevent clusters of tightly packed CpGs from dominating the features? 
 @njit
 def build_emission_matrix_numba(
     positions,

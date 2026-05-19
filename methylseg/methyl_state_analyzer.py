@@ -382,7 +382,7 @@ class MethylStateAnalyzer:
         if sample_emissions is not None:
             meth_emissions = sample_emissions
         else:
-            test_meth, summary_stats, test_emissions = (
+            test_meth, test_emissions = (
                 self.assigner.prepare_sample_for_clustering(sample_info, chrom)
             )
             meth_emissions = test_emissions

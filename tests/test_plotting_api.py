@@ -42,6 +42,7 @@ class PathwayPlottingTests(unittest.TestCase):
         pathway = MethylSegPathway.__new__(MethylSegPathway)
         train_sample = _sample_info("train")
         pathway.train_sample_info = train_sample
+        pathway.out_dir = tempfile.mkdtemp()
 
         raw_regions = pd.DataFrame(
             [
@@ -61,10 +62,7 @@ class PathwayPlottingTests(unittest.TestCase):
             lambda self, sample_info=None, chrom="chr1", min_probes=3, force_resegment=False, **kwargs: raw_regions.copy(),
             pathway,
         )
-        pathway.get_clean_regions = MethodType(
-            lambda self, regions_df=None, state=MethylationStates.PMD, **kwargs: clean_regions.copy(),
-            pathway,
-        )
+        _write_clean_outputs(pathway.out_dir, {MethylationStates.PMD: clean_regions.copy()})
 
         captured = {}
 
@@ -78,7 +76,7 @@ class PathwayPlottingTests(unittest.TestCase):
         result = pathway.plot_labels(
             label_source="hmm",
             chrom="chr1",
-            clean_regions=True,
+            use_cleaned_regions=True,
             overlay_state="PMD",
             show_plot=False,
         )
@@ -92,6 +90,7 @@ class PathwayPlottingTests(unittest.TestCase):
     def test_plot_labels_preserves_state_overlay_when_region_is_selected(self):
         pathway = MethylSegPathway.__new__(MethylSegPathway)
         pathway.train_sample_info = _sample_info("train")
+        pathway.out_dir = tempfile.mkdtemp()
 
         clean_regions = pd.DataFrame(
             [
@@ -106,10 +105,7 @@ class PathwayPlottingTests(unittest.TestCase):
                 }
             ]
         )
-        pathway.get_clean_regions = MethodType(
-            lambda self, regions_df=None, state=MethylationStates.PMD, **kwargs: clean_regions.copy(),
-            pathway,
-        )
+        _write_clean_outputs(pathway.out_dir, {MethylationStates.PMD: clean_regions.copy()})
         pathway.generate_regions = MethodType(
             lambda self, sample_info=None, chrom="chr1", min_probes=3, force_resegment=False, **kwargs: clean_regions.copy(),
             pathway,
@@ -127,7 +123,7 @@ class PathwayPlottingTests(unittest.TestCase):
         result = pathway.plot_labels(
             label_source="kmeans",
             chrom="chr1",
-            clean_regions=True,
+            use_cleaned_regions=True,
             region_start=100,
             region_end=200,
             region_chrom="chr1",
@@ -145,6 +141,7 @@ class PathwayPlottingTests(unittest.TestCase):
     def test_plot_labels_routes_clean_overlay_reuse_through_get_clean_regions(self):
         pathway = MethylSegPathway.__new__(MethylSegPathway)
         pathway.train_sample_info = _sample_info("train")
+        pathway.out_dir = tempfile.mkdtemp()
         pathway.segmentor = SimpleNamespace()
         clean_regions = pd.DataFrame(
             [
@@ -159,13 +156,7 @@ class PathwayPlottingTests(unittest.TestCase):
                 }
             ]
         )
-        captured_get_clean_regions = {}
-
-        def fake_get_clean_regions(self, regions_df=None, state=MethylationStates.PMD, **kwargs):
-            captured_get_clean_regions.update(kwargs)
-            return clean_regions.copy()
-
-        pathway.get_clean_regions = MethodType(fake_get_clean_regions, pathway)
+        _write_clean_outputs(pathway.out_dir, {MethylationStates.PMD: clean_regions.copy()})
         pathway.generate_regions = MethodType(
             lambda self, sample_info=None, chrom="chr1", min_probes=3, force_resegment=False, **kwargs: clean_regions.copy(),
             pathway,
@@ -182,15 +173,30 @@ class PathwayPlottingTests(unittest.TestCase):
         result = pathway.plot_labels(
             label_source="kmeans",
             chrom="chr1",
-            clean_regions=True,
+            use_cleaned_regions=True,
             show_plot=False,
         )
 
         self.assertEqual(result, "kmeans-figure")
-        self.assertEqual(captured_get_clean_regions["sample_id"], "train")
-        self.assertEqual(captured_get_clean_regions["chrom"], "chr1")
-        self.assertFalse(captured_get_clean_regions["force_resegment"])
         self.assertTrue(captured_plot["overlay_regions_df"].equals(clean_regions))
+
+    def test_plot_labels_use_cleaned_regions_requires_prebuilt_outputs(self):
+        pathway = MethylSegPathway.__new__(MethylSegPathway)
+        pathway.train_sample_info = _sample_info("train")
+        pathway.out_dir = tempfile.mkdtemp()
+        pathway.segmentor = SimpleNamespace()
+        pathway.analyzer = SimpleNamespace(plot_labels=MethodType(lambda self, **kwargs: "unused", SimpleNamespace()))
+
+        with self.assertRaisesRegex(
+            ValueError,
+            "Clean regions must be generated first using get_clean_regions",
+        ):
+            pathway.plot_labels(
+                label_source="kmeans",
+                chrom="chr1",
+                use_cleaned_regions=True,
+                show_plot=False,
+            )
 
     def test_plot_embedding_uses_training_kmeans_by_default(self):
         pathway = MethylSegPathway.__new__(MethylSegPathway)
@@ -456,8 +462,47 @@ class LowLevelPlottingTests(unittest.TestCase):
         self.assertEqual(captured["show_plot"], False)
 
 
+def _write_clean_outputs(
+    out_dir: str,
+    data_by_state: dict[MethylationStates, pd.DataFrame],
+    chrom: str = "chr1",
+    sample_id: str = "train",
+) -> dict[MethylationStates, Path]:
+    clean_dir = Path(out_dir) / "clean_regions"
+    clean_dir.mkdir(parents=True, exist_ok=True)
+    output_paths = {}
+    for state in MethylationStates:
+        bed_path = clean_dir / f"segments_cleaned_{chrom}_{sample_id}_{state.name}.bed"
+        metadata_path = (
+            clean_dir / f"metadata_cleaned_{chrom}_{sample_id}_{state.name}.tsv"
+        )
+        clean_df = data_by_state.get(state)
+        if clean_df is None:
+            clean_df = pd.DataFrame(
+                columns=[
+                    "CpG_chrm",
+                    "start",
+                    "end",
+                    "avg_beta",
+                    "probe_count",
+                    "state",
+                    "length",
+                    "contains_intermediate",
+                    "n_segments",
+                    "n_pmd_segments",
+                    "n_intermediate_segments",
+                ]
+            )
+        clean_df.to_csv(metadata_path, sep="\t", index=False)
+        clean_df.loc[:, ["CpG_chrm", "start", "end", "state"]].to_csv(
+            bed_path, sep="\t", header=False, index=False
+        )
+        output_paths[state] = bed_path
+    return output_paths
+
+
 class CleanRegionCachingTests(unittest.TestCase):
-    def test_get_clean_regions_writes_and_reuses_chromosome_specific_cache(self):
+    def test_get_clean_regions_writes_chr_specific_outputs(self):
         pathway = MethylSegPathway.__new__(MethylSegPathway)
         pathway.out_dir = tempfile.mkdtemp()
         pathway.merge_gap_bp = 100
@@ -478,34 +523,21 @@ class CleanRegionCachingTests(unittest.TestCase):
             ]
         )
 
-        clean_df = pathway.get_clean_regions(
+        summary_paths, clean_dir = pathway.get_clean_regions(
             regions_df=regions_df,
-            state=MethylationStates.PMD,
-            sample_id="sample1",
-            chrom="chr1",
-        )
-        cache_path = pathway._clean_region_cache_path(
-            sample_id="sample1",
-            chrom="chr1",
-            state=MethylationStates.PMD,
-            merge_gap_bp=100,
-            min_region_length=0,
-            min_cpgs=1,
-        )
-
-        self.assertTrue(cache_path.exists())
-        self.assertEqual(clean_df.iloc[0]["start"], 10)
-
-        reused_df = pathway.get_clean_regions(
-            regions_df=None,
-            state=MethylationStates.PMD,
             sample_id="sample1",
             chrom="chr1",
         )
 
-        self.assertTrue(reused_df.equals(clean_df))
+        pmd_metadata = clean_dir / "metadata_cleaned_chr1_sample1_PMD.tsv"
+        pmd_bed = clean_dir / "segments_cleaned_chr1_sample1_PMD.bed"
 
-    def test_get_clean_regions_force_resegment_rewrites_cache(self):
+        self.assertEqual(summary_paths, {})
+        self.assertTrue(pmd_metadata.exists())
+        self.assertTrue(pmd_bed.exists())
+        self.assertEqual(pd.read_csv(pmd_metadata, sep="\t").iloc[0]["start"], 10)
+
+    def test_get_clean_regions_force_resegment_rewrites_outputs(self):
         pathway = MethylSegPathway.__new__(MethylSegPathway)
         pathway.out_dir = tempfile.mkdtemp()
         pathway.merge_gap_bp = 100
@@ -538,36 +570,32 @@ class CleanRegionCachingTests(unittest.TestCase):
             ]
         )
 
-        pathway.get_clean_regions(
+        _, clean_dir = pathway.get_clean_regions(
             regions_df=first_regions,
-            state=MethylationStates.PMD,
             sample_id="sample1",
             chrom="chr1",
         )
-        rewritten_df = pathway.get_clean_regions(
+        pathway.get_clean_regions(
             regions_df=second_regions,
-            state=MethylationStates.PMD,
             sample_id="sample1",
             chrom="chr1",
             force_resegment=True,
+        )
+        rewritten_df = pd.read_csv(
+            clean_dir / "metadata_cleaned_chr1_sample1_PMD.tsv",
+            sep="\t",
         )
 
         self.assertEqual(rewritten_df.iloc[0]["start"], 30)
         self.assertEqual(rewritten_df.iloc[0]["probe_count"], 3)
 
-    def test_get_clean_regions_does_not_overwrite_summary_file(self):
+    def test_get_clean_regions_writes_metadata_and_summary_outputs(self):
         pathway = MethylSegPathway.__new__(MethylSegPathway)
         pathway.out_dir = tempfile.mkdtemp()
         pathway.merge_gap_bp = 100
         pathway.min_region_length = 0
         pathway.min_region_cpgs = 1
         pathway.segmentor = SimpleNamespace(regions_df=None)
-
-        summary_dir = Path(pathway.out_dir) / "summary_files"
-        summary_dir.mkdir(parents=True, exist_ok=True)
-        summary_path = summary_dir / "segments_cleaned_PMD.bed"
-        with open(summary_path, "w", encoding="utf-8") as handle:
-            handle.write("sentinel\n")
 
         regions_df = pd.DataFrame(
             [
@@ -581,15 +609,271 @@ class CleanRegionCachingTests(unittest.TestCase):
                 }
             ]
         )
-        pathway.get_clean_regions(
+        summary_paths, clean_dir = pathway.get_clean_regions(
             regions_df=regions_df,
-            state=MethylationStates.PMD,
             sample_id="sample1",
-            chrom="chr1",
+            chrom=None,
+            generate_summary_files=True,
         )
 
-        with open(summary_path, "r", encoding="utf-8") as handle:
-            self.assertEqual(handle.read(), "sentinel\n")
+        self.assertTrue((clean_dir / "metadata_cleaned_chr1_sample1_PMD.tsv").exists())
+        self.assertTrue(summary_paths[MethylationStates.PMD].exists())
+        self.assertTrue(
+            (
+                Path(pathway.out_dir) / "summary_files" / "metadata_cleaned_PMD.tsv"
+            ).exists()
+        )
+
+    def test_get_clean_regions_pmd_expansion_respects_boundaries_and_gap(self):
+        pathway = MethylSegPathway.__new__(MethylSegPathway)
+        pathway.out_dir = tempfile.mkdtemp()
+        pathway.merge_gap_bp = 0
+        pathway.min_region_length = 0
+        pathway.min_region_cpgs = 1
+        pathway.segmentor = SimpleNamespace(regions_df=None)
+
+        regions_df = pd.DataFrame(
+            [
+                {"CpG_chrm": "chr1", "start": 10, "end": 20, "avg_beta": 0.2, "probe_count": 2, "state": MethylationStates.PMD},
+                {"CpG_chrm": "chr1", "start": 20, "end": 30, "avg_beta": 0.4, "probe_count": 2, "state": MethylationStates.INTERMEDIATE},
+                {"CpG_chrm": "chr1", "start": 30, "end": 40, "avg_beta": 0.3, "probe_count": 2, "state": MethylationStates.PMD},
+                {"CpG_chrm": "chr1", "start": 40, "end": 50, "avg_beta": 0.1, "probe_count": 2, "state": MethylationStates.LOW},
+                {"CpG_chrm": "chr1", "start": 50, "end": 60, "avg_beta": 0.2, "probe_count": 2, "state": MethylationStates.PMD},
+            ]
+        )
+        pathway.get_clean_regions(
+            regions_df=regions_df,
+            sample_id="sample1",
+            chrom="chr1",
+            allow_pmd_expansion=True,
+            expansion_merge_bp=0,
+        )
+        pmd_df = pd.read_csv(
+            Path(pathway.out_dir)
+            / "clean_regions"
+            / "metadata_cleaned_chr1_sample1_PMD.tsv",
+            sep="\t",
+        )
+        self.assertEqual(pmd_df["start"].tolist(), [10, 50])
+        self.assertEqual(pmd_df["end"].tolist(), [40, 60])
+        self.assertEqual(pmd_df["contains_intermediate"].tolist(), [True, False])
+        self.assertTrue((pmd_df["n_pmd_segments"] > 0).all())
+
+    def test_get_clean_regions_isolated_intermediate_does_not_seed_pmd(self):
+        pathway = MethylSegPathway.__new__(MethylSegPathway)
+        pathway.out_dir = tempfile.mkdtemp()
+        pathway.merge_gap_bp = 0
+        pathway.min_region_length = 0
+        pathway.min_region_cpgs = 1
+        pathway.segmentor = SimpleNamespace(regions_df=None)
+
+        regions_df = pd.DataFrame(
+            [
+                {
+                    "CpG_chrm": "chr1",
+                    "start": 20,
+                    "end": 30,
+                    "avg_beta": 0.4,
+                    "probe_count": 2,
+                    "state": MethylationStates.INTERMEDIATE,
+                }
+            ]
+        )
+        pathway.get_clean_regions(
+            regions_df=regions_df,
+            sample_id="sample1",
+            chrom="chr1",
+            allow_pmd_expansion=True,
+            expansion_merge_bp=0,
+        )
+        pmd_df = pd.read_csv(
+            Path(pathway.out_dir)
+            / "clean_regions"
+            / "metadata_cleaned_chr1_sample1_PMD.tsv",
+            sep="\t",
+        )
+        intermediate_df = pd.read_csv(
+            Path(pathway.out_dir)
+            / "clean_regions"
+            / "metadata_cleaned_chr1_sample1_INTERMEDIATE.tsv",
+            sep="\t",
+        )
+        self.assertTrue(pmd_df.empty)
+        self.assertEqual(intermediate_df["start"].tolist(), [20])
+        self.assertEqual(intermediate_df["end"].tolist(), [30])
+
+    def test_get_clean_regions_high_intermediate_high_stays_non_pmd(self):
+        pathway = MethylSegPathway.__new__(MethylSegPathway)
+        pathway.out_dir = tempfile.mkdtemp()
+        pathway.merge_gap_bp = 0
+        pathway.min_region_length = 0
+        pathway.min_region_cpgs = 1
+        pathway.segmentor = SimpleNamespace(regions_df=None)
+
+        regions_df = pd.DataFrame(
+            [
+                {"CpG_chrm": "chr1", "start": 10, "end": 20, "avg_beta": 0.8, "probe_count": 2, "state": MethylationStates.HIGH},
+                {"CpG_chrm": "chr1", "start": 20, "end": 30, "avg_beta": 0.4, "probe_count": 2, "state": MethylationStates.INTERMEDIATE},
+                {"CpG_chrm": "chr1", "start": 30, "end": 40, "avg_beta": 0.9, "probe_count": 2, "state": MethylationStates.HIGH},
+            ]
+        )
+        pathway.get_clean_regions(
+            regions_df=regions_df,
+            sample_id="sample1",
+            chrom="chr1",
+            allow_pmd_expansion=True,
+            expansion_merge_bp=0,
+        )
+        pmd_df = pd.read_csv(
+            Path(pathway.out_dir)
+            / "clean_regions"
+            / "metadata_cleaned_chr1_sample1_PMD.tsv",
+            sep="\t",
+        )
+        intermediate_df = pd.read_csv(
+            Path(pathway.out_dir)
+            / "clean_regions"
+            / "metadata_cleaned_chr1_sample1_INTERMEDIATE.tsv",
+            sep="\t",
+        )
+        self.assertTrue(pmd_df.empty)
+        self.assertEqual(intermediate_df["start"].tolist(), [20])
+        self.assertEqual(intermediate_df["end"].tolist(), [30])
+        self.assertNotIn("contains_intermediate", intermediate_df.columns)
+        self.assertNotIn("n_pmd_segments", intermediate_df.columns)
+        self.assertNotIn("n_intermediate_segments", intermediate_df.columns)
+
+    def test_get_clean_regions_no_expansion_keeps_intermediate_split(self):
+        pathway = MethylSegPathway.__new__(MethylSegPathway)
+        pathway.out_dir = tempfile.mkdtemp()
+        pathway.merge_gap_bp = 0
+        pathway.min_region_length = 0
+        pathway.min_region_cpgs = 1
+        pathway.segmentor = SimpleNamespace(regions_df=None)
+
+        regions_df = pd.DataFrame(
+            [
+                {"CpG_chrm": "chr1", "start": 10, "end": 20, "avg_beta": 0.2, "probe_count": 2, "state": MethylationStates.PMD},
+                {"CpG_chrm": "chr1", "start": 20, "end": 30, "avg_beta": 0.4, "probe_count": 2, "state": MethylationStates.INTERMEDIATE},
+                {"CpG_chrm": "chr1", "start": 30, "end": 40, "avg_beta": 0.3, "probe_count": 2, "state": MethylationStates.PMD},
+            ]
+        )
+        pathway.get_clean_regions(
+            regions_df=regions_df,
+            sample_id="sample1",
+            chrom="chr1",
+            allow_pmd_expansion=False,
+        )
+        pmd_df = pd.read_csv(
+            Path(pathway.out_dir)
+            / "clean_regions"
+            / "metadata_cleaned_chr1_sample1_PMD.tsv",
+            sep="\t",
+        )
+        self.assertEqual(pmd_df["start"].tolist(), [10, 30])
+
+    def test_get_clean_regions_intermediate_pmd_intermediate_merges_when_anchored(self):
+        pathway = MethylSegPathway.__new__(MethylSegPathway)
+        pathway.out_dir = tempfile.mkdtemp()
+        pathway.merge_gap_bp = 0
+        pathway.min_region_length = 0
+        pathway.min_region_cpgs = 1
+        pathway.segmentor = SimpleNamespace(regions_df=None)
+
+        regions_df = pd.DataFrame(
+            [
+                {"CpG_chrm": "chr1", "start": 10, "end": 20, "avg_beta": 0.4, "probe_count": 2, "state": MethylationStates.INTERMEDIATE},
+                {"CpG_chrm": "chr1", "start": 20, "end": 30, "avg_beta": 0.2, "probe_count": 2, "state": MethylationStates.PMD},
+                {"CpG_chrm": "chr1", "start": 30, "end": 40, "avg_beta": 0.4, "probe_count": 2, "state": MethylationStates.INTERMEDIATE},
+            ]
+        )
+        pathway.get_clean_regions(
+            regions_df=regions_df,
+            sample_id="sample1",
+            chrom="chr1",
+            allow_pmd_expansion=True,
+            expansion_merge_bp=0,
+        )
+        pmd_df = pd.read_csv(
+            Path(pathway.out_dir)
+            / "clean_regions"
+            / "metadata_cleaned_chr1_sample1_PMD.tsv",
+            sep="\t",
+        )
+        self.assertEqual(pmd_df["start"].tolist(), [10])
+        self.assertEqual(pmd_df["end"].tolist(), [40])
+        self.assertEqual(pmd_df["contains_intermediate"].tolist(), [True])
+        self.assertEqual(pmd_df["n_pmd_segments"].tolist(), [1])
+        self.assertEqual(pmd_df["n_intermediate_segments"].tolist(), [2])
+
+    def test_get_clean_regions_post_expansion_merge_uses_standard_gap(self):
+        pathway = MethylSegPathway.__new__(MethylSegPathway)
+        pathway.out_dir = tempfile.mkdtemp()
+        pathway.merge_gap_bp = 15
+        pathway.min_region_length = 0
+        pathway.min_region_cpgs = 1
+        pathway.segmentor = SimpleNamespace(regions_df=None)
+
+        regions_df = pd.DataFrame(
+            [
+                {"CpG_chrm": "chr1", "start": 10, "end": 20, "avg_beta": 0.4, "probe_count": 2, "state": MethylationStates.INTERMEDIATE},
+                {"CpG_chrm": "chr1", "start": 20, "end": 30, "avg_beta": 0.2, "probe_count": 2, "state": MethylationStates.PMD},
+                {"CpG_chrm": "chr1", "start": 30, "end": 40, "avg_beta": 0.4, "probe_count": 2, "state": MethylationStates.INTERMEDIATE},
+                {"CpG_chrm": "chr1", "start": 42, "end": 45, "avg_beta": 0.1, "probe_count": 2, "state": MethylationStates.LOW},
+                {"CpG_chrm": "chr1", "start": 50, "end": 60, "avg_beta": 0.3, "probe_count": 2, "state": MethylationStates.PMD},
+            ]
+        )
+        pathway.get_clean_regions(
+            regions_df=regions_df,
+            sample_id="sample1",
+            chrom="chr1",
+            allow_pmd_expansion=True,
+            expansion_merge_bp=0,
+        )
+        pmd_df = pd.read_csv(
+            Path(pathway.out_dir)
+            / "clean_regions"
+            / "metadata_cleaned_chr1_sample1_PMD.tsv",
+            sep="\t",
+        )
+        self.assertEqual(pmd_df["start"].tolist(), [10])
+        self.assertEqual(pmd_df["end"].tolist(), [60])
+        self.assertEqual(pmd_df["contains_intermediate"].tolist(), [True])
+        self.assertEqual(pmd_df["n_segments"].tolist(), [4])
+        self.assertEqual(pmd_df["n_pmd_segments"].tolist(), [2])
+        self.assertEqual(pmd_df["n_intermediate_segments"].tolist(), [2])
+
+    def test_get_clean_regions_skips_summary_files_when_requested(self):
+        pathway = MethylSegPathway.__new__(MethylSegPathway)
+        pathway.out_dir = tempfile.mkdtemp()
+        pathway.merge_gap_bp = 0
+        pathway.min_region_length = 0
+        pathway.min_region_cpgs = 1
+        pathway.segmentor = SimpleNamespace(regions_df=None)
+
+        regions_df = pd.DataFrame(
+            [
+                {
+                    "CpG_chrm": "chr1",
+                    "start": 10,
+                    "end": 20,
+                    "avg_beta": 0.2,
+                    "probe_count": 2,
+                    "state": MethylationStates.PMD,
+                }
+            ]
+        )
+        summary_paths, clean_dir = pathway.get_clean_regions(
+            regions_df=regions_df,
+            sample_id="sample1",
+            chrom=None,
+            generate_summary_files=False,
+        )
+        self.assertEqual(summary_paths, {})
+        self.assertTrue((clean_dir / "metadata_cleaned_chr1_sample1_PMD.tsv").exists())
+        self.assertFalse(
+            (Path(pathway.out_dir) / "summary_files" / "metadata_cleaned_PMD.tsv").exists()
+        )
 
 
 if __name__ == "__main__":

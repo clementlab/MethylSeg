@@ -188,6 +188,13 @@ class PathwaySummaryDefaultTests(unittest.TestCase):
             self.assertTrue(
                 (tmp_path / "summary_files" / "segments_cleaned_PMD.bed").exists()
             )
+            self.assertTrue(
+                (
+                    tmp_path
+                    / "clean_regions"
+                    / f"metadata_cleaned_chr1_{train_sample.sample_id}_PMD.tsv"
+                ).exists()
+            )
 
     def test_run_pathway_honors_explicit_sample_override(self):
         pathway = MethylSegPathway.__new__(MethylSegPathway)

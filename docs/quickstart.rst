@@ -9,7 +9,8 @@ The most common flow is:
 1. Prepare an input methylation table with ``MethylDataPrep``.
 2. Load or train a ``MethylSegPathway``.
 3. Segment a sample into regions.
-4. Post-process those regions with ``get_clean_regions``.
+4. Build cleaned whole-genome region artifacts with ``get_clean_regions`` when
+   you want cleaned overlays or summary exports.
 
 Example
 -------
@@ -18,7 +19,7 @@ Example
 
    from pathlib import Path
 
-   from methylseg import MethylDataPrep, MethylSegPathway
+   from methylseg import MethylDataPrep, MethylSegPathway, MethylationStates
 
    reference_dir = Path("data/reference_files")
    sample_name = "TCGA-BD-A3EP-01A"
@@ -40,8 +41,19 @@ Example
        chrom="chr1",
        force_resegment=True,
    )
+   _, clean_dir = pathway.get_clean_regions(
+       regions_df=regions,
+       sample_id=sample_info.sample_id,
+       chrom="chr1",
+   )
 
-   clean_pmds = pathway.get_clean_regions(regions_df=regions)
+   fig = pathway.plot_labels(
+       sample_info=sample_info,
+       chrom="chr1",
+       overlay_state=MethylationStates.PMD,
+       use_cleaned_regions=True,
+       label_title="Cleaned PMD overlay",
+   )
 
 Important entrypoints
 ---------------------

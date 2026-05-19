@@ -1532,6 +1532,8 @@ class MethylStateAssigner:
             return ",".join(chroms)
         return f"{len(chroms)} chromosomes"
 
+
+    #TODO: plotting region-specific PCA clusters is currently only not working and needs to be debugged
     def plot_train_pca_clusters(
         self,
         n_pca_plot: int = 2,
@@ -1633,7 +1635,7 @@ class MethylStateAssigner:
         self,
         meth_data: pd.DataFrame,
         windows_to_use: Optional[List[str]] = None,
-    ) -> Tuple[pd.DataFrame, np.ndarray, pd.DataFrame]:
+    ) -> Tuple[pd.DataFrame, pd.DataFrame]:
         if len(meth_data) == 0:
             raise ValueError("No CpGs remaining after filtering.")
 
@@ -1659,14 +1661,14 @@ class MethylStateAssigner:
             windows_to_use=windows_to_use,
         )
         emission_df = pd.DataFrame(X, columns=feature_names)
-        return meth_data, X, emission_df
+        return meth_data, emission_df
 
     def prepare_sample_for_clustering(
         self,
         sample_info: SampleInfo,
         chrom: Optional[str] = None,
         windows_to_use: Optional[List[str]] = None,
-    ) -> Tuple[pd.DataFrame, np.ndarray, pd.DataFrame]:
+    ) -> Tuple[pd.DataFrame, pd.DataFrame]:
         """
         Convenience wrapper to:
         1. Filter methylation DataFrame (optionally by chromosome).
@@ -1675,8 +1677,7 @@ class MethylStateAssigner:
 
         Returns:
             meth_data (filtered DataFrame),
-            emission_matrix (np.ndarray),
-            emission_df (pandas DataFrame view)
+            emission_df (pandas DataFrame)
         """
 
         meth_data = sample_info.meth_data.copy()
@@ -1701,24 +1702,21 @@ class MethylStateAssigner:
 
         meth_frames = []
         emission_frames = []
-        emission_arrays = []
 
         for chrom_name in chrom_order:
             chrom_meth = meth_data[chrom_series == chrom_name].copy()
-            chrom_meth, chrom_X, chrom_emission_df = (
+            chrom_meth, chrom_emission_df = (
                 self._prepare_filtered_sample_for_clustering(
                     meth_data=chrom_meth,
                     windows_to_use=windows_to_use,
                 )
             )
             meth_frames.append(chrom_meth)
-            emission_arrays.append(chrom_X)
             emission_frames.append(chrom_emission_df)
 
         combined_meth = pd.concat(meth_frames, ignore_index=True)
-        combined_X = np.vstack(emission_arrays)
         combined_emission_df = pd.concat(emission_frames, ignore_index=True)
-        return combined_meth, combined_X, combined_emission_df
+        return combined_meth, combined_emission_df
 
     def _resolve_train_chroms(
         self,
@@ -1783,7 +1781,7 @@ class MethylStateAssigner:
         summary_rows = []
 
         for chrom in resolved_chroms:
-            meth_data, _, emission_df = self.prepare_sample_for_clustering(
+            meth_data, emission_df = self.prepare_sample_for_clustering(
                 sample_info=sample_info,
                 chrom=chrom,
                 windows_to_use=windows_to_use,
@@ -1902,7 +1900,7 @@ class MethylStateAssigner:
         if not hasattr(self, "model"):
             raise ValueError("No trained model found. Please train a model first.")
 
-        meth_data, _emission_matrix, emission_df = self.prepare_sample_for_clustering(
+        meth_data, emission_df = self.prepare_sample_for_clustering(
             sample_info=sample_info,
             chrom=chrom,
             windows_to_use=windows_to_use,
