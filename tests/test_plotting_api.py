@@ -570,7 +570,6 @@ class CleanRegionCachingTests(unittest.TestCase):
             regions_df=second_regions,
             sample_id="sample1",
             chrom="chr1",
-            force_resegment=True,
         )
         rewritten_df = pd.read_csv(
             clean_dir / "metadata_cleaned_chr1_sample1_PMD.tsv",

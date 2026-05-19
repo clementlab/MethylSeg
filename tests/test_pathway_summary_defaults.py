@@ -10,6 +10,10 @@ from methylseg.helper_classes import HMMObservationMode, HMMType, MethylationSta
 from methylseg.methyl_segmentor import MethylSegmentor
 from methylseg.methylseg_pathway import MethylSegPathway
 
+# Pylint struggles with the dynamic MethodType monkeypatching and __new__-based
+# test doubles in this module; runtime tests still exercise the real behavior.
+# pylint: disable=not-callable,no-member
+
 
 def _sample_info(sample_id: str = "train_sample") -> SampleInfo:
     return SampleInfo(
