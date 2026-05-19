@@ -44,3 +44,6 @@ include = ["methylseg*"]
 
 [project.scripts]
 methylseg = "methylseg.cli:main"
+
+[tool.pylint.messages_control]
+disable = ["invalid-enum-extension"]

@@ -1,6 +1,5 @@
 from types import MethodType, SimpleNamespace
 from pathlib import Path
-import sys
 import tempfile
 import unittest
 from unittest.mock import patch
@@ -8,20 +7,12 @@ from unittest.mock import patch
 import numpy as np
 import pandas as pd
 
-sys.modules.setdefault("gdown", SimpleNamespace())
-
-from methylseg import (  # noqa: E402
-    HMMObservationMode,
-    MethylSegPathway,
-    MethylSegmentor,
-    MethylStateAnalyzer,
-    MethylStateAssigner,
-    MethylationStates,
-    SampleInfo,
-)
-from methylseg.utils import (  # noqa: E402
-    plot_interactive_beta_scatter,
-)
+from methylseg.helper_classes import HMMObservationMode, MethylationStates, SampleInfo
+from methylseg.methyl_segmentor import MethylSegmentor
+from methylseg.methyl_state_analyzer import MethylStateAnalyzer
+from methylseg.methyl_state_assigner import MethylStateAssigner
+from methylseg.methylseg_pathway import MethylSegPathway
+from methylseg.utils import plot_interactive_beta_scatter
 
 
 def _sample_info(sample_id: str = "sample1") -> SampleInfo:

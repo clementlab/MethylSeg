@@ -1,22 +1,14 @@
 from pathlib import Path
 from tempfile import TemporaryDirectory
 from types import MethodType, SimpleNamespace
-import sys
 import unittest
 
 import numpy as np
 import pandas as pd
 
-sys.modules.setdefault("gdown", SimpleNamespace())
-
-from methylseg import (
-    HMMObservationMode,
-    MethylSegPathway,
-    MethylSegmentor,
-    MethylationStates,
-    SampleInfo,
-)
-from methylseg.helper_classes import HMMType
+from methylseg.helper_classes import HMMObservationMode, HMMType, MethylationStates, SampleInfo
+from methylseg.methyl_segmentor import MethylSegmentor
+from methylseg.methylseg_pathway import MethylSegPathway
 
 
 def _sample_info(sample_id: str = "train_sample") -> SampleInfo:

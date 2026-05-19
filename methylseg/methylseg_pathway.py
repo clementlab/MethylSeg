@@ -123,6 +123,7 @@ class MethylSegPathway:
         int_high_cutoff: float = 0.7,
         high_cutoff: float = 0.7,
         window_specs: list[tuple[int, str]] = [
+            (500, "500bp"),
             (40_000, "40kb"),
             (450_000, "450kb"),
         ],
