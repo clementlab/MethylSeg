@@ -19,13 +19,19 @@ from .helper_classes import MethylationStates, SampleInfo
 
 def get_biological_state_colors(cmap_name: str = "viridis"):
     """
-    Return a fixed color mapping for the biological methylation states
-    keyed by their canonical enum values (LOW=0, PMD=1, INTERMEDIATE=2, HIGH=3).
+    Return a fixed biological-state palette keyed by the canonical enum values
+    (LOW=0, PMD=1, INTERMEDIATE=2, HIGH=3).
+
+    The ``cmap_name`` argument is kept for backward compatibility, but the
+    palette is explicit so state colors stay stable across plots.
     """
+    del cmap_name
     state_values = [state.value for state in MethylationStates]
-    base_cmap = plt.get_cmap(cmap_name, len(state_values))
     state_colors_rgba = {
-        state_value: base_cmap(idx) for idx, state_value in enumerate(state_values)
+        MethylationStates.LOW.value: mcolors.to_rgba("#440154"),
+        MethylationStates.PMD.value: mcolors.to_rgba("#31688e"),
+        MethylationStates.INTERMEDIATE.value: mcolors.to_rgba("#35b779"),
+        MethylationStates.HIGH.value: mcolors.to_rgba("#fde725"),
     }
     state_colors_hex = {
         state_value: mcolors.to_hex(color)
@@ -101,41 +107,10 @@ def build_region_overlay_df(
 def resolve_region_overlay_df(
     *,
     overlay_regions_df: pd.DataFrame | None = None,
-    region_start: int | None = None,
-    region_end: int | None = None,
-    region_chrom: str | None = None,
-    label: str = "Selected region",
 ) -> tuple[pd.DataFrame | None, str]:
-    overlay_style = "state"
-
-    region_requested = any(
-        value is not None for value in (region_start, region_end, region_chrom)
-    )
     if overlay_regions_df is not None:
-        return overlay_regions_df.copy(), overlay_style
-
-    if region_requested:
-        if region_start is None or region_end is None:
-            raise ValueError(
-                "region_start and region_end must both be provided when "
-                "requesting region highlighting."
-            )
-        if region_chrom is None:
-            raise ValueError(
-                "region_chrom must be provided when requesting region highlighting."
-            )
-        overlay_style = "highlight"
-        return (
-            build_region_overlay_df(
-                region_start=region_start,
-                region_end=region_end,
-                region_chrom=region_chrom,
-                label=label,
-            ),
-            overlay_style,
-        )
-
-    return None, overlay_style
+        return overlay_regions_df.copy(), "state"
+    return None, "state"
 
 
 def resolve_overlay_plot_args(
@@ -298,6 +273,12 @@ def plot_interactive_beta_scatter(
     region_end: int | None = None,
     region_chrom: str | None = None,
 ) -> object | None:
+    """Create an interactive beta scatter plot.
+
+    ``region_start``/``region_end``/``region_chrom`` only control the viewport
+    for the requested region. They do not change point coloring unless an
+    explicit region overlay is provided through ``overlay_regions_df``.
+    """
     df_plot = df_plot.copy()
     df_plot = df_plot.loc[:, ~df_plot.columns.duplicated()]
     removed_plot = None
@@ -441,7 +422,7 @@ def plot_interactive_beta_scatter(
         scatter_kwargs["category_orders"] = category_orders
 
     fig = px.scatter(**scatter_kwargs)
-    fig.update_traces(marker=dict(size=4, opacity=0.8))
+    fig.update_traces(marker=dict(size=6, opacity=0.8))
 
     if removed_plot is not None and not removed_plot.empty:
         fig.add_trace(
@@ -450,7 +431,7 @@ def plot_interactive_beta_scatter(
                 y=removed_plot[y_col],
                 mode="markers",
                 name="Removed CpGs",
-                marker=dict(size=4, color="#d3d3d3", opacity=0.35),
+                marker=dict(size=6, color="#d3d3d3", opacity=0.35),
                 hovertemplate=(
                     "status: removed<br>"
                     "pos: %{x}<br>"
@@ -462,7 +443,7 @@ def plot_interactive_beta_scatter(
 
     fig.update_layout(
         legend_title_text=legend_title,
-        plot_bgcolor="white",
+        plot_bgcolor="#f2f2f2",
         paper_bgcolor="white",
     )
 
@@ -473,33 +454,26 @@ def plot_interactive_beta_scatter(
         if region_start is None or region_end is None:
             raise ValueError(
                 "region_start and region_end must both be provided when "
-                "requesting region highlighting."
+                "requesting region zoom."
             )
         if region_chrom is None:
             raise ValueError(
-                "region_chrom must be provided when requesting region highlighting."
+                "region_chrom must be provided when requesting region zoom."
             )
 
         resolved_region_chrom = str(region_chrom)
-        should_highlight = chrom is None or str(chrom) == resolved_region_chrom
-        if should_highlight:
+        plotted_chrom = str(chrom) if chrom is not None else None
+        if plotted_chrom is None and "CpG_chrm" in df_plot.columns:
+            plotted_chrom_values = df_plot["CpG_chrm"].dropna().astype(str).unique()
+            if len(plotted_chrom_values) == 1:
+                plotted_chrom = plotted_chrom_values[0]
+
+        if plotted_chrom == resolved_region_chrom:
             resolved_region_start = int(region_start)
             resolved_region_end = int(region_end)
             flank_bp = max(
                 1000,
                 int(np.ceil(max(resolved_region_end - resolved_region_start, 1) * 0.1)),
-            )
-            fig.add_vline(
-                x=resolved_region_start,
-                line_color="#111111",
-                line_dash="dash",
-                opacity=0.8,
-            )
-            fig.add_vline(
-                x=resolved_region_end,
-                line_color="#111111",
-                line_dash="dash",
-                opacity=0.8,
             )
             fig.update_xaxes(
                 range=[
@@ -519,7 +493,6 @@ def plot_interactive_beta_scatter(
 
     return fig
 
-#TODO: Maybe bin inside of windows for average to prevent clusters of tightly packed CpGs from dominating the features? 
 @njit
 def build_emission_matrix_numba(
     positions,
@@ -683,12 +656,10 @@ def absorb_small_clusters(
 
     return labels
 
-
 def get_regional_window_labels(window_specs) -> List[str]:
     sorted_window_specs = sorted(window_specs, key=lambda item: item[0])
-    if len(sorted_window_specs) <= 2:
-        return [label for _, label in sorted_window_specs]
-    return [label for _, label in sorted_window_specs[-2:]]
+    sorted_window_specs = sorted(window_specs, key=lambda item: item[0])
+    return [label for _, label in sorted_window_specs]
 
 
 def relabel_by_mean_emission(
@@ -742,15 +713,16 @@ def relabel_by_mean_emission(
             "intermediate": regional_mean(c, "int_pct"),
             "high": regional_mean(c, "high_pct"),
             "low": regional_mean(c, "low_pct"),
+            "std": regional_mean(c, "std")
         }
         for c in clusters
     }
 
     beta_mid = (beta_min + beta_max) / 2.0
-    beta_span = max(beta_max - beta_min, 1e-6)
+    beta_span_half = max(beta_max - beta_min, 1e-6) / 2.0
 
     def beta_mid_score(beta: float) -> float:
-        return max(0.0, 1.0 - (abs(beta - beta_mid) / beta_span))
+        return max(0.0, 1.0 - (abs(beta - beta_mid) / beta_span_half))
 
     def low_score(cluster) -> float:
         s = stats[cluster]
@@ -759,6 +731,7 @@ def relabel_by_mean_emission(
             + (1.0 - s["beta"])
             - (0.5 * s["intermediate"])
             - (0.75 * s["high"])
+            - (0.5 * s["std"])
         )
 
     def high_score(cluster) -> float:
@@ -768,6 +741,7 @@ def relabel_by_mean_emission(
             + s["beta"]
             - (0.5 * s["intermediate"])
             - (0.75 * s["low"])
+            - (0.5 * s["std"])
         )
 
     def pmd_score(cluster) -> float:
@@ -776,6 +750,7 @@ def relabel_by_mean_emission(
             (3.0 * s["intermediate"])
             + (1.0 * s["low"])
             - (1.5 * s["high"])
+            - (1.0 * s["std"])
             + beta_mid_score(s["beta"])
         )
 
@@ -786,6 +761,7 @@ def relabel_by_mean_emission(
             + (1.0 * s["high"])
             - (1.0 * s["low"])
             + beta_mid_score(s["beta"])
+            + (1.0 * s["std"])
         )
 
     def state_score(cluster, state):

@@ -212,7 +212,7 @@ class PathwayPlottingTests(unittest.TestCase):
 
 
 class LowLevelPlottingTests(unittest.TestCase):
-    def test_segmentor_plot_labels_uses_default_sample_and_highlight_overlay(self):
+    def test_segmentor_plot_labels_uses_default_sample_and_region_zoom(self):
         segmentor = MethylSegmentor.__new__(MethylSegmentor)
         default_sample = _sample_info("default")
         segmentor.default_sample_info = default_sample
@@ -247,9 +247,11 @@ class LowLevelPlottingTests(unittest.TestCase):
         self.assertEqual(
             mock_plot.call_args.kwargs["sample_info"].sample_id, default_sample.sample_id
         )
-        self.assertEqual(mock_plot.call_args.kwargs["overlay_style"], "highlight")
+        self.assertIsNone(mock_plot.call_args.kwargs["overlay_regions_df"])
+        self.assertEqual(mock_plot.call_args.kwargs["overlay_style"], "state")
         self.assertEqual(mock_plot.call_args.kwargs["region_start"], 10)
         self.assertEqual(mock_plot.call_args.kwargs["region_end"], 25)
+        self.assertEqual(mock_plot.call_args.kwargs["region_chrom"], "chr1")
 
     def test_analyzer_plot_labels_supports_rule_based_labels(self):
         analyzer = MethylStateAnalyzer.__new__(MethylStateAnalyzer)
@@ -378,7 +380,7 @@ class LowLevelPlottingTests(unittest.TestCase):
             ["PMD", "HIGH"],
         )
 
-    def test_interactive_plot_preserves_state_colors_and_adds_region_guides(self):
+    def test_interactive_plot_region_zoom_preserves_state_overlay_colors(self):
         sample_info = _sample_info("eval")
         df_plot = sample_info.meth_data.copy()
         df_plot["hmm_state_readable"] = np.array(
@@ -390,7 +392,7 @@ class LowLevelPlottingTests(unittest.TestCase):
                 {
                     "CpG_chrm": "chr1",
                     "start": 10,
-                    "end": 25,
+                    "end": 15,
                     "state": MethylationStates.PMD,
                 },
                 {
@@ -418,7 +420,37 @@ class LowLevelPlottingTests(unittest.TestCase):
         )
 
         self.assertIn("PMD", [trace.name for trace in fig.data])
-        self.assertEqual(len(fig.layout.shapes), 2)
+        self.assertIn("Outside regions", [trace.name for trace in fig.data])
+        self.assertEqual(len(fig.layout.shapes), 0)
+        self.assertEqual(list(fig.layout.xaxis.range), [-990, 1025])
+
+    def test_interactive_plot_region_zoom_keeps_label_colors_without_overlay(self):
+        sample_info = _sample_info("eval")
+        df_plot = sample_info.meth_data.copy()
+        df_plot["hmm_state_readable"] = np.array(
+            [MethylationStates.PMD, MethylationStates.PMD, MethylationStates.HIGH],
+            dtype=object,
+        )
+
+        fig = plot_interactive_beta_scatter(
+            df_plot=df_plot,
+            sample_info=sample_info,
+            sample_info_removed=None,
+            chrom="chr1",
+            out_dir=None,
+            label_col="hmm_state_readable",
+            show_plot=False,
+            region_start=10,
+            region_end=25,
+            region_chrom="chr1",
+        )
+
+        trace_names = [trace.name for trace in fig.data]
+        self.assertIn("PMD", trace_names)
+        self.assertNotIn("Selected region", trace_names)
+        self.assertNotIn("Outside region", trace_names)
+        self.assertNotIn("Outside regions", trace_names)
+        self.assertEqual(len(fig.layout.shapes), 0)
         self.assertEqual(list(fig.layout.xaxis.range), [-990, 1025])
 
     def test_assigner_plot_embedding_routes_to_region_highlight_path(self):

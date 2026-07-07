@@ -77,7 +77,7 @@ fig = pathway.plot_labels(
 
 [ ] Think about what should be saved and what should be returned
 
-[ ] Remove legacy code that is not used anymore
+[ x ] Remove legacy code that is not used anymore
 split into multiple files to clean up codebase
 
 [ x ] Rename PMR to PMD throughout codebase for clarity and consistency with literature
@@ -88,3 +88,5 @@ clean up plotting functions to make them easier for public use
 [ ] Add a function that runs full pipeline from raw input to figures and saves the outputs including running the cleaning step
 
 [ ] Add a function to run on all chromosomes and generate all summary files like methyltool compatator
+
+[ ] Move plotting into a visualization module

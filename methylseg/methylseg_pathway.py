@@ -122,11 +122,7 @@ class MethylSegPathway:
         int_low_cutoff: float = 0.2,
         int_high_cutoff: float = 0.7,
         high_cutoff: float = 0.7,
-        window_specs: list[tuple[int, str]] = [
-            (500, "500bp"),
-            (40_000, "40kb"),
-            (450_000, "450kb"),
-        ],
+        window_specs: list[tuple[int, str]] | None = None,
         train_sample_info: SampleInfo | None = None,
         train_sample_file: str | None = None,
         train_sample_name: str | None = None,
@@ -138,14 +134,13 @@ class MethylSegPathway:
         # TODO: make cluster_space an enum
         cluster_space: str = "pca",
         n_pca: int | None = 5,
-        # TODO: make hmm_type an enum
-        hmm_type: HMMType = HMMType.CT,
-        hmm_params: dict = {},
-        min_region_length: int = 0,
+        hmm_type: HMMType | None = None,
+        hmm_params: dict | None = None,
+        min_region_length: int = 5000,
         min_region_cpgs: int = 6,
         merge_gap_bp: int = 100_000,
-        allow_pmd_expansion: bool = True,
-        expansion_merge_bp: int = 100_000,
+        merge_with_intermediate: bool = True,
+        merge_with_intermediate_gap_bp: int = 100_000,
         hmm_observation_mode: HMMObservationMode = HMMObservationMode.DISCRETE_STATES,
     ):
         self.window_specs = window_specs
@@ -178,6 +173,40 @@ class MethylSegPathway:
             if train_sample_name is not None
             else str(self.train_sample_info.sample_id)
         )
+        if self.window_specs is None:
+            if self.train_sample_info.resolution == "wgbs":
+                self.window_specs = [
+                    (500, "500bp"),
+                    (40_000, "40kb"),
+                    (450_000, "450kb"),
+                ]
+            elif self.train_sample_info.resolution == "450k":
+                self.window_specs = [
+                    (40_000, "40kb"),
+                    (450_000, "450kb"),
+                ]
+        if hmm_type is None:
+            hmm_type = (
+                HMMType.STICKY
+                if self.train_sample_info.resolution == "wgbs"
+                else HMMType.CT
+            )
+        if hmm_params is None:
+            hmm_params = (
+                {
+                    "stay_prob": 0.99995,
+                    "emission_mismatch_prob": 0.45,
+                    "fit_transitions": False,
+                }
+                if hmm_type == HMMType.STICKY
+                else {
+                    "n_emissions": 4,
+                    "holding_time_guess": 1_500_000,
+                    "algorithm": "forward-backward",
+                    "max_iter": 25,
+                    "tol": 1e-2,
+                }
+            )
         self.train_chroms = train_chroms
         self.max_cpg_per_chrom = max_cpg_per_chrom
         self.random_state = random_state
@@ -192,8 +221,8 @@ class MethylSegPathway:
         )
         self.min_region_cpgs = int(min_region_cpgs)
         self.merge_gap_bp = int(merge_gap_bp)
-        self.allow_pmd_expansion = bool(allow_pmd_expansion)
-        self.expansion_merge_bp = int(expansion_merge_bp)
+        self.merge_with_intermediate = bool(merge_with_intermediate)
+        self.merge_with_intermediate_gap_bp = int(merge_with_intermediate_gap_bp)
         self.hmm_observation_mode = HMMObservationMode(hmm_observation_mode)
         if (
             self.hmm_observation_mode
@@ -680,11 +709,12 @@ class MethylSegPathway:
         )
         return merged_records
 
-    def _build_expanded_pmd_records(
+    def _build_state_records_with_intermediate(
         self,
         chrom_rows: list[object],
         *,
-        expansion_merge_bp: int,
+        state: MethylationStates,
+        merge_with_intermediate_gap_bp: int,
     ) -> list[dict[str, object]]:
         if not chrom_rows:
             return []
@@ -697,8 +727,8 @@ class MethylSegPathway:
             if not block_rows:
                 return
 
-            has_pmd = any(row.state == MethylationStates.PMD for row in block_rows)
-            if not has_pmd:
+            has_state = any(row.state == state for row in block_rows)
+            if not has_state:
                 block_rows = []
                 return
 
@@ -740,11 +770,12 @@ class MethylSegPathway:
             expanded_records.append(record)
             block_rows = []
 
+        mergeable_states = (state, MethylationStates.INTERMEDIATE)
         for row in chrom_rows:
-            if row.state in (MethylationStates.PMD, MethylationStates.INTERMEDIATE):
+            if row.state in mergeable_states:
                 if block_rows:
                     gap_bp = int(row.start) - int(block_rows[-1].end)
-                    if gap_bp <= int(expansion_merge_bp):
+                    if gap_bp <= int(merge_with_intermediate_gap_bp):
                         block_rows.append(row)
                         continue
                     flush_block()
@@ -816,8 +847,8 @@ class MethylSegPathway:
         min_cpgs: int | None = None,
         sample_id: str | None = None,
         chrom: str | None = None,
-        allow_pmd_expansion: bool | None = None,
-        expansion_merge_bp: int | None = None,
+        merge_with_intermediate: bool | None = None,
+        merge_with_intermediate_gap_bp: int | None = None,
         generate_summary_files: bool = True,
     ) -> tuple[dict[MethylationStates, Path], Path]:
         """
@@ -833,12 +864,11 @@ class MethylSegPathway:
         The metadata TSV is the full cleaned record used by plotting; the BED is
         the slim interval export.
 
-        PMD cleanup is the only cross-state expansion rule. When
-        ``allow_pmd_expansion`` is true, PMD regions may absorb adjacent
-        ``Intermediate`` segments if they are close enough under
-        ``expansion_merge_bp``. ``LOW`` and ``HIGH`` always stop PMD expansion.
-        Raw state labels are never relabeled in ``regions_df``; only the cleaned
-        PMD output reflects the absorbed transitional segments.
+        When ``merge_with_intermediate`` is true, cleaned ``LOW``, ``PMD``, and
+        ``HIGH`` regions may each absorb adjacent ``Intermediate`` segments if
+        they are close enough under ``merge_with_intermediate_gap_bp``. Raw
+        state labels are never relabeled in ``regions_df``; only the cleaned
+        non-intermediate outputs reflect the absorbed transitional segments.
 
         Parameters
         ----------
@@ -855,10 +885,11 @@ class MethylSegPathway:
         chrom
             If provided, clean only this chromosome and write only chromosome-local
             cleaned artifacts for it.
-        allow_pmd_expansion
-            Whether PMD clean regions may absorb ``Intermediate`` segments.
-        expansion_merge_bp
-            Maximum gap allowed when PMD expands through ``Intermediate``.
+        merge_with_intermediate
+            Whether cleaned non-intermediate regions may absorb adjacent
+            ``Intermediate`` segments.
+        merge_with_intermediate_gap_bp
+            Maximum gap allowed when a state merges through ``Intermediate``.
         generate_summary_files
             When ``chrom`` is ``None``, also build combined cleaned summary files.
 
@@ -877,15 +908,11 @@ class MethylSegPathway:
             else int(min_region_length)
         )
         min_cpgs = self.min_region_cpgs if min_cpgs is None else int(min_cpgs)
-        allow_pmd_expansion = (
-            getattr(self, "allow_pmd_expansion", True)
-            if allow_pmd_expansion is None
-            else bool(allow_pmd_expansion)
+        merge_with_intermediate = (
+            self.merge_with_intermediate if merge_with_intermediate is None else bool(merge_with_intermediate)
         )
-        expansion_merge_bp = (
-            getattr(self, "expansion_merge_bp", 100_000)
-            if expansion_merge_bp is None
-            else int(expansion_merge_bp)
+        merge_with_intermediate_gap_bp = (
+            self.merge_with_intermediate_gap_bp if merge_with_intermediate_gap_bp is None else int(merge_with_intermediate_gap_bp)
         )
 
         # Resolve the source regions and output location for this cleaning pass.
@@ -996,20 +1023,28 @@ class MethylSegPathway:
                 state: [] for state in MethylationStates
             }
 
-            # Stage 2: if PMD expansion is enabled, build the PMD candidates first.
-            # Otherwise PMD is treated like the other states in the ordinary raw pass.
-            if allow_pmd_expansion:
-                raw_records_by_state[MethylationStates.PMD] = (
-                    self._build_expanded_pmd_records(
-                        chrom_rows,
-                        expansion_merge_bp=expansion_merge_bp,
+            # Stage 2: if intermediate merging is enabled, build the
+            # non-intermediate candidates first from a single chromosome pass.
+            if merge_with_intermediate:
+                for state in MethylationStates:
+                    if state == MethylationStates.INTERMEDIATE:
+                        continue
+                    raw_records_by_state[state] = (
+                        self._build_state_records_with_intermediate(
+                            chrom_rows,
+                            state=state,
+                            merge_with_intermediate_gap_bp=merge_with_intermediate_gap_bp,
+                        )
                     )
-                )
 
             # Stage 3: build the ordinary same-state inputs directly from the raw
-            # rows. When PMD expansion is disabled, raw PMD rows are included here too.
+            # rows. When intermediate merging is enabled, only the intermediate
+            # stream still comes from the raw rows.
             for row in chrom_rows:
-                if allow_pmd_expansion and row.state == MethylationStates.PMD:
+                if (
+                    merge_with_intermediate
+                    and row.state != MethylationStates.INTERMEDIATE
+                ):
                     continue
                 raw_records_by_state[row.state].append(
                     {
@@ -1247,7 +1282,7 @@ class MethylSegPathway:
         self,
         sample_info: SampleInfo | None = None,
         chroms: Optional[List[str]] = None,
-        min_probes: int = 3,
+        min_probes: int = 5,
         force_resegment: bool = False,
         clean_regions: bool = True,
     ) -> list[str]:
@@ -1352,7 +1387,6 @@ class MethylSegPathway:
             clean_regions=clean_regions,
         )
 
-    # TODO fix region highlighting so that it adds verticle lines and zooms in on the region but still colors by state
     def plot_labels(
         self,
         *,
@@ -1380,7 +1414,8 @@ class MethylSegPathway:
         ``clean_regions/metadata_cleaned_{chrom}_{sample_id}_{STATE}.tsv``.
         It does not generate cleaned regions on demand; call
         ``get_clean_regions(..., chrom=...)`` first when you want cleaned
-        overlays.
+        overlays. Region args only zoom the x-axis viewport for scatter plots;
+        they do not create an implicit highlight overlay.
         """
         resolved_sample_info = self._resolve_sample_info(sample_info=sample_info)
         overlay_df, overlay_style = self._resolve_overlay_regions(

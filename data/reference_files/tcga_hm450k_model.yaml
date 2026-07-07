@@ -15,8 +15,6 @@ pathway:
   merge_gap_bp: 100000
 state_assigner:
   window_specs:
-  - - 500
-    - 500bp
   - - 40000
     - 40kb
   - - 450000
@@ -26,24 +24,19 @@ state_assigner:
   int_high_cutoff: 0.7
   high_cutoff: 0.7
 state_cutoffs:
-  beta_low_max: 0.26587249840875865
-  beta_high_min: 0.8241192173935694
+  beta_low_max: 0.15760183745837336
+  beta_high_min: 0.7430342820783494
   pmd_cutoffs:
-    500bp:
-      int_min: 0.7938763594329801
-      std_max: 0.36908283754999227
-      high_max: 0.28802129940053317
-      low_max: 0.07367384407607253
     40kb:
-      int_min: 0.49157017292489014
-      std_max: 0.3861934546801252
-      high_max: 0.3890276656820292
-      low_max: 0.38859465979442687
+      int_min: 0.6157595018436773
+      std_max: 0.28994475464341285
+      high_max: 0.3743692870211477
+      low_max: 0.3764728668799439
     450kb:
-      int_min: 0.418399700200059
-      std_max: 0.2147344503848255
-      high_max: 0.31588544639579863
-      low_max: 0.3135100312802408
+      int_min: 0.5957459897653317
+      std_max: 0.19877873787933087
+      high_max: 0.2078662750648393
+      low_max: 0.2487769806499724
 state_cutoffs_set_manually: false
 hmm:
   type: continuous-time
@@ -70,11 +63,6 @@ models:
   scaler: models/scaler.joblib
   feature_cols:
   - beta
-  - 500bp_avg_meth
-  - 500bp_std
-  - 500bp_high_pct
-  - 500bp_int_pct
-  - 500bp_low_pct
   - 40kb_avg_meth
   - 40kb_std
   - 40kb_high_pct

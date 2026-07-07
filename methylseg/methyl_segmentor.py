@@ -633,6 +633,9 @@ class MethylSegmentor:
     ):
         """
         Plot genomic-position vs beta for HMM labels.
+
+        Region args only zoom the x-axis viewport; they do not create a
+        highlight overlay unless one is passed explicitly.
         """
         meth_data, _ = self.segment_sample(sample_info=sample_info, chrom=chrom)
         resolved_sample_info = (
@@ -640,9 +643,6 @@ class MethylSegmentor:
         )
         overlay_regions_df, resolved_overlay_style = resolve_region_overlay_df(
             overlay_regions_df=overlay_regions_df,
-            region_start=region_start,
-            region_end=region_end,
-            region_chrom=region_chrom,
         )
         return plot_interactive_beta_scatter(
             df_plot=meth_data.copy(),

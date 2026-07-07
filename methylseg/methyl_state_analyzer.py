@@ -27,6 +27,7 @@ from .helper_classes import (
     SampleInfo,
 )
 from .utils import (
+    get_biological_state_colors,
     get_regional_window_labels,
     normalize_state_label,
     plot_interactive_beta_scatter,
@@ -88,18 +89,47 @@ class MethylStateAnalyzer:
     def plot_feature_distributions_by_kmeans_state(self, show_plots=True):
         self._build_train_joint()
         train_loadings = self.assigner.get_pca_loadings()
-        for emission in train_loadings["PC2"].abs().sort_values(ascending=False).index:
-            for state, df in self.train_joint.groupby("kmeans_state_display"):
-                df[emission].hist(bins=50, alpha=0.5, label=f"{state}")
-            plt.xlabel(emission)
-            plt.ylabel("Count")
-            plt.title(f"Distribution of {emission} by KMeans State")
-            plt.legend()
+        ranked_features = list(
+            train_loadings["PC2"].abs().sort_values(ascending=False).index
+        )
+        if "beta" in train_loadings.index:
+            ranked_features = ["beta"] + [
+                feature for feature in ranked_features if feature != "beta"
+            ]
+        _, _, _, state_colors_hex = get_biological_state_colors()
+        ordered_states = [state.name for state in MethylationStates]
+        for emission in ranked_features:
+            fig, ax = plt.subplots()
+            plotted = False
+            for state_name in ordered_states:
+                df = self.train_joint.loc[
+                    self.train_joint["kmeans_state_display"].eq(state_name)
+                ]
+                if df.empty:
+                    continue
+                df[emission].hist(
+                    bins=50,
+                    alpha=0.5,
+                    label=state_name,
+                    color=state_colors_hex[MethylationStates[state_name].value],
+                    ax=ax,
+                )
+                plotted = True
+
+            if not plotted:
+                plt.close(fig)
+                continue
+
+            ax.set_xlabel(emission)
+            ax.set_ylabel("Count")
+            ax.set_title(f"Distribution of {emission} by KMeans State")
+            ax.legend()
+            fig.tight_layout()
             if show_plots:
                 plt.show()
             elif self.out_dir is not None:
-                plt.savefig(f"{self.out_dir}/feature_distribution_{emission}.png")
-            plt.close()
+                fig.savefig(f"{self.out_dir}/feature_distribution_{emission}.png")
+            plt.close(fig)
 
     def define_states_by_rules_param(
         self,
@@ -618,6 +648,9 @@ class MethylStateAnalyzer:
     ):
         """
         Plot genomic-position vs beta for analyzer-owned labels.
+
+        Region args only zoom the x-axis viewport; they do not create a
+        highlight overlay unless one is passed explicitly.
         """
         label_source = str(label_source).lower()
         if label_source not in {"kmeans", "rule_based"}:
@@ -663,9 +696,6 @@ class MethylStateAnalyzer:
 
         overlay_regions_df, resolved_overlay_style = resolve_region_overlay_df(
             overlay_regions_df=overlay_regions_df,
-            region_start=region_start,
-            region_end=region_end,
-            region_chrom=region_chrom,
         )
         label_col = f"{label_source}_label"
         return plot_interactive_beta_scatter(

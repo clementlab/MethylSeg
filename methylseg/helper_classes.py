@@ -46,8 +46,7 @@ class MethylEnum(Enum):
         return super().__eq__(other)
 
     __hash__ = Enum.__hash__
-    
- 
+
     def __str__(self):
         return self.name
 
@@ -83,8 +82,6 @@ class HMMType(MethylEnum):
     MULTINOMIAL = "multinomial"
 
 
-
-
 class HMMObservationMode(MethylEnum):
     """Observation representations supported by the downstream HMM segmentor."""
 
@@ -109,6 +106,7 @@ class SampleInfo:
 
     sample_id: str
     meth_data: pd.DataFrame
+    resolution: Optional[str] = None
 
     @classmethod
     def __from_tsv__(cls, sample_name, file_name, sep="\t"):
@@ -160,13 +158,12 @@ class MethylDataPrep:
         "probe": {"probe", "probe_id", "cpg", "cpg_id"},
     }
 
-    # TODO: Add 27k resolution support
     def __init__(
         self,
         meth_file,
         sample_id,
         resolution="auto",
-        min_coverage=5,
+        min_coverage=10,
         remove_low_coverage_like_cpgs=False,
     ):
         """
@@ -178,9 +175,11 @@ class MethylDataPrep:
             Unique identifier for the sample.
         resolution : str, default="auto"
             Format of the methylation data. Valid options are:
-            - "auto": Automatically detect format (450k or WGBS)
+            - "auto": Automatically detect format
             - "wgbs": Whole-genome bisulfite sequencing format
             - "450k": Illumina 450k array format
+            - "27k": Illumina 27k array format
+            - "850k": Illumina 850k array format
         min_coverage : int, default=5
             Minimum coverage threshold for WGBS data.
         remove_low_coverage_like_cpgs : bool, default=False
@@ -222,6 +221,14 @@ class MethylDataPrep:
                 return True
 
         return False
+    
+    def _is_microarray_format(self) -> bool:
+        if self.resolution in {"450k", "27k", "850k"}:
+            return True
+        if self.resolution == "wgbs":
+            return False
+        else:
+            raise ValueError(f"Unsupported resolution for format inference: {self.resolution}")
 
     def _promote_header_row(self, df: pd.DataFrame) -> pd.DataFrame:
         if df.empty or not all(isinstance(col, int) for col in df.columns):
@@ -246,7 +253,7 @@ class MethylDataPrep:
                 df = df.copy()
                 if self.resolution == "wgbs":
                     df.columns = ["CpG_chrm", "CpG_beg", "CpG_end", "meth", "coverage"]
-                elif self.resolution == "450k":
+                elif self._is_microarray_format():
                     df.columns = ["CpG_chrm", "CpG_beg", "CpG_end", "beta", "probe"]
                 elif self.resolution == "auto":
                     col5_numeric = pd.to_numeric(df.iloc[:, 4], errors="coerce")
@@ -347,6 +354,9 @@ class MethylDataPrep:
             compression="gzip" if self.meth_file.suffix in {".gz", ".gzip"} else None,
         )
         df = self._promote_header_row(df)
+        if df.shape[1] == 4:
+            #default to 450k-like format if only 4 columns are present
+            return self._load_450k()
         if df.shape[1] < 5:
             raise ValueError(
                 f"Expected at least 5 columns for WGBS input: {self.meth_file}"
@@ -426,7 +436,14 @@ class MethylDataPrep:
 
     def prepare(self) -> tuple[SampleInfo, pd.DataFrame]:
         filtered_df, removed_df = self.prepare_dataframe()
-        return SampleInfo(sample_id=self.sample_id, meth_data=filtered_df), removed_df
+        return (
+            SampleInfo(
+                sample_id=self.sample_id,
+                meth_data=filtered_df,
+                resolution=self.resolution,
+            ),
+            removed_df,
+        )
 
     def write_prepared_tsv(self, out_file, sep="\t") -> Path:
         out_file = Path(out_file)
@@ -443,6 +460,7 @@ class MethylationStates(MethylEnum):
     PMD = 1
     INTERMEDIATE = 2
     HIGH = 3
+
     def __lt__(self, other):
         if isinstance(other, MethylationStates):
             return self.value < other.value
