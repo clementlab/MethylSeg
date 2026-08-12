@@ -63,32 +63,7 @@
 </li>
 <li class="toctree-l2"><a class="reference internal" href="../api.html#enums-and-labels">Enums and labels</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../api.html#hmm-backends">HMM backends</a></li>
-<li class="toctree-l2 current"><a class="reference internal" href="../api.html#utility-helpers">Utility helpers</a><ul class="current">
-<li class="toctree-l3"><a class="reference internal" href="methylseg.get_biological_state_colors.html">methylseg.get_biological_state_colors</a></li>
-<li class="toctree-l3"><a class="reference internal" href="methylseg.get_cluster_colors.html">methylseg.get_cluster_colors</a></li>
-<li class="toctree-l3"><a class="reference internal" href="methylseg.CTMethylSegHMM.html">methylseg.CTMethylSegHMM</a></li>
-<li class="toctree-l3"><a class="reference internal" href="methylseg.DAMethylSegHMM.html">methylseg.DAMethylSegHMM</a></li>
-<li class="toctree-l3"><a class="reference internal" href="methylseg.GaussianMethylSegHMM.html">methylseg.GaussianMethylSegHMM</a></li>
-<li class="toctree-l3"><a class="reference internal" href="methylseg.HMMObservationMode.html">methylseg.HMMObservationMode</a></li>
-<li class="toctree-l3"><a class="reference internal" href="methylseg.MethylDataPrep.html">methylseg.MethylDataPrep</a></li>
-<li class="toctree-l3"><a class="reference internal" href="methylseg.MethylSegConfig.html">methylseg.MethylSegConfig</a></li>
-<li class="toctree-l3"><a class="reference internal" href="methylseg.MethylSegHMM.html">methylseg.MethylSegHMM</a></li>
-<li class="toctree-l3"><a class="reference internal" href="methylseg.MethylSegPathway.html">methylseg.MethylSegPathway</a></li>
-<li class="toctree-l3 current"><a class="current reference internal" href="#">methylseg.MethylSegmentor</a><ul>
-<li class="toctree-l4"><a class="reference internal" href="#methylseg.MethylSegmentor"><code class="docutils literal notranslate"><span class="pre">MethylSegmentor</span></code></a></li>
-</ul>
-</li>
-<li class="toctree-l3"><a class="reference internal" href="methylseg.MethylStateAnalyzer.html">methylseg.MethylStateAnalyzer</a></li>
-<li class="toctree-l3"><a class="reference internal" href="methylseg.MethylStateAssigner.html">methylseg.MethylStateAssigner</a></li>
-<li class="toctree-l3"><a class="reference internal" href="methylseg.MethylStateAssignmentMethod.html">methylseg.MethylStateAssignmentMethod</a></li>
-<li class="toctree-l3"><a class="reference internal" href="methylseg.MethylationStates.html">methylseg.MethylationStates</a></li>
-<li class="toctree-l3"><a class="reference internal" href="methylseg.MultinomialSegHMM.html">methylseg.MultinomialSegHMM</a></li>
-<li class="toctree-l3"><a class="reference internal" href="methylseg.SampleInfo.html">methylseg.SampleInfo</a></li>
-<li class="toctree-l3"><a class="reference internal" href="methylseg.StickyCategoricalMethylSegHMM.html">methylseg.StickyCategoricalMethylSegHMM</a></li>
-<li class="toctree-l3"><a class="reference internal" href="methylseg.get_biological_state_colors.html">methylseg.get_biological_state_colors</a></li>
-<li class="toctree-l3"><a class="reference internal" href="methylseg.get_cluster_colors.html">methylseg.get_cluster_colors</a></li>
-</ul>
-</li>
+<li class="toctree-l2"><a class="reference internal" href="../api.html#utility-helpers">Utility helpers</a></li>
 </ul>
 </li>
 <li class="toctree-l1"><a class="reference internal" href="../tutorials.html">Tutorial Notebook</a></li>
@@ -162,18 +137,21 @@ sticky categorical smoother for dense discrete state-label smoothing.</p>
 <td><p></p></td>
 </tr>
 <tr class="row-even"><td><p><a class="reference internal" href="#methylseg.MethylSegmentor.assign_states" title="methylseg.MethylSegmentor.assign_states"><code class="xref py py-obj docutils literal notranslate"><span class="pre">assign_states</span></code></a>(sample_info[, chrom])</p></td>
-<td><p></p></td>
+<td><p>Assign coarse methylation states before HMM smoothing.</p></td>
 </tr>
 <tr class="row-odd"><td><p><a class="reference internal" href="#methylseg.MethylSegmentor.create_regions" title="methylseg.MethylSegmentor.create_regions"><code class="xref py py-obj docutils literal notranslate"><span class="pre">create_regions</span></code></a>([state_col, region_min_probes])</p></td>
 <td><p>Create regions (start, end) for contiguous segments of the same state.</p></td>
 </tr>
-<tr class="row-even"><td><p><a class="reference internal" href="#methylseg.MethylSegmentor.plot_interactive_beta_by_label" title="methylseg.MethylSegmentor.plot_interactive_beta_by_label"><code class="xref py py-obj docutils literal notranslate"><span class="pre">plot_interactive_beta_by_label</span></code></a>(sample_info)</p></td>
-<td><p>Interactive scatter: genomic position vs beta, colored by label.</p></td>
+<tr class="row-even"><td><p><a class="reference internal" href="#methylseg.MethylSegmentor.plot_interactive_beta_by_label" title="methylseg.MethylSegmentor.plot_interactive_beta_by_label"><code class="xref py py-obj docutils literal notranslate"><span class="pre">plot_interactive_beta_by_label</span></code></a>([...])</p></td>
+<td><p>Backward-compatible wrapper for interactive HMM label plots.</p></td>
 </tr>
-<tr class="row-odd"><td><p><a class="reference internal" href="#methylseg.MethylSegmentor.regions_to_bed" title="methylseg.MethylSegmentor.regions_to_bed"><code class="xref py py-obj docutils literal notranslate"><span class="pre">regions_to_bed</span></code></a>(bed_path[, ...])</p></td>
+<tr class="row-odd"><td><p><a class="reference internal" href="#methylseg.MethylSegmentor.plot_labels" title="methylseg.MethylSegmentor.plot_labels"><code class="xref py py-obj docutils literal notranslate"><span class="pre">plot_labels</span></code></a>([sample_info, chrom, ...])</p></td>
+<td><p>Plot genomic-position vs beta for HMM labels.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#methylseg.MethylSegmentor.regions_to_bed" title="methylseg.MethylSegmentor.regions_to_bed"><code class="xref py py-obj docutils literal notranslate"><span class="pre">regions_to_bed</span></code></a>(bed_path[, ...])</p></td>
 <td><p>Save regions DataFrame to BED file.</p></td>
 </tr>
-<tr class="row-even"><td><p><a class="reference internal" href="#methylseg.MethylSegmentor.segment_sample" title="methylseg.MethylSegmentor.segment_sample"><code class="xref py py-obj docutils literal notranslate"><span class="pre">segment_sample</span></code></a>(sample_info[, chrom, ...])</p></td>
+<tr class="row-odd"><td><p><a class="reference internal" href="#methylseg.MethylSegmentor.segment_sample" title="methylseg.MethylSegmentor.segment_sample"><code class="xref py py-obj docutils literal notranslate"><span class="pre">segment_sample</span></code></a>([sample_info, chrom, ...])</p></td>
 <td><p>Segment a sample and refresh probe-level results plus raw regions.</p></td>
 </tr>
 </tbody>
@@ -181,29 +159,40 @@ sticky categorical smoother for dense discrete state-label smoothing.</p>
 <dl class="py method">
 <dt class="sig sig-object py" id="methylseg.MethylSegmentor.assign_states">
 <span class="sig-name descname"><span class="pre">assign_states</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">sample_info</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">chrom</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/methylseg/methyl_segmentor.html#MethylSegmentor.assign_states"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#methylseg.MethylSegmentor.assign_states" title="Link to this definition"></a></dt>
-<dd><dl class="field-list simple">
+<dd><p>Assign coarse methylation states before HMM smoothing.</p>
+<dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
-<li><p><strong>sample_info</strong> (<a class="reference internal" href="methylseg.SampleInfo.html#methylseg.SampleInfo" title="methylseg.helper_classes.SampleInfo"><em>SampleInfo</em></a>)</p></li>
-<li><p><strong>chrom</strong> (<em>str</em><em> | </em><em>None</em>)</p></li>
+<li><p><strong>sample_info</strong> (<a class="reference internal" href="methylseg.SampleInfo.html#methylseg.SampleInfo" title="methylseg.helper_classes.SampleInfo"><em>SampleInfo</em></a>) – Prepared methylation sample to summarize and label.</p></li>
+<li><p><strong>chrom</strong> (<em>str</em><em> | </em><em>None</em>) – Optional chromosome restriction for per-chromosome state assignment.</p></li>
 </ul>
 </dd>
-<dt class="field-even">Return type<span class="colon">:</span></dt>
-<dd class="field-even"><p><em>ndarray</em></p>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Pair of <code class="docutils literal notranslate"><span class="pre">(meth_data,</span> <span class="pre">emissions_df)</span></code> cached on the segmentor after
+populating <code class="docutils literal notranslate"><span class="pre">state</span></code> and <code class="docutils literal notranslate"><span class="pre">state_readable</span></code> columns on <code class="docutils literal notranslate"><span class="pre">meth_data</span></code>.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>tuple</p>
+</dd>
+<dt class="field-even">Raises<span class="colon">:</span></dt>
+<dd class="field-even"><ul class="simple">
+<li><p><strong>ValueError</strong> – If the configured state-assignment method is unknown.</p></li>
+<li><p><strong>NotImplementedError</strong> – If <code class="docutils literal notranslate"><span class="pre">AUTO</span></code> assignment is requested.</p></li>
+</ul>
 </dd>
 </dl>
 </dd></dl>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="methylseg.MethylSegmentor.segment_sample">
-<span class="sig-name descname"><span class="pre">segment_sample</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">sample_info</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">chrom</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">force_resegment</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/methylseg/methyl_segmentor.html#MethylSegmentor.segment_sample"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#methylseg.MethylSegmentor.segment_sample" title="Link to this definition"></a></dt>
+<span class="sig-name descname"><span class="pre">segment_sample</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">sample_info</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">chrom</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">force_resegment</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/methylseg/methyl_segmentor.html#MethylSegmentor.segment_sample"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#methylseg.MethylSegmentor.segment_sample" title="Link to this definition"></a></dt>
 <dd><p>Segment a sample and refresh probe-level results plus raw regions.</p>
 <p>Returns the segmented probe-level methylation table and fitted HMM
 object. Raw contiguous regions are stored on <code class="docutils literal notranslate"><span class="pre">self.regions_df</span></code>.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
-<li><p><strong>sample_info</strong> (<a class="reference internal" href="methylseg.SampleInfo.html#methylseg.SampleInfo" title="methylseg.helper_classes.SampleInfo"><em>SampleInfo</em></a>)</p></li>
+<li><p><strong>sample_info</strong> (<a class="reference internal" href="methylseg.SampleInfo.html#methylseg.SampleInfo" title="methylseg.helper_classes.SampleInfo"><em>SampleInfo</em></a><em> | </em><em>None</em>)</p></li>
 <li><p><strong>chrom</strong> (<em>str</em><em> | </em><em>None</em>)</p></li>
 <li><p><strong>force_resegment</strong> (<em>bool</em>)</p></li>
 </ul>
@@ -252,23 +241,56 @@ object. Raw contiguous regions are stored on <code class="docutils literal notra
 
 <dl class="py method">
 <dt class="sig sig-object py" id="methylseg.MethylSegmentor.plot_interactive_beta_by_label">
-<span class="sig-name descname"><span class="pre">plot_interactive_beta_by_label</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">sample_info</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">sample_info_removed</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">label_type</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'hmm'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">use_train_data</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">chrom</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">x_col</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'CpG_beg'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">y_col</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'beta'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">label_title</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">show_plot</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">max_points</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">120000</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">color_pmd_only</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">color_regions_df</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/methylseg/methyl_segmentor.html#MethylSegmentor.plot_interactive_beta_by_label"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#methylseg.MethylSegmentor.plot_interactive_beta_by_label" title="Link to this definition"></a></dt>
-<dd><p>Interactive scatter: genomic position vs beta, colored by label.</p>
+<span class="sig-name descname"><span class="pre">plot_interactive_beta_by_label</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">sample_info</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">sample_info_removed</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">label_type</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'hmm'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">chrom</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">x_col</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'CpG_beg'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">y_col</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'beta'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">label_title</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">show_plot</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">max_points</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">120000</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">color_pmd_only</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">color_regions_df</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/methylseg/methyl_segmentor.html#MethylSegmentor.plot_interactive_beta_by_label"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#methylseg.MethylSegmentor.plot_interactive_beta_by_label" title="Link to this definition"></a></dt>
+<dd><p>Backward-compatible wrapper for interactive HMM label plots.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
-<li><p><strong>sample_info</strong> (<a class="reference internal" href="methylseg.SampleInfo.html#methylseg.SampleInfo" title="methylseg.helper_classes.SampleInfo"><em>SampleInfo</em></a>)</p></li>
-<li><p><strong>sample_info_removed</strong> (<em>DataFrame</em><em> | </em><em>None</em>)</p></li>
-<li><p><strong>label_type</strong> (<em>str</em>)</p></li>
-<li><p><strong>use_train_data</strong> (<em>bool</em>)</p></li>
+<li><p><strong>sample_info</strong> (<a class="reference internal" href="methylseg.SampleInfo.html#methylseg.SampleInfo" title="methylseg.helper_classes.SampleInfo"><em>SampleInfo</em></a><em> | </em><em>None</em>) – Sample to segment and plot. Falls back to <code class="docutils literal notranslate"><span class="pre">default_sample_info</span></code>.</p></li>
+<li><p><strong>sample_info_removed</strong> (<em>DataFrame</em><em> | </em><em>None</em>) – Optional table of filtered CpGs to overlay as removed points.</p></li>
+<li><p><strong>label_type</strong> (<em>str</em>) – Deprecated compatibility argument. The segmentor always plots HMM
+labels here.</p></li>
+<li><p><strong>chrom</strong> (<em>str</em><em> | </em><em>None</em>) – Optional chromosome restriction for segmentation and plotting.</p></li>
+<li><p><strong>x_col</strong> (<em>str</em>) – Probe-level columns used for the scatter plot axes.</p></li>
+<li><p><strong>y_col</strong> (<em>str</em>) – Probe-level columns used for the scatter plot axes.</p></li>
+<li><p><strong>label_title</strong> (<em>str</em><em> | </em><em>None</em>) – Legend title override for the HMM state labels.</p></li>
+<li><p><strong>show_plot</strong> (<em>bool</em>) – If <code class="docutils literal notranslate"><span class="pre">True</span></code>, display the plot immediately.</p></li>
+<li><p><strong>max_points</strong> (<em>int</em>) – Maximum number of probe rows to render in the interactive scatter.</p></li>
+<li><p><strong>color_pmd_only</strong> (<em>bool</em>) – Legacy overlay controls translated into <code class="docutils literal notranslate"><span class="pre">overlay_regions_df</span></code>.</p></li>
+<li><p><strong>color_regions_df</strong> (<em>DataFrame</em><em> | </em><em>None</em>) – Legacy overlay controls translated into <code class="docutils literal notranslate"><span class="pre">overlay_regions_df</span></code>.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Interactive scatter plot returned by <code class="docutils literal notranslate"><span class="pre">plot_labels</span></code>.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>plotly.graph_objects.Figure</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="methylseg.MethylSegmentor.plot_labels">
+<span class="sig-name descname"><span class="pre">plot_labels</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">sample_info</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">chrom</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">sample_info_removed</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">overlay_regions_df</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">overlay_style</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'state'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">region_start</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">region_end</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">region_chrom</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">x_col</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'CpG_beg'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">y_col</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'beta'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">label_title</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">show_plot</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">max_points</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">120000</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/methylseg/methyl_segmentor.html#MethylSegmentor.plot_labels"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#methylseg.MethylSegmentor.plot_labels" title="Link to this definition"></a></dt>
+<dd><p>Plot genomic-position vs beta for HMM labels.</p>
+<p>Region args only zoom the x-axis viewport; they do not create a
+highlight overlay unless one is passed explicitly.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>sample_info</strong> (<a class="reference internal" href="methylseg.SampleInfo.html#methylseg.SampleInfo" title="methylseg.helper_classes.SampleInfo"><em>SampleInfo</em></a><em> | </em><em>None</em>)</p></li>
 <li><p><strong>chrom</strong> (<em>str</em><em> | </em><em>None</em>)</p></li>
+<li><p><strong>sample_info_removed</strong> (<em>DataFrame</em><em> | </em><em>None</em>)</p></li>
+<li><p><strong>overlay_regions_df</strong> (<em>DataFrame</em><em> | </em><em>None</em>)</p></li>
+<li><p><strong>overlay_style</strong> (<em>str</em>)</p></li>
+<li><p><strong>region_start</strong> (<em>int</em><em> | </em><em>None</em>)</p></li>
+<li><p><strong>region_end</strong> (<em>int</em><em> | </em><em>None</em>)</p></li>
+<li><p><strong>region_chrom</strong> (<em>str</em><em> | </em><em>None</em>)</p></li>
 <li><p><strong>x_col</strong> (<em>str</em>)</p></li>
 <li><p><strong>y_col</strong> (<em>str</em>)</p></li>
 <li><p><strong>label_title</strong> (<em>str</em><em> | </em><em>None</em>)</p></li>
 <li><p><strong>show_plot</strong> (<em>bool</em>)</p></li>
 <li><p><strong>max_points</strong> (<em>int</em>)</p></li>
-<li><p><strong>color_pmd_only</strong> (<em>bool</em>)</p></li>
-<li><p><strong>color_regions_df</strong> (<em>DataFrame</em><em> | </em><em>None</em>)</p></li>
 </ul>
 </dd>
 </dl>

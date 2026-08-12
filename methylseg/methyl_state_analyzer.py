@@ -87,6 +87,15 @@ class MethylStateAnalyzer:
         self.train_joint = self._populate_kmeans_state_display(train_joint)
 
     def plot_feature_distributions_by_kmeans_state(self, show_plots=True):
+        """
+        Plot per-feature histograms stratified by learned KMeans state.
+
+        Parameters
+        ----------
+        show_plots
+            If ``True``, display each figure immediately. Otherwise, save plots
+            to ``out_dir`` when configured.
+        """
         self._build_train_joint()
         train_loadings = self.assigner.get_pca_loadings()
         ranked_features = list(
@@ -409,6 +418,30 @@ class MethylStateAnalyzer:
     def define_states_by_rules(
         self, sample_info: SampleInfo, chrom=None, sample_emissions: pd.DataFrame = None
     ) -> np.ndarray:
+        """
+        Apply the current rule-based cutoff set to a sample or emission table.
+
+        Parameters
+        ----------
+        sample_info
+            Prepared methylation sample used when ``sample_emissions`` is not
+            supplied.
+        chrom
+            Optional chromosome restriction passed through to emission
+            preparation.
+        sample_emissions
+            Precomputed emission table to label directly.
+
+        Returns
+        -------
+        numpy.ndarray
+            Rule-based ``MethylationStates`` assignments for each emission row.
+
+        Raises
+        ------
+        ValueError
+            If rule cutoffs have not been defined.
+        """
         if sample_emissions is not None:
             meth_emissions = sample_emissions
         else:
@@ -611,6 +644,38 @@ class MethylStateAnalyzer:
         color_pmd_only: bool = False,
         color_regions_df: pd.DataFrame | None = None,
     ):
+        """
+        Backward-compatible wrapper for interactive analyzer-owned label plots.
+
+        Parameters
+        ----------
+        label_type
+            Label source to visualize, typically ``"kmeans"`` or
+            ``"rule_based"``.
+        use_train_data
+            If ``True``, plot cached training labels instead of a new sample.
+        chrom
+            Optional chromosome restriction when plotting a new sample.
+        sample_info
+            Sample to analyze when ``use_train_data`` is ``False``.
+        sample_info_removed
+            Optional table of filtered CpGs to overlay as removed points.
+        x_col, y_col
+            Probe-level columns used for the scatter plot axes.
+        label_title
+            Legend title override.
+        show_plot
+            If ``True``, display the plot immediately.
+        max_points
+            Maximum number of probe rows to render in the interactive scatter.
+        color_pmd_only, color_regions_df
+            Legacy overlay controls translated into ``overlay_regions_df``.
+
+        Returns
+        -------
+        plotly.graph_objects.Figure
+            Interactive scatter plot returned by ``plot_labels``.
+        """
         overlay_regions_df, overlay_style = resolve_overlay_plot_args(
             color_pmd_only=color_pmd_only,
             color_regions_df=color_regions_df,

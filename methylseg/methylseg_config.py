@@ -227,6 +227,26 @@ class MethylSegConfig:
         out_dir: str | None = None,
         include_learned: bool = True,
     ) -> "MethylSegConfig":
+        """
+        Serialize a fitted pathway into a portable configuration bundle.
+
+        Parameters
+        ----------
+        inst
+            Fitted ``MethylSegPathway`` instance to serialize.
+        out_dir
+            Directory where the YAML-adjacent artifacts should be written. When
+            omitted, uses the pathway output directory.
+        include_learned
+            If ``True``, also write learned models and training artifacts such as
+            PCA scores, labels, and feather tables.
+
+        Returns
+        -------
+        MethylSegConfig
+            Config wrapper whose ``config`` dictionary references any artifacts
+            written during serialization.
+        """
 
         base_dir = Path(out_dir or inst.out_dir or ".").resolve()
         base_dir.mkdir(parents=True, exist_ok=True)
@@ -534,6 +554,16 @@ class MethylSegConfig:
         return cls(cfg)
 
     def get_state_cutoffs(self) -> dict | None:
+        """
+        Return the normalized rule-based cutoff configuration, if present.
+
+        Returns
+        -------
+        dict or None
+            State-cutoff mapping compatible with
+            ``MethylStateAnalyzer.set_state_cutoffs`` or ``None`` when the
+            serialized config does not include rule thresholds.
+        """
 
         state_cutoffs = self.config.get("state_cutoffs", None)
 
@@ -548,6 +578,15 @@ class MethylSegConfig:
         return state_cutoffs
 
     def to_yaml(self, yaml_path: str):
+        """
+        Write the serialized configuration dictionary to YAML.
+
+        Parameters
+        ----------
+        yaml_path
+            Output path for the YAML configuration file. Parent directories are
+            created automatically.
+        """
 
         yaml_path = Path(yaml_path)
 
@@ -558,6 +597,19 @@ class MethylSegConfig:
 
     @classmethod
     def from_yaml(cls, yaml_path: str) -> "MethylSegConfig":
+        """
+        Load a serialized methylseg configuration from YAML.
+
+        Parameters
+        ----------
+        yaml_path
+            Path to a YAML file previously written by ``to_yaml``.
+
+        Returns
+        -------
+        MethylSegConfig
+            Config wrapper with ``source_path`` set to the loaded YAML file.
+        """
 
         with open(yaml_path, "r") as fh:
             data = yaml.safe_load(fh)
@@ -568,6 +620,30 @@ class MethylSegConfig:
         return config
 
     def build_pathway(self, load_learned: bool = True):
+        """
+        Reconstruct a ``MethylSegPathway`` from the serialized config.
+
+        Parameters
+        ----------
+        load_learned
+            If ``True``, attempt to restore saved training artifacts, learned
+            KMeans preprocessing components, and persisted tables referenced by
+            the config.
+
+        Returns
+        -------
+        MethylSegPathway
+            Rehydrated pathway configured from the serialized YAML bundle.
+
+        Raises
+        ------
+        ValueError
+            If the loaded config is missing required sections or has invalid
+            field shapes.
+        FileNotFoundError
+            If an expected serialized artifact referenced by the config is
+            missing on disk.
+        """
 
         from .helper_classes import KMeansMethylationModel
         from .methylseg_pathway import MethylSegPathway

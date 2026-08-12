@@ -31,6 +31,7 @@ Enums and labels
    MethylStateAssignmentMethod
    HMMObservationMode
    MethylationStates
+   HMMType
 
 HMM backends
 ------------
@@ -40,7 +41,6 @@ HMM backends
    :nosignatures:
 
    MethylSegHMM
-   DAMethylSegHMM
    MultinomialSegHMM
    StickyCategoricalMethylSegHMM
    GaussianMethylSegHMM
@@ -55,25 +55,3 @@ Utility helpers
 
    get_biological_state_colors
    get_cluster_colors
-
-.. toctree::
-   :hidden:
-
-   generated/methylseg.CTMethylSegHMM
-   generated/methylseg.DAMethylSegHMM
-   generated/methylseg.GaussianMethylSegHMM
-   generated/methylseg.HMMObservationMode
-   generated/methylseg.MethylDataPrep
-   generated/methylseg.MethylSegConfig
-   generated/methylseg.MethylSegHMM
-   generated/methylseg.MethylSegPathway
-   generated/methylseg.MethylSegmentor
-   generated/methylseg.MethylStateAnalyzer
-   generated/methylseg.MethylStateAssigner
-   generated/methylseg.MethylStateAssignmentMethod
-   generated/methylseg.MethylationStates
-   generated/methylseg.MultinomialSegHMM
-   generated/methylseg.SampleInfo
-   generated/methylseg.StickyCategoricalMethylSegHMM
-   generated/methylseg.get_biological_state_colors
-   generated/methylseg.get_cluster_colors

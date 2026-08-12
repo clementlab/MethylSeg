@@ -9,6 +9,12 @@
    .. automethod:: __init__
 
    
+   .. rubric:: Methods
+
+   .. autosummary::
+   
+      ~HMMObservationMode.from_string
+   
    
 
    

@@ -39,6 +39,30 @@ class MethylSegPathway:
     def get_pretrained_model(
         cls, out_dir, resolution="450k", download_if_missing=False
     ):
+        """
+        Load a packaged pretrained pathway configuration.
+
+        Parameters
+        ----------
+        out_dir
+            Output directory to attach to the loaded pathway.
+        resolution
+            Reference model family to load, typically ``"450k"`` or WGBS.
+        download_if_missing
+            If ``True``, download packaged model artifacts when the local files
+            are missing or still Git LFS pointers.
+
+        Returns
+        -------
+        MethylSegPathway
+            Restored pretrained pathway ready for segmentation.
+
+        Raises
+        ------
+        FileNotFoundError
+            If the requested pretrained model is unavailable locally and
+            ``download_if_missing`` is ``False``.
+        """
         pretrained_yaml = (
             FILES / f"tcga_hm450k_model.yaml"
             if resolution == "450k"
@@ -63,6 +87,28 @@ class MethylSegPathway:
         min_coverage: int = 5,
         remove_low_coverage_like_cpgs: bool = False,
     ) -> tuple[SampleInfo, pd.DataFrame]:
+        """
+        Prepare a methylation file into the package's canonical sample schema.
+
+        Parameters
+        ----------
+        sample_name
+            Identifier to assign to the prepared sample.
+        sample_file
+            Path to the methylation input table.
+        resolution
+            Input format hint passed through to ``MethylDataPrep``.
+        min_coverage
+            Minimum WGBS coverage threshold when WGBS-style inputs are used.
+        remove_low_coverage_like_cpgs
+            Whether to remove beta values that resemble very low-coverage WGBS
+            counts.
+
+        Returns
+        -------
+        tuple
+            ``(sample_info, removed_df)`` from ``MethylDataPrep.prepare``.
+        """
         return MethylDataPrep(
             meth_file=sample_file,
             sample_id=sample_name,
@@ -76,6 +122,28 @@ class MethylSegPathway:
         sample_info: SampleInfo,
         chroms: Optional[List[str]] = None,
     ) -> SampleInfo:
+        """
+        Return a copy of ``SampleInfo`` restricted to selected chromosomes.
+
+        Parameters
+        ----------
+        sample_info
+            Prepared sample whose methylation table should be filtered.
+        chroms
+            Optional chromosome list. When omitted, preserves the full set and
+            original chromosome order.
+
+        Returns
+        -------
+        SampleInfo
+            New sample object containing only the requested chromosomes.
+
+        Raises
+        ------
+        ValueError
+            If the sample contains no methylation rows or the requested
+            chromosomes are missing.
+        """
         meth_data = sample_info.meth_data.copy()
         if meth_data.empty:
             raise ValueError("SampleInfo contains no methylation data.")
@@ -274,6 +342,14 @@ class MethylSegPathway:
         self.segmentor.default_sample_info = self.train_sample_info
 
     def set_out_dir(self, out_dir: str | Path) -> None:
+        """
+        Update the output directory across the pathway and owned components.
+
+        Parameters
+        ----------
+        out_dir
+            New output directory. It is created if needed.
+        """
         resolved_out_dir = str(Path(out_dir))
         Path(resolved_out_dir).mkdir(parents=True, exist_ok=True)
         self.out_dir = resolved_out_dir
@@ -486,6 +562,15 @@ class MethylSegPathway:
         self,
         force_optimize_rules: bool = False,
     ):
+        """
+        Train the KMeans assignment model and optional rule-based cutoffs.
+
+        Parameters
+        ----------
+        force_optimize_rules
+            If ``True``, rerun rule optimization even when KMeans labeling is the
+            active state-assignment method.
+        """
         model, train_meth, train_emissions, train_pca, train_labels = (
             self.assigner.train_kmeans_for_sample(
                 sample_info=self.train_sample_info,
@@ -510,6 +595,31 @@ class MethylSegPathway:
         sample_file: str | None = None,
         force_resegment: bool = False,
     ) -> pd.DataFrame:
+        """
+        Segment one chromosome and return its length-filtered regions.
+
+        Parameters
+        ----------
+        sample_info
+            Prepared sample to segment. When omitted, uses the configured
+            training sample or resolves ``sample_name``/``sample_file``.
+        chrom
+            Chromosome to segment.
+        min_probes
+            Minimum number of probes required per raw contiguous region before
+            downstream length filtering.
+        sample_name, sample_file
+            Alternate inputs used to prepare ``sample_info`` on the fly.
+        force_resegment
+            If ``True``, ignore cached segmentation results and rerun the HMM.
+
+        Returns
+        -------
+        pandas.DataFrame
+            Region table for the requested chromosome after applying
+            ``min_region_length`` filtering. BED files are also written to
+            ``out_dir`` as a side effect.
+        """
         sample_info = self._resolve_sample_info(
             sample_info=sample_info,
             sample_name=sample_name,
@@ -1286,6 +1396,30 @@ class MethylSegPathway:
         force_resegment: bool = False,
         clean_regions: bool = True,
     ) -> list[str]:
+        """
+        Segment a sample across all requested chromosomes and write summaries.
+
+        Parameters
+        ----------
+        sample_info
+            Prepared sample to segment. When omitted, uses the pathway default
+            sample.
+        chroms
+            Optional chromosome subset. When omitted, uses every chromosome
+            present in the sample.
+        min_probes
+            Minimum probes required per raw contiguous region.
+        force_resegment
+            If ``True``, ignore cached HMM results and rerun segmentation.
+        clean_regions
+            If ``True``, run cleaned-region postprocessing and emit cleaned
+            summary files alongside raw summaries.
+
+        Returns
+        -------
+        list of str
+            Paths to the summary BED files written under ``out_dir``.
+        """
         sample_info = self._resolve_sample_info(sample_info=sample_info)
         filtered_sample_info = self.subset_sample_info_by_chroms(
             sample_info=sample_info,
@@ -1373,6 +1507,33 @@ class MethylSegPathway:
         clean_regions: bool = True,
         verbose: bool = True,
     ) -> list[str]:
+        """
+        Fit the pathway and run end-to-end segmentation for a sample.
+
+        Parameters
+        ----------
+        sample_info
+            Prepared sample to segment. When omitted, uses the pathway default
+            sample.
+        chroms
+            Optional chromosome subset to process.
+        min_probes
+            Minimum probes required per raw contiguous region.
+        force_optimize_rules
+            If ``True``, rerun rule optimization before segmentation.
+        force_resegment
+            If ``True``, ignore cached HMM results and rerun segmentation.
+        clean_regions
+            If ``True``, generate cleaned-region artifacts and cleaned summary
+            files.
+        verbose
+            If ``True``, print simple progress messages.
+
+        Returns
+        -------
+        list of str
+            Paths to the written summary BED files.
+        """
         sample_info = self._resolve_sample_info(sample_info=sample_info)
         if verbose:
             print("Fitting pathway...")
@@ -1498,6 +1659,11 @@ class MethylSegPathway:
         n_components: int = 2,
         top_n_loadings: int = 5,
         hexbin: bool = True,
+        hexbin_gridsize: int = 60,
+        hexbin_bins: str | int | list[float] | np.ndarray | None = "log",
+        hexbin_mincnt: int | None = 1,
+        hexbin_alpha: float | None = None,
+        hexbin_linewidths: float | None = None,
         interactive: bool = False,
         include_metrics: bool = True,
         include_biplot: bool = False,
@@ -1510,6 +1676,66 @@ class MethylSegPathway:
         show_plot: bool = True,
         force_resegment: bool = False,
     ):
+        """
+        Plot PCA or UMAP embeddings for training or sample-level labels.
+
+        Parameters
+        ----------
+        label_source
+            Label family to visualize: training/sample ``"kmeans"``,
+            ``"rule_based"``, or segmented ``"hmm"``.
+        sample_info
+            Optional sample to embed. When omitted with ``label_source="kmeans"``,
+            the cached training embedding is used.
+        chrom
+            Optional chromosome restriction for sample-level embeddings.
+        method
+            Embedding method, either ``"pca"`` or ``"umap"``.
+        n_components
+            Number of embedding dimensions to render.
+        top_n_loadings
+            Number of PCA loading features to show in side tables and biplots.
+        hexbin
+            If ``True``, render 2-D PCA as hexbins instead of points.
+        hexbin_gridsize
+            Hexbin grid resolution for 2-D PCA hexbin plots.
+        hexbin_bins
+            Hexbin binning strategy for 2-D PCA hexbin plots, for example
+            ``"log"``, an integer bin count, explicit bin edges, or ``None``.
+        hexbin_mincnt
+            Minimum points required to draw a hexbin in 2-D PCA hexbin plots.
+            Use ``None`` to let matplotlib draw all bins.
+        hexbin_alpha
+            Optional global transparency multiplier for 2-D PCA hexbin plots.
+        hexbin_linewidths
+            Optional hexagon border width for 2-D PCA hexbin plots.
+        interactive
+            If ``True``, use interactive rendering when supported.
+        include_metrics
+            Include clustering-quality metrics where available.
+        include_biplot
+            Overlay top PCA loading vectors on 2-D PCA plots.
+        label_title
+            Legend or colorbar title.
+        region_start, region_end, region_chrom
+            Optional genomic interval used to highlight overlapping CpGs in PCA
+            space.
+        use_pca_features
+            For UMAP, project the trained PCA features instead of scaled raw
+            features.
+        use_parallel
+            Whether to allow UMAP's parallel execution mode.
+        show_plot
+            If ``True``, display the figure immediately.
+        force_resegment
+            If ``True`` and ``label_source="hmm"``, rerun segmentation before
+            plotting.
+
+        Returns
+        -------
+        object
+            Matplotlib or Plotly figure object from the selected plotting path.
+        """
         label_source = str(label_source).lower()
         if label_source == "kmeans" and sample_info is None:
             return self.assigner.plot_training_embedding(
@@ -1517,6 +1743,11 @@ class MethylSegPathway:
                 n_components=n_components,
                 top_n_loadings=top_n_loadings,
                 hexbin=hexbin,
+                hexbin_gridsize=hexbin_gridsize,
+                hexbin_bins=hexbin_bins,
+                hexbin_mincnt=hexbin_mincnt,
+                hexbin_alpha=hexbin_alpha,
+                hexbin_linewidths=hexbin_linewidths,
                 interactive=interactive,
                 include_metrics=include_metrics,
                 include_biplot=include_biplot,
@@ -1548,6 +1779,11 @@ class MethylSegPathway:
                 n_components=n_components,
                 top_n_loadings=top_n_loadings,
                 hexbin=hexbin,
+                hexbin_gridsize=hexbin_gridsize,
+                hexbin_bins=hexbin_bins,
+                hexbin_mincnt=hexbin_mincnt,
+                hexbin_alpha=hexbin_alpha,
+                hexbin_linewidths=hexbin_linewidths,
                 interactive=interactive,
                 include_metrics=include_metrics,
                 include_biplot=include_biplot,
@@ -1576,6 +1812,11 @@ class MethylSegPathway:
                 n_components=n_components,
                 top_n_loadings=top_n_loadings,
                 hexbin=hexbin,
+                hexbin_gridsize=hexbin_gridsize,
+                hexbin_bins=hexbin_bins,
+                hexbin_mincnt=hexbin_mincnt,
+                hexbin_alpha=hexbin_alpha,
+                hexbin_linewidths=hexbin_linewidths,
                 interactive=interactive,
                 include_metrics=include_metrics,
                 include_biplot=include_biplot,

@@ -19,8 +19,12 @@
       ~MethylSegPathway.generate_regions
       ~MethylSegPathway.get_clean_regions
       ~MethylSegPathway.get_pretrained_model
+      ~MethylSegPathway.plot_embedding
+      ~MethylSegPathway.plot_labels
       ~MethylSegPathway.prepare_sample_info
       ~MethylSegPathway.run_on_all_chroms
+      ~MethylSegPathway.run_pathway
+      ~MethylSegPathway.set_out_dir
       ~MethylSegPathway.subset_sample_info_by_chroms
       ~MethylSegPathway.to_yaml
    

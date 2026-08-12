@@ -23,6 +23,7 @@
 
    .. autosummary::
    
+      ~SampleInfo.resolution
       ~SampleInfo.sample_id
       ~SampleInfo.meth_data
    

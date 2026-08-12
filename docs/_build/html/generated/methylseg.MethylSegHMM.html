@@ -20,8 +20,8 @@
     <script src="../_static/js/theme.js"></script>
     <link rel="index" title="Index" href="../genindex.html" />
     <link rel="search" title="Search" href="../search.html" />
-    <link rel="next" title="methylseg.DAMethylSegHMM" href="methylseg.DAMethylSegHMM.html" />
-    <link rel="prev" title="methylseg.MethylationStates" href="methylseg.MethylationStates.html" /> 
+    <link rel="next" title="methylseg.MultinomialSegHMM" href="methylseg.MultinomialSegHMM.html" />
+    <link rel="prev" title="methylseg.HMMType" href="methylseg.HMMType.html" /> 
 </head>
 
 <body class="wy-body-for-nav"> 
@@ -55,39 +55,13 @@
 <li class="toctree-l4"><a class="reference internal" href="#methylseg.MethylSegHMM"><code class="docutils literal notranslate"><span class="pre">MethylSegHMM</span></code></a></li>
 </ul>
 </li>
-<li class="toctree-l3"><a class="reference internal" href="methylseg.DAMethylSegHMM.html">methylseg.DAMethylSegHMM</a></li>
 <li class="toctree-l3"><a class="reference internal" href="methylseg.MultinomialSegHMM.html">methylseg.MultinomialSegHMM</a></li>
 <li class="toctree-l3"><a class="reference internal" href="methylseg.StickyCategoricalMethylSegHMM.html">methylseg.StickyCategoricalMethylSegHMM</a></li>
 <li class="toctree-l3"><a class="reference internal" href="methylseg.GaussianMethylSegHMM.html">methylseg.GaussianMethylSegHMM</a></li>
 <li class="toctree-l3"><a class="reference internal" href="methylseg.CTMethylSegHMM.html">methylseg.CTMethylSegHMM</a></li>
 </ul>
 </li>
-<li class="toctree-l2 current"><a class="reference internal" href="../api.html#utility-helpers">Utility helpers</a><ul class="current">
-<li class="toctree-l3"><a class="reference internal" href="methylseg.get_biological_state_colors.html">methylseg.get_biological_state_colors</a></li>
-<li class="toctree-l3"><a class="reference internal" href="methylseg.get_cluster_colors.html">methylseg.get_cluster_colors</a></li>
-<li class="toctree-l3"><a class="reference internal" href="methylseg.CTMethylSegHMM.html">methylseg.CTMethylSegHMM</a></li>
-<li class="toctree-l3"><a class="reference internal" href="methylseg.DAMethylSegHMM.html">methylseg.DAMethylSegHMM</a></li>
-<li class="toctree-l3"><a class="reference internal" href="methylseg.GaussianMethylSegHMM.html">methylseg.GaussianMethylSegHMM</a></li>
-<li class="toctree-l3"><a class="reference internal" href="methylseg.HMMObservationMode.html">methylseg.HMMObservationMode</a></li>
-<li class="toctree-l3"><a class="reference internal" href="methylseg.MethylDataPrep.html">methylseg.MethylDataPrep</a></li>
-<li class="toctree-l3"><a class="reference internal" href="methylseg.MethylSegConfig.html">methylseg.MethylSegConfig</a></li>
-<li class="toctree-l3 current"><a class="current reference internal" href="#">methylseg.MethylSegHMM</a><ul>
-<li class="toctree-l4"><a class="reference internal" href="#methylseg.MethylSegHMM"><code class="docutils literal notranslate"><span class="pre">MethylSegHMM</span></code></a></li>
-</ul>
-</li>
-<li class="toctree-l3"><a class="reference internal" href="methylseg.MethylSegPathway.html">methylseg.MethylSegPathway</a></li>
-<li class="toctree-l3"><a class="reference internal" href="methylseg.MethylSegmentor.html">methylseg.MethylSegmentor</a></li>
-<li class="toctree-l3"><a class="reference internal" href="methylseg.MethylStateAnalyzer.html">methylseg.MethylStateAnalyzer</a></li>
-<li class="toctree-l3"><a class="reference internal" href="methylseg.MethylStateAssigner.html">methylseg.MethylStateAssigner</a></li>
-<li class="toctree-l3"><a class="reference internal" href="methylseg.MethylStateAssignmentMethod.html">methylseg.MethylStateAssignmentMethod</a></li>
-<li class="toctree-l3"><a class="reference internal" href="methylseg.MethylationStates.html">methylseg.MethylationStates</a></li>
-<li class="toctree-l3"><a class="reference internal" href="methylseg.MultinomialSegHMM.html">methylseg.MultinomialSegHMM</a></li>
-<li class="toctree-l3"><a class="reference internal" href="methylseg.SampleInfo.html">methylseg.SampleInfo</a></li>
-<li class="toctree-l3"><a class="reference internal" href="methylseg.StickyCategoricalMethylSegHMM.html">methylseg.StickyCategoricalMethylSegHMM</a></li>
-<li class="toctree-l3"><a class="reference internal" href="methylseg.get_biological_state_colors.html">methylseg.get_biological_state_colors</a></li>
-<li class="toctree-l3"><a class="reference internal" href="methylseg.get_cluster_colors.html">methylseg.get_cluster_colors</a></li>
-</ul>
-</li>
+<li class="toctree-l2"><a class="reference internal" href="../api.html#utility-helpers">Utility helpers</a></li>
 </ul>
 </li>
 <li class="toctree-l1"><a class="reference internal" href="../tutorials.html">Tutorial Notebook</a></li>
@@ -147,46 +121,83 @@
 <td><p></p></td>
 </tr>
 <tr class="row-even"><td><p><a class="reference internal" href="#methylseg.MethylSegHMM.create_model" title="methylseg.MethylSegHMM.create_model"><code class="xref py py-obj docutils literal notranslate"><span class="pre">create_model</span></code></a>()</p></td>
-<td><p></p></td>
+<td><p>Instantiate and initialize the backend-specific HMM object.</p></td>
 </tr>
 <tr class="row-odd"><td><p><a class="reference internal" href="#methylseg.MethylSegHMM.fit" title="methylseg.MethylSegHMM.fit"><code class="xref py py-obj docutils literal notranslate"><span class="pre">fit</span></code></a>(emissions[, sample_info, chrom])</p></td>
-<td><p></p></td>
+<td><p>Fit backend-specific HMM parameters on the provided emissions.</p></td>
 </tr>
 <tr class="row-even"><td><p><a class="reference internal" href="#methylseg.MethylSegHMM.format_fit" title="methylseg.MethylSegHMM.format_fit"><code class="xref py py-obj docutils literal notranslate"><span class="pre">format_fit</span></code></a>(emissions)</p></td>
-<td><p></p></td>
+<td><p>Convert raw emissions into the representation expected by <code class="docutils literal notranslate"><span class="pre">fit</span></code>.</p></td>
 </tr>
 <tr class="row-odd"><td><p><a class="reference internal" href="#methylseg.MethylSegHMM.format_predict" title="methylseg.MethylSegHMM.format_predict"><code class="xref py py-obj docutils literal notranslate"><span class="pre">format_predict</span></code></a>(emissions)</p></td>
-<td><p></p></td>
+<td><p>Convert raw emissions into the representation expected by <code class="docutils literal notranslate"><span class="pre">predict</span></code>.</p></td>
 </tr>
 <tr class="row-even"><td><p><a class="reference internal" href="#methylseg.MethylSegHMM.predict" title="methylseg.MethylSegHMM.predict"><code class="xref py py-obj docutils literal notranslate"><span class="pre">predict</span></code></a>(emissions)</p></td>
-<td><p></p></td>
+<td><p>Decode hidden states for the supplied emissions.</p></td>
 </tr>
 </tbody>
 </table>
 <dl class="py method">
 <dt class="sig sig-object py" id="methylseg.MethylSegHMM.fit">
 <span class="sig-name descname"><span class="pre">fit</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">emissions</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">sample_info</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">chrom</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/methylseg/methylseg_hmm.html#MethylSegHMM.fit"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#methylseg.MethylSegHMM.fit" title="Link to this definition"></a></dt>
-<dd></dd></dl>
+<dd><p>Fit backend-specific HMM parameters on the provided emissions.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>emissions</strong> – Observation sequence or feature matrix already prepared for the
+backend.</p></li>
+<li><p><strong>sample_info</strong> – Optional sample metadata used by backends that require genomic
+coordinates or other sample-level context.</p></li>
+<li><p><strong>chrom</strong> – Chromosome label for single-chromosome fitting when relevant.</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="methylseg.MethylSegHMM.create_model">
 <span class="sig-name descname"><span class="pre">create_model</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/methylseg/methylseg_hmm.html#MethylSegHMM.create_model"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#methylseg.MethylSegHMM.create_model" title="Link to this definition"></a></dt>
-<dd></dd></dl>
+<dd><p>Instantiate and initialize the backend-specific HMM object.</p>
+</dd></dl>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="methylseg.MethylSegHMM.predict">
 <span class="sig-name descname"><span class="pre">predict</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">emissions</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/methylseg/methylseg_hmm.html#MethylSegHMM.predict"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#methylseg.MethylSegHMM.predict" title="Link to this definition"></a></dt>
-<dd></dd></dl>
+<dd><p>Decode hidden states for the supplied emissions.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>emissions</strong> – Observation sequence or feature matrix prepared for prediction.</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Hidden-state assignments in backend-specific numeric form.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>numpy.ndarray</p>
+</dd>
+</dl>
+</dd></dl>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="methylseg.MethylSegHMM.format_fit">
 <span class="sig-name descname"><span class="pre">format_fit</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">emissions</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/methylseg/methylseg_hmm.html#MethylSegHMM.format_fit"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#methylseg.MethylSegHMM.format_fit" title="Link to this definition"></a></dt>
-<dd></dd></dl>
+<dd><p>Convert raw emissions into the representation expected by <code class="docutils literal notranslate"><span class="pre">fit</span></code>.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>emissions</strong> – Raw observation labels or features.</p>
+</dd>
+</dl>
+</dd></dl>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="methylseg.MethylSegHMM.format_predict">
 <span class="sig-name descname"><span class="pre">format_predict</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">emissions</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/methylseg/methylseg_hmm.html#MethylSegHMM.format_predict"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#methylseg.MethylSegHMM.format_predict" title="Link to this definition"></a></dt>
-<dd></dd></dl>
+<dd><p>Convert raw emissions into the representation expected by <code class="docutils literal notranslate"><span class="pre">predict</span></code>.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>emissions</strong> – Raw observation labels or features.</p>
+</dd>
+</dl>
+</dd></dl>
 
 </dd></dl>
 
@@ -196,8 +207,8 @@
            </div>
           </div>
           <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
-        <a href="methylseg.MethylationStates.html" class="btn btn-neutral float-left" title="methylseg.MethylationStates" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
-        <a href="methylseg.DAMethylSegHMM.html" class="btn btn-neutral float-right" title="methylseg.DAMethylSegHMM" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+        <a href="methylseg.HMMType.html" class="btn btn-neutral float-left" title="methylseg.HMMType" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="methylseg.MultinomialSegHMM.html" class="btn btn-neutral float-right" title="methylseg.MultinomialSegHMM" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
     </div>
 
   <hr/>

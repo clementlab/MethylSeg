@@ -62,11 +62,11 @@
 <li class="toctree-l3"><a class="reference internal" href="generated/methylseg.MethylStateAssignmentMethod.html">methylseg.MethylStateAssignmentMethod</a></li>
 <li class="toctree-l3"><a class="reference internal" href="generated/methylseg.HMMObservationMode.html">methylseg.HMMObservationMode</a></li>
 <li class="toctree-l3"><a class="reference internal" href="generated/methylseg.MethylationStates.html">methylseg.MethylationStates</a></li>
+<li class="toctree-l3"><a class="reference internal" href="generated/methylseg.HMMType.html">methylseg.HMMType</a></li>
 </ul>
 </li>
 <li class="toctree-l2"><a class="reference internal" href="#hmm-backends">HMM backends</a><ul>
 <li class="toctree-l3"><a class="reference internal" href="generated/methylseg.MethylSegHMM.html">methylseg.MethylSegHMM</a></li>
-<li class="toctree-l3"><a class="reference internal" href="generated/methylseg.DAMethylSegHMM.html">methylseg.DAMethylSegHMM</a></li>
 <li class="toctree-l3"><a class="reference internal" href="generated/methylseg.MultinomialSegHMM.html">methylseg.MultinomialSegHMM</a></li>
 <li class="toctree-l3"><a class="reference internal" href="generated/methylseg.StickyCategoricalMethylSegHMM.html">methylseg.StickyCategoricalMethylSegHMM</a></li>
 <li class="toctree-l3"><a class="reference internal" href="generated/methylseg.GaussianMethylSegHMM.html">methylseg.GaussianMethylSegHMM</a></li>
@@ -74,24 +74,6 @@
 </ul>
 </li>
 <li class="toctree-l2"><a class="reference internal" href="#utility-helpers">Utility helpers</a><ul>
-<li class="toctree-l3"><a class="reference internal" href="generated/methylseg.get_biological_state_colors.html">methylseg.get_biological_state_colors</a></li>
-<li class="toctree-l3"><a class="reference internal" href="generated/methylseg.get_cluster_colors.html">methylseg.get_cluster_colors</a></li>
-<li class="toctree-l3"><a class="reference internal" href="generated/methylseg.CTMethylSegHMM.html">methylseg.CTMethylSegHMM</a></li>
-<li class="toctree-l3"><a class="reference internal" href="generated/methylseg.DAMethylSegHMM.html">methylseg.DAMethylSegHMM</a></li>
-<li class="toctree-l3"><a class="reference internal" href="generated/methylseg.GaussianMethylSegHMM.html">methylseg.GaussianMethylSegHMM</a></li>
-<li class="toctree-l3"><a class="reference internal" href="generated/methylseg.HMMObservationMode.html">methylseg.HMMObservationMode</a></li>
-<li class="toctree-l3"><a class="reference internal" href="generated/methylseg.MethylDataPrep.html">methylseg.MethylDataPrep</a></li>
-<li class="toctree-l3"><a class="reference internal" href="generated/methylseg.MethylSegConfig.html">methylseg.MethylSegConfig</a></li>
-<li class="toctree-l3"><a class="reference internal" href="generated/methylseg.MethylSegHMM.html">methylseg.MethylSegHMM</a></li>
-<li class="toctree-l3"><a class="reference internal" href="generated/methylseg.MethylSegPathway.html">methylseg.MethylSegPathway</a></li>
-<li class="toctree-l3"><a class="reference internal" href="generated/methylseg.MethylSegmentor.html">methylseg.MethylSegmentor</a></li>
-<li class="toctree-l3"><a class="reference internal" href="generated/methylseg.MethylStateAnalyzer.html">methylseg.MethylStateAnalyzer</a></li>
-<li class="toctree-l3"><a class="reference internal" href="generated/methylseg.MethylStateAssigner.html">methylseg.MethylStateAssigner</a></li>
-<li class="toctree-l3"><a class="reference internal" href="generated/methylseg.MethylStateAssignmentMethod.html">methylseg.MethylStateAssignmentMethod</a></li>
-<li class="toctree-l3"><a class="reference internal" href="generated/methylseg.MethylationStates.html">methylseg.MethylationStates</a></li>
-<li class="toctree-l3"><a class="reference internal" href="generated/methylseg.MultinomialSegHMM.html">methylseg.MultinomialSegHMM</a></li>
-<li class="toctree-l3"><a class="reference internal" href="generated/methylseg.SampleInfo.html">methylseg.SampleInfo</a></li>
-<li class="toctree-l3"><a class="reference internal" href="generated/methylseg.StickyCategoricalMethylSegHMM.html">methylseg.StickyCategoricalMethylSegHMM</a></li>
 <li class="toctree-l3"><a class="reference internal" href="generated/methylseg.get_biological_state_colors.html">methylseg.get_biological_state_colors</a></li>
 <li class="toctree-l3"><a class="reference internal" href="generated/methylseg.get_cluster_colors.html">methylseg.get_cluster_colors</a></li>
 </ul>
@@ -170,6 +152,9 @@ is enough to pick up docstring updates.</p>
 <tr class="row-odd"><td><p><a class="reference internal" href="generated/methylseg.MethylationStates.html#methylseg.MethylationStates" title="methylseg.MethylationStates"><code class="xref py py-obj docutils literal notranslate"><span class="pre">MethylationStates</span></code></a></p></td>
 <td><p>Canonical biological methylation states used throughout the package.</p></td>
 </tr>
+<tr class="row-even"><td><p><a class="reference internal" href="generated/methylseg.HMMType.html#methylseg.HMMType" title="methylseg.HMMType"><code class="xref py py-obj docutils literal notranslate"><span class="pre">HMMType</span></code></a></p></td>
+<td><p>Supported HMM model types for segmentation.</p></td>
+</tr>
 </tbody>
 </table>
 </section>
@@ -180,19 +165,16 @@ is enough to pick up docstring updates.</p>
 <tr class="row-odd"><td><p><a class="reference internal" href="generated/methylseg.MethylSegHMM.html#methylseg.MethylSegHMM" title="methylseg.MethylSegHMM"><code class="xref py py-obj docutils literal notranslate"><span class="pre">MethylSegHMM</span></code></a></p></td>
 <td><p>Abstract base class for methylseg HMM backends.</p></td>
 </tr>
-<tr class="row-even"><td><p><a class="reference internal" href="generated/methylseg.DAMethylSegHMM.html#methylseg.DAMethylSegHMM" title="methylseg.DAMethylSegHMM"><code class="xref py py-obj docutils literal notranslate"><span class="pre">DAMethylSegHMM</span></code></a></p></td>
-<td><p>Placeholder for an alternative HMM implementation that is not yet built.</p></td>
-</tr>
-<tr class="row-odd"><td><p><a class="reference internal" href="generated/methylseg.MultinomialSegHMM.html#methylseg.MultinomialSegHMM" title="methylseg.MultinomialSegHMM"><code class="xref py py-obj docutils literal notranslate"><span class="pre">MultinomialSegHMM</span></code></a></p></td>
+<tr class="row-even"><td><p><a class="reference internal" href="generated/methylseg.MultinomialSegHMM.html#methylseg.MultinomialSegHMM" title="methylseg.MultinomialSegHMM"><code class="xref py py-obj docutils literal notranslate"><span class="pre">MultinomialSegHMM</span></code></a></p></td>
 <td><p>Discrete multinomial HMM over categorical methylation state labels.</p></td>
 </tr>
-<tr class="row-even"><td><p><a class="reference internal" href="generated/methylseg.StickyCategoricalMethylSegHMM.html#methylseg.StickyCategoricalMethylSegHMM" title="methylseg.StickyCategoricalMethylSegHMM"><code class="xref py py-obj docutils literal notranslate"><span class="pre">StickyCategoricalMethylSegHMM</span></code></a></p></td>
+<tr class="row-odd"><td><p><a class="reference internal" href="generated/methylseg.StickyCategoricalMethylSegHMM.html#methylseg.StickyCategoricalMethylSegHMM" title="methylseg.StickyCategoricalMethylSegHMM"><code class="xref py py-obj docutils literal notranslate"><span class="pre">StickyCategoricalMethylSegHMM</span></code></a></p></td>
 <td><p>Categorical HMM with strong self-transition priors for smoother segments.</p></td>
 </tr>
-<tr class="row-odd"><td><p><a class="reference internal" href="generated/methylseg.GaussianMethylSegHMM.html#methylseg.GaussianMethylSegHMM" title="methylseg.GaussianMethylSegHMM"><code class="xref py py-obj docutils literal notranslate"><span class="pre">GaussianMethylSegHMM</span></code></a></p></td>
+<tr class="row-even"><td><p><a class="reference internal" href="generated/methylseg.GaussianMethylSegHMM.html#methylseg.GaussianMethylSegHMM" title="methylseg.GaussianMethylSegHMM"><code class="xref py py-obj docutils literal notranslate"><span class="pre">GaussianMethylSegHMM</span></code></a></p></td>
 <td><p>Gaussian HMM for continuous emission vectors such as PCA features.</p></td>
 </tr>
-<tr class="row-even"><td><p><a class="reference internal" href="generated/methylseg.CTMethylSegHMM.html#methylseg.CTMethylSegHMM" title="methylseg.CTMethylSegHMM"><code class="xref py py-obj docutils literal notranslate"><span class="pre">CTMethylSegHMM</span></code></a></p></td>
+<tr class="row-odd"><td><p><a class="reference internal" href="generated/methylseg.CTMethylSegHMM.html#methylseg.CTMethylSegHMM" title="methylseg.CTMethylSegHMM"><code class="xref py py-obj docutils literal notranslate"><span class="pre">CTMethylSegHMM</span></code></a></p></td>
 <td><p>Continuous-time HMM backend for sparsely spaced CpGs along a chromosome.</p></td>
 </tr>
 </tbody>
@@ -203,15 +185,13 @@ is enough to pick up docstring updates.</p>
 <table class="autosummary longtable docutils align-default">
 <tbody>
 <tr class="row-odd"><td><p><a class="reference internal" href="generated/methylseg.get_biological_state_colors.html#methylseg.get_biological_state_colors" title="methylseg.get_biological_state_colors"><code class="xref py py-obj docutils literal notranslate"><span class="pre">get_biological_state_colors</span></code></a></p></td>
-<td><p>Return a fixed color mapping for the biological methylation states keyed by their canonical enum values (LOW=0, PMD=1, INTERMEDIATE=2, HIGH=3).</p></td>
+<td><p>Return a fixed biological-state palette keyed by the canonical enum values (LOW=0, PMD=1, INTERMEDIATE=2, HIGH=3).</p></td>
 </tr>
 <tr class="row-even"><td><p><a class="reference internal" href="generated/methylseg.get_cluster_colors.html#methylseg.get_cluster_colors" title="methylseg.get_cluster_colors"><code class="xref py py-obj docutils literal notranslate"><span class="pre">get_cluster_colors</span></code></a></p></td>
 <td><p>Return a discrete colormap, norm, and per-state hex colors such that state k always uses the k-th color.</p></td>
 </tr>
 </tbody>
 </table>
-<div class="toctree-wrapper compound">
-</div>
 </section>
 </section>
 

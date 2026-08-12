@@ -13,6 +13,7 @@
 
    .. autosummary::
    
+      ~MethylationStates.from_string
       ~MethylationStates.convert_to_numeric
    
    

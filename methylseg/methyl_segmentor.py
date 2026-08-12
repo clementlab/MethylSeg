@@ -297,6 +297,29 @@ class MethylSegmentor:
         sample_info: SampleInfo,
         chrom: str | None = None,
     ) -> np.ndarray:
+        """
+        Assign coarse methylation states before HMM smoothing.
+
+        Parameters
+        ----------
+        sample_info
+            Prepared methylation sample to summarize and label.
+        chrom
+            Optional chromosome restriction for per-chromosome state assignment.
+
+        Returns
+        -------
+        tuple
+            Pair of ``(meth_data, emissions_df)`` cached on the segmentor after
+            populating ``state`` and ``state_readable`` columns on ``meth_data``.
+
+        Raises
+        ------
+        ValueError
+            If the configured state-assignment method is unknown.
+        NotImplementedError
+            If ``AUTO`` assignment is requested.
+        """
         meth_data, emissions_df = self._prepare_emissions(
             sample_info=sample_info, chrom=chrom
         )
@@ -598,6 +621,36 @@ class MethylSegmentor:
         color_pmd_only: bool = False,
         color_regions_df: pd.DataFrame | None = None,
     ):
+        """
+        Backward-compatible wrapper for interactive HMM label plots.
+
+        Parameters
+        ----------
+        sample_info
+            Sample to segment and plot. Falls back to ``default_sample_info``.
+        sample_info_removed
+            Optional table of filtered CpGs to overlay as removed points.
+        label_type
+            Deprecated compatibility argument. The segmentor always plots HMM
+            labels here.
+        chrom
+            Optional chromosome restriction for segmentation and plotting.
+        x_col, y_col
+            Probe-level columns used for the scatter plot axes.
+        label_title
+            Legend title override for the HMM state labels.
+        show_plot
+            If ``True``, display the plot immediately.
+        max_points
+            Maximum number of probe rows to render in the interactive scatter.
+        color_pmd_only, color_regions_df
+            Legacy overlay controls translated into ``overlay_regions_df``.
+
+        Returns
+        -------
+        plotly.graph_objects.Figure
+            Interactive scatter plot returned by ``plot_labels``.
+        """
         overlay_regions_df, overlay_style = resolve_overlay_plot_args(
             color_pmd_only=color_pmd_only,
             color_regions_df=color_regions_df,

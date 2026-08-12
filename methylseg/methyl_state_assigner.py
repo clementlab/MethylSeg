@@ -108,6 +108,28 @@ class MethylStateAssigner:
         int_high_cutoff,
         high_cutoff,
     ):
+        """
+        Build emission features for one ordered probe sequence.
+
+        Parameters
+        ----------
+        positions
+            Genomic positions for each CpG.
+        betas
+            Beta values aligned to ``positions``.
+        window_specs
+            ``(window_size_bp, label)`` pairs describing the local summary
+            windows to compute.
+        int_low_cutoff, int_high_cutoff, high_cutoff
+            Thresholds used to derive low/intermediate/high proportions inside
+            each window.
+
+        Returns
+        -------
+        tuple
+            ``(X, feature_names)`` where ``X`` is the numeric emission matrix
+            and ``feature_names`` are the corresponding column labels.
+        """
 
         window_sizes = np.array([w[0] for w in window_specs], dtype=np.int64)
 
@@ -158,6 +180,32 @@ class MethylStateAssigner:
         feature_cols: List[str],
         fit: bool = False,
     ):
+        """
+        Impute and scale emission features for clustering or inference.
+
+        Parameters
+        ----------
+        emission_df
+            Emission-feature table.
+        feature_cols
+            Ordered columns to extract and preprocess.
+        fit
+            If ``True``, fit a new imputer/scaler pair and return them alongside
+            the transformed matrix. Otherwise, reuse the trained model's
+            preprocessing objects.
+
+        Returns
+        -------
+        numpy.ndarray or tuple
+            Scaled feature matrix, or ``(scaled_values, imputer, scaler)`` when
+            ``fit=True``.
+
+        Raises
+        ------
+        ValueError
+            If preprocessing cannot produce a finite feature matrix or a
+            required trained preprocessing component is missing.
+        """
         feature_matrix = emission_df[feature_cols].copy()
         feature_matrix = self._transform_emission_features(feature_matrix)
 
@@ -225,6 +273,22 @@ class MethylStateAssigner:
         emission_df: pd.DataFrame,
         feature_cols: Optional[List[str]] = None,
     ) -> List[str]:
+        """
+        Resolve the emission columns to use for clustering features.
+
+        Parameters
+        ----------
+        emission_df
+            Emission-feature table whose columns should be filtered.
+        feature_cols
+            Optional explicit column list. When omitted, uses all non-count
+            features.
+
+        Returns
+        -------
+        list of str
+            Ordered feature-column names passed to preprocessing and clustering.
+        """
         if feature_cols is None:
             feature_cols = [
                 col
@@ -456,6 +520,11 @@ class MethylStateAssigner:
         n_components: int = 2,
         top_n_loadings: int = 5,
         hexbin: bool = False,
+        hexbin_gridsize: int = 60,
+        hexbin_bins: str | int | list[float] | np.ndarray | None = "log",
+        hexbin_mincnt: int | None = 2000,
+        hexbin_alpha: float | None = None,
+        hexbin_linewidths: float | None = None,
         interactive: bool = False,
         include_metrics: bool = True,
         include_biplot: bool = False,
@@ -467,6 +536,69 @@ class MethylStateAssigner:
         use_parallel: bool = True,
         show_plot: bool = True,
     ):
+        """
+        Plot PCA or UMAP embeddings for an emission table and state labels.
+
+        Parameters
+        ----------
+        emission_df
+            Emission-feature table to embed.
+        labels
+            Cluster or biological state labels aligned to ``emission_df``.
+        meth_data
+            Optional probe-level methylation table used for region-aware PCA
+            highlighting.
+        method
+            Embedding method, either ``"pca"`` or ``"umap"``.
+        sample_info
+            Optional sample metadata used for plot titles.
+        chrom
+            Optional chromosome label used for plot titles and region-aware
+            views.
+        n_components
+            Number of embedding dimensions to render.
+        top_n_loadings
+            Number of PCA loading features to show in tables and biplots.
+        hexbin
+            If ``True``, render 2-D PCA as hexbins instead of points.
+        hexbin_gridsize
+            Hexbin grid resolution for 2-D PCA hexbin plots.
+        hexbin_bins
+            Hexbin binning strategy for 2-D PCA hexbin plots, for example
+            ``"log"``, an integer bin count, explicit bin edges, or ``None``.
+        hexbin_mincnt
+            Minimum points required to draw a hexbin in 2-D PCA hexbin plots.
+            Use ``None`` to let matplotlib draw all bins.
+        hexbin_alpha
+            Optional global transparency multiplier for 2-D PCA hexbin plots.
+        hexbin_linewidths
+            Optional hexagon border width for 2-D PCA hexbin plots.
+        interactive
+            If ``True``, use interactive rendering when supported by the chosen
+            method.
+        include_metrics
+            Include clustering-quality metrics where available.
+        include_biplot
+            Overlay top PCA loading vectors on 2-D PCA plots.
+        label_title
+            Legend or colorbar title.
+        region_start, region_end, region_chrom
+            Optional genomic interval used to highlight overlapping CpGs in PCA
+            space.
+        use_pca_features
+            For UMAP, project the trained PCA features instead of scaled raw
+            features.
+        use_parallel
+            Whether to allow UMAP's parallel execution mode.
+        show_plot
+            If ``True``, display the figure immediately.
+
+        Returns
+        -------
+        object
+            Matplotlib or Plotly figure object, depending on the selected
+            rendering path.
+        """
         method = str(method).lower()
         sample_name = None if sample_info is None else sample_info.sample_id
 
@@ -494,6 +626,11 @@ class MethylStateAssigner:
                     n_pca_plot=n_components,
                     top_n_loadings=top_n_loadings,
                     pca_hexbin=hexbin,
+                    hexbin_gridsize=hexbin_gridsize,
+                    hexbin_bins=hexbin_bins,
+                    hexbin_mincnt=hexbin_mincnt,
+                    hexbin_alpha=hexbin_alpha,
+                    hexbin_linewidths=hexbin_linewidths,
                     interactive=interactive,
                     include_kmeans_metrics=include_metrics,
                     include_biplot=include_biplot,
@@ -508,6 +645,11 @@ class MethylStateAssigner:
                 n_pca_plot=n_components,
                 top_n_loadings=top_n_loadings,
                 pca_hexbin=hexbin,
+                hexbin_gridsize=hexbin_gridsize,
+                hexbin_bins=hexbin_bins,
+                hexbin_mincnt=hexbin_mincnt,
+                hexbin_alpha=hexbin_alpha,
+                hexbin_linewidths=hexbin_linewidths,
                 interactive=interactive,
                 include_kmeans_metrics=include_metrics,
                 include_biplot=include_biplot,
@@ -541,6 +683,11 @@ class MethylStateAssigner:
         n_components: int = 2,
         top_n_loadings: int = 5,
         hexbin: bool = False,
+        hexbin_gridsize: int = 60,
+        hexbin_bins: str | int | list[float] | np.ndarray | None = "log",
+        hexbin_mincnt: int | None = 2000,
+        hexbin_alpha: float | None = None,
+        hexbin_linewidths: float | None = None,
         interactive: bool = False,
         include_metrics: bool = True,
         include_biplot: bool = False,
@@ -552,6 +699,55 @@ class MethylStateAssigner:
         use_parallel: bool = True,
         show_plot: bool = True,
     ):
+        """
+        Plot embeddings for the cached training sample and labels.
+
+        Parameters
+        ----------
+        method
+            Embedding method, either ``"pca"`` or ``"umap"``.
+        n_components
+            Number of embedding dimensions to render.
+        top_n_loadings
+            Number of PCA loading features to show in tables and biplots.
+        hexbin
+            If ``True``, render 2-D PCA as hexbins instead of points.
+        hexbin_gridsize
+            Hexbin grid resolution for 2-D PCA hexbin plots.
+        hexbin_bins
+            Hexbin binning strategy for 2-D PCA hexbin plots, for example
+            ``"log"``, an integer bin count, explicit bin edges, or ``None``.
+        hexbin_mincnt
+            Minimum points required to draw a hexbin in 2-D PCA hexbin plots.
+            Use ``None`` to let matplotlib draw all bins.
+        hexbin_alpha
+            Optional global transparency multiplier for 2-D PCA hexbin plots.
+        hexbin_linewidths
+            Optional hexagon border width for 2-D PCA hexbin plots.
+        interactive
+            If ``True``, use interactive rendering when supported.
+        include_metrics
+            Include clustering-quality metrics where available.
+        include_biplot
+            Overlay top PCA loading vectors on 2-D PCA plots.
+        label_title
+            Legend or colorbar title.
+        region_start, region_end, region_chrom
+            Optional genomic interval used to highlight overlapping training
+            CpGs in PCA space.
+        use_pca_features
+            For UMAP, project the trained PCA features instead of scaled raw
+            features.
+        use_parallel
+            Whether to allow UMAP's parallel execution mode.
+        show_plot
+            If ``True``, display the figure immediately.
+
+        Returns
+        -------
+        object
+            Matplotlib or Plotly figure object.
+        """
         required_attrs = ["train_emission_df", "train_labels", "train_sample_info"]
         if any(value is not None for value in (region_start, region_end, region_chrom)):
             required_attrs.append("train_meth")
@@ -573,6 +769,11 @@ class MethylStateAssigner:
             n_components=n_components,
             top_n_loadings=top_n_loadings,
             hexbin=hexbin,
+            hexbin_gridsize=hexbin_gridsize,
+            hexbin_bins=hexbin_bins,
+            hexbin_mincnt=hexbin_mincnt,
+            hexbin_alpha=hexbin_alpha,
+            hexbin_linewidths=hexbin_linewidths,
             interactive=interactive,
             include_metrics=include_metrics,
             include_biplot=include_biplot,
@@ -595,6 +796,33 @@ class MethylStateAssigner:
         use_parallel: bool = True,
         show_plot: bool = True,
     ):
+        """
+        Plot a 2-D UMAP embedding colored by state labels.
+
+        Parameters
+        ----------
+        emission_df
+            Emission-feature table to embed.
+        labels
+            State labels aligned to ``emission_df``.
+        chrom
+            Optional chromosome label used in the plot title.
+        sample_name
+            Optional sample identifier used in the plot title.
+        use_pca
+            If ``True``, run UMAP on the trained PCA features instead of scaled
+            raw features.
+        use_parallel
+            If ``True``, allow UMAP to disable a fixed random seed for parallel
+            execution.
+        show_plot
+            If ``True``, display the figure immediately.
+
+        Returns
+        -------
+        matplotlib.figure.Figure
+            Scatter plot of the UMAP embedding.
+        """
         if not hasattr(self, "model"):
             raise ValueError("No trained model found. Please train a model first.")
         random_state = None if use_parallel else self.random_state
@@ -678,6 +906,31 @@ class MethylStateAssigner:
         feature_cols_for_table: Optional[List[str]] = None,
         interactive: bool = False,
     ):
+        """
+        Plot genomic beta values colored by KMeans-derived state labels.
+
+        Parameters
+        ----------
+        meth_data
+            Probe-level methylation table containing genomic positions and beta
+            values.
+        labels
+            Cluster or biological state labels aligned to ``meth_data``.
+        chrom
+            Optional chromosome label used in the plot title.
+        sample_name
+            Optional sample identifier used in the plot title.
+        feature_cols_for_table
+            Optional feature list to display alongside the static scatter plot.
+        interactive
+            If ``True``, render the Plotly version instead of the static
+            matplotlib figure.
+
+        Returns
+        -------
+        object
+            Matplotlib or Plotly figure object.
+        """
         # Convert Enum labels to integers if needed
         if isinstance(labels.flat[0], Enum):
             labels_numeric = np.array([lbl.value for lbl in labels])
@@ -796,6 +1049,11 @@ class MethylStateAssigner:
         n_pca_plot: int = 2,  # 2 or 3
         top_n_loadings: int = 5,
         pca_hexbin: bool = False,  # True -> old hexbin behavior
+        hexbin_gridsize: int = 60,
+        hexbin_bins: str | int | list[float] | np.ndarray | None = "log",
+        hexbin_mincnt: int | None = 2000,
+        hexbin_alpha: float | None = None,
+        hexbin_linewidths: float | None = None,
         interactive: bool = False,  # 3D Plotly option
         include_kmeans_metrics: bool = True,
         include_biplot: bool = False,
@@ -816,6 +1074,11 @@ class MethylStateAssigner:
             n_pca_plot=n_pca_plot,
             top_n_loadings=top_n_loadings,
             pca_hexbin=pca_hexbin,
+            hexbin_gridsize=hexbin_gridsize,
+            hexbin_bins=hexbin_bins,
+            hexbin_mincnt=hexbin_mincnt,
+            hexbin_alpha=hexbin_alpha,
+            hexbin_linewidths=hexbin_linewidths,
             interactive=interactive,
             include_kmeans_metrics=include_kmeans_metrics,
             include_biplot=include_biplot,
@@ -1147,6 +1410,11 @@ class MethylStateAssigner:
         n_pca_plot: int = 2,
         top_n_loadings: int = 5,
         pca_hexbin: bool = False,
+        hexbin_gridsize: int = 60,
+        hexbin_bins: str | int | list[float] | np.ndarray | None = "log",
+        hexbin_mincnt: int | None = 1,
+        hexbin_alpha: float | None = None,
+        hexbin_linewidths: float | None = None,
         interactive: bool = False,
         include_kmeans_metrics: bool = True,
         include_biplot: bool = False,
@@ -1220,7 +1488,6 @@ class MethylStateAssigner:
             highlight_handle = None
 
             if pca_hexbin:
-                gridsize = 60
                 cluster_cmaps = []
                 for state_value in present_states:
                     base_color = state_colors_rgba[state_value]
@@ -1234,13 +1501,22 @@ class MethylStateAssigner:
                     mask = labels_numeric == state_value
                     if not np.any(mask):
                         continue
+                    hexbin_kwargs = {
+                        "gridsize": hexbin_gridsize,
+                        "cmap": cluster_cmaps[cmap_idx],
+                    }
+                    if hexbin_bins is not None:
+                        hexbin_kwargs["bins"] = hexbin_bins
+                    if hexbin_mincnt is not None:
+                        hexbin_kwargs["mincnt"] = hexbin_mincnt
+                    if hexbin_alpha is not None:
+                        hexbin_kwargs["alpha"] = hexbin_alpha
+                    if hexbin_linewidths is not None:
+                        hexbin_kwargs["linewidths"] = hexbin_linewidths
                     ax0.hexbin(
                         plot_scores[mask, 0],
                         plot_scores[mask, 1],
-                        gridsize=gridsize,
-                        bins="log",
-                        mincnt=1,
-                        cmap=cluster_cmaps[cmap_idx],
+                        **hexbin_kwargs,
                     )
 
                 ax0.set_xlabel(pc_axis_labels[0])
@@ -1432,6 +1708,11 @@ class MethylStateAssigner:
         n_pca_plot: int = 2,
         top_n_loadings: int = 5,
         pca_hexbin: bool = False,
+        hexbin_gridsize: int = 60,
+        hexbin_bins: str | int | list[float] | np.ndarray | None = "log",
+        hexbin_mincnt: int | None = 2000,
+        hexbin_alpha: float | None = None,
+        hexbin_linewidths: float | None = None,
         interactive: bool = False,
         include_kmeans_metrics: bool = True,
         include_biplot: bool = False,
@@ -1440,6 +1721,60 @@ class MethylStateAssigner:
         chrom: str | None = None,
         show_plot: bool = True,
     ):
+        """
+        Plot PCA clusters while highlighting CpGs overlapping a genomic region.
+
+        Parameters
+        ----------
+        meth_data
+            Probe-level methylation table containing genomic coordinates.
+        emission_df
+            Emission-feature table aligned to ``meth_data``.
+        labels
+            Cluster or biological state labels aligned to both tables.
+        region_start, region_end
+            Inclusive genomic interval used for highlighting.
+        region_chrom
+            Chromosome of the highlighted interval. Required when ``meth_data``
+            spans multiple chromosomes.
+        n_pca_plot
+            Number of PCA dimensions to render.
+        top_n_loadings
+            Number of PCA loading features to show in the side table.
+        pca_hexbin
+            If ``True``, render 2-D PCA as hexbins instead of points.
+        hexbin_gridsize
+            Hexbin grid resolution for 2-D PCA hexbin plots.
+        hexbin_bins
+            Hexbin binning strategy for 2-D PCA hexbin plots, for example
+            ``"log"``, an integer bin count, explicit bin edges, or ``None``.
+        hexbin_mincnt
+            Minimum points required to draw a hexbin in 2-D PCA hexbin plots.
+            Use ``None`` to let matplotlib draw all bins.
+        hexbin_alpha
+            Optional global transparency multiplier for 2-D PCA hexbin plots.
+        hexbin_linewidths
+            Optional hexagon border width for 2-D PCA hexbin plots.
+        interactive
+            If ``True``, use interactive rendering when supported.
+        include_kmeans_metrics
+            Include clustering-quality metrics in the plot.
+        include_biplot
+            Overlay top PCA loading vectors on 2-D PCA plots.
+        label_title
+            Legend or colorbar title.
+        sample_name
+            Optional sample identifier used in the plot title.
+        chrom
+            Optional chromosome label used in the plot title.
+        show_plot
+            If ``True``, display the figure immediately.
+
+        Returns
+        -------
+        object
+            Matplotlib or Plotly figure object from the PCA plotting backend.
+        """
         required_cols = {"CpG_chrm", "CpG_beg", "CpG_end"}
         missing_cols = sorted(required_cols - set(meth_data.columns))
         if missing_cols:
@@ -1498,6 +1833,11 @@ class MethylStateAssigner:
             n_pca_plot=n_pca_plot,
             top_n_loadings=top_n_loadings,
             pca_hexbin=pca_hexbin,
+            hexbin_gridsize=hexbin_gridsize,
+            hexbin_bins=hexbin_bins,
+            hexbin_mincnt=hexbin_mincnt,
+            hexbin_alpha=hexbin_alpha,
+            hexbin_linewidths=hexbin_linewidths,
             interactive=interactive,
             include_kmeans_metrics=include_kmeans_metrics,
             include_biplot=include_biplot,
@@ -1539,6 +1879,11 @@ class MethylStateAssigner:
         n_pca_plot: int = 2,
         top_n_loadings: int = 5,
         pca_hexbin: bool = False,
+        hexbin_gridsize: int = 60,
+        hexbin_bins: str | int | list[float] | np.ndarray | None = "log",
+        hexbin_mincnt: int | None = 2000,
+        hexbin_alpha: float | None = None,
+        hexbin_linewidths: float | None = None,
         interactive: bool = False,
         include_kmeans_metrics: bool = True,
         include_biplot: bool = False,
@@ -1584,6 +1929,11 @@ class MethylStateAssigner:
                 n_pca_plot=n_pca_plot,
                 top_n_loadings=top_n_loadings,
                 pca_hexbin=pca_hexbin,
+                hexbin_gridsize=hexbin_gridsize,
+                hexbin_bins=hexbin_bins,
+                hexbin_mincnt=hexbin_mincnt,
+                hexbin_alpha=hexbin_alpha,
+                hexbin_linewidths=hexbin_linewidths,
                 interactive=interactive,
                 include_kmeans_metrics=include_kmeans_metrics,
                 include_biplot=include_biplot,
@@ -1598,6 +1948,11 @@ class MethylStateAssigner:
             n_pca_plot=n_pca_plot,
             top_n_loadings=top_n_loadings,
             pca_hexbin=pca_hexbin,
+            hexbin_gridsize=hexbin_gridsize,
+            hexbin_bins=hexbin_bins,
+            hexbin_mincnt=hexbin_mincnt,
+            hexbin_alpha=hexbin_alpha,
+            hexbin_linewidths=hexbin_linewidths,
             interactive=interactive,
             include_kmeans_metrics=include_kmeans_metrics,
             include_biplot=include_biplot,

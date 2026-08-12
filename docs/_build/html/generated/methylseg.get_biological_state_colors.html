@@ -57,27 +57,6 @@
 </ul>
 </li>
 <li class="toctree-l3"><a class="reference internal" href="methylseg.get_cluster_colors.html">methylseg.get_cluster_colors</a></li>
-<li class="toctree-l3"><a class="reference internal" href="methylseg.CTMethylSegHMM.html">methylseg.CTMethylSegHMM</a></li>
-<li class="toctree-l3"><a class="reference internal" href="methylseg.DAMethylSegHMM.html">methylseg.DAMethylSegHMM</a></li>
-<li class="toctree-l3"><a class="reference internal" href="methylseg.GaussianMethylSegHMM.html">methylseg.GaussianMethylSegHMM</a></li>
-<li class="toctree-l3"><a class="reference internal" href="methylseg.HMMObservationMode.html">methylseg.HMMObservationMode</a></li>
-<li class="toctree-l3"><a class="reference internal" href="methylseg.MethylDataPrep.html">methylseg.MethylDataPrep</a></li>
-<li class="toctree-l3"><a class="reference internal" href="methylseg.MethylSegConfig.html">methylseg.MethylSegConfig</a></li>
-<li class="toctree-l3"><a class="reference internal" href="methylseg.MethylSegHMM.html">methylseg.MethylSegHMM</a></li>
-<li class="toctree-l3"><a class="reference internal" href="methylseg.MethylSegPathway.html">methylseg.MethylSegPathway</a></li>
-<li class="toctree-l3"><a class="reference internal" href="methylseg.MethylSegmentor.html">methylseg.MethylSegmentor</a></li>
-<li class="toctree-l3"><a class="reference internal" href="methylseg.MethylStateAnalyzer.html">methylseg.MethylStateAnalyzer</a></li>
-<li class="toctree-l3"><a class="reference internal" href="methylseg.MethylStateAssigner.html">methylseg.MethylStateAssigner</a></li>
-<li class="toctree-l3"><a class="reference internal" href="methylseg.MethylStateAssignmentMethod.html">methylseg.MethylStateAssignmentMethod</a></li>
-<li class="toctree-l3"><a class="reference internal" href="methylseg.MethylationStates.html">methylseg.MethylationStates</a></li>
-<li class="toctree-l3"><a class="reference internal" href="methylseg.MultinomialSegHMM.html">methylseg.MultinomialSegHMM</a></li>
-<li class="toctree-l3"><a class="reference internal" href="methylseg.SampleInfo.html">methylseg.SampleInfo</a></li>
-<li class="toctree-l3"><a class="reference internal" href="methylseg.StickyCategoricalMethylSegHMM.html">methylseg.StickyCategoricalMethylSegHMM</a></li>
-<li class="toctree-l3 current"><a class="current reference internal" href="#">methylseg.get_biological_state_colors</a><ul>
-<li class="toctree-l4"><a class="reference internal" href="#methylseg.get_biological_state_colors"><code class="docutils literal notranslate"><span class="pre">get_biological_state_colors()</span></code></a></li>
-</ul>
-</li>
-<li class="toctree-l3"><a class="reference internal" href="methylseg.get_cluster_colors.html">methylseg.get_cluster_colors</a></li>
 </ul>
 </li>
 </ul>
@@ -115,8 +94,10 @@
 <dl class="py function">
 <dt class="sig sig-object py" id="methylseg.get_biological_state_colors">
 <span class="sig-prename descclassname"><span class="pre">methylseg.</span></span><span class="sig-name descname"><span class="pre">get_biological_state_colors</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">cmap_name</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'viridis'</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/methylseg/utils.html#get_biological_state_colors"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#methylseg.get_biological_state_colors" title="Link to this definition"></a></dt>
-<dd><p>Return a fixed color mapping for the biological methylation states
-keyed by their canonical enum values (LOW=0, PMD=1, INTERMEDIATE=2, HIGH=3).</p>
+<dd><p>Return a fixed biological-state palette keyed by the canonical enum values
+(LOW=0, PMD=1, INTERMEDIATE=2, HIGH=3).</p>
+<p>The <code class="docutils literal notranslate"><span class="pre">cmap_name</span></code> argument is kept for backward compatibility, but the
+palette is explicit so state colors stay stable across plots.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><p><strong>cmap_name</strong> (<em>str</em>)</p>

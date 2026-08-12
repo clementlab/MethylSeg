@@ -96,13 +96,19 @@
 <a class="viewcode-back" href="../../generated/methylseg.get_biological_state_colors.html#methylseg.get_biological_state_colors">[docs]</a>
 <span class="k">def</span> <span class="nf">get_biological_state_colors</span><span class="p">(</span><span class="n">cmap_name</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;viridis&quot;</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">    Return a fixed color mapping for the biological methylation states</span>
-<span class="sd">    keyed by their canonical enum values (LOW=0, PMD=1, INTERMEDIATE=2, HIGH=3).</span>
+<span class="sd">    Return a fixed biological-state palette keyed by the canonical enum values</span>
+<span class="sd">    (LOW=0, PMD=1, INTERMEDIATE=2, HIGH=3).</span>
+
+<span class="sd">    The ``cmap_name`` argument is kept for backward compatibility, but the</span>
+<span class="sd">    palette is explicit so state colors stay stable across plots.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">del</span> <span class="n">cmap_name</span>
     <span class="n">state_values</span> <span class="o">=</span> <span class="p">[</span><span class="n">state</span><span class="o">.</span><span class="n">value</span> <span class="k">for</span> <span class="n">state</span> <span class="ow">in</span> <span class="n">MethylationStates</span><span class="p">]</span>
-    <span class="n">base_cmap</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">get_cmap</span><span class="p">(</span><span class="n">cmap_name</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">state_values</span><span class="p">))</span>
     <span class="n">state_colors_rgba</span> <span class="o">=</span> <span class="p">{</span>
-        <span class="n">state_value</span><span class="p">:</span> <span class="n">base_cmap</span><span class="p">(</span><span class="n">idx</span><span class="p">)</span> <span class="k">for</span> <span class="n">idx</span><span class="p">,</span> <span class="n">state_value</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">state_values</span><span class="p">)</span>
+        <span class="n">MethylationStates</span><span class="o">.</span><span class="n">LOW</span><span class="o">.</span><span class="n">value</span><span class="p">:</span> <span class="n">mcolors</span><span class="o">.</span><span class="n">to_rgba</span><span class="p">(</span><span class="s2">&quot;#440154&quot;</span><span class="p">),</span>
+        <span class="n">MethylationStates</span><span class="o">.</span><span class="n">PMD</span><span class="o">.</span><span class="n">value</span><span class="p">:</span> <span class="n">mcolors</span><span class="o">.</span><span class="n">to_rgba</span><span class="p">(</span><span class="s2">&quot;#31688e&quot;</span><span class="p">),</span>
+        <span class="n">MethylationStates</span><span class="o">.</span><span class="n">INTERMEDIATE</span><span class="o">.</span><span class="n">value</span><span class="p">:</span> <span class="n">mcolors</span><span class="o">.</span><span class="n">to_rgba</span><span class="p">(</span><span class="s2">&quot;#35b779&quot;</span><span class="p">),</span>
+        <span class="n">MethylationStates</span><span class="o">.</span><span class="n">HIGH</span><span class="o">.</span><span class="n">value</span><span class="p">:</span> <span class="n">mcolors</span><span class="o">.</span><span class="n">to_rgba</span><span class="p">(</span><span class="s2">&quot;#fde725&quot;</span><span class="p">),</span>
     <span class="p">}</span>
     <span class="n">state_colors_hex</span> <span class="o">=</span> <span class="p">{</span>
         <span class="n">state_value</span><span class="p">:</span> <span class="n">mcolors</span><span class="o">.</span><span class="n">to_hex</span><span class="p">(</span><span class="n">color</span><span class="p">)</span>
@@ -152,29 +158,88 @@
     <span class="k">return</span> <span class="nb">str</span><span class="p">(</span><span class="n">value</span><span class="p">)</span>
 
 
+<span class="k">def</span> <span class="nf">build_region_overlay_df</span><span class="p">(</span>
+    <span class="o">*</span><span class="p">,</span>
+    <span class="n">region_start</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
+    <span class="n">region_end</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
+    <span class="n">region_chrom</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+    <span class="n">label</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;Selected region&quot;</span><span class="p">,</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">:</span>
+    <span class="n">resolved_region_start</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">region_start</span><span class="p">)</span>
+    <span class="n">resolved_region_end</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">region_end</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">resolved_region_end</span> <span class="o">&lt;</span> <span class="n">resolved_region_start</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;region_end must be greater than or equal to region_start.&quot;</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span>
+        <span class="p">[</span>
+            <span class="p">{</span>
+                <span class="s2">&quot;CpG_chrm&quot;</span><span class="p">:</span> <span class="nb">str</span><span class="p">(</span><span class="n">region_chrom</span><span class="p">),</span>
+                <span class="s2">&quot;start&quot;</span><span class="p">:</span> <span class="n">resolved_region_start</span><span class="p">,</span>
+                <span class="s2">&quot;end&quot;</span><span class="p">:</span> <span class="n">resolved_region_end</span><span class="p">,</span>
+                <span class="s2">&quot;state&quot;</span><span class="p">:</span> <span class="nb">str</span><span class="p">(</span><span class="n">label</span><span class="p">),</span>
+            <span class="p">}</span>
+        <span class="p">]</span>
+    <span class="p">)</span>
+
+
+<span class="k">def</span> <span class="nf">resolve_region_overlay_df</span><span class="p">(</span>
+    <span class="o">*</span><span class="p">,</span>
+    <span class="n">overlay_regions_df</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span> <span class="o">|</span> <span class="kc">None</span><span class="p">,</span> <span class="nb">str</span><span class="p">]:</span>
+    <span class="k">if</span> <span class="n">overlay_regions_df</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">overlay_regions_df</span><span class="o">.</span><span class="n">copy</span><span class="p">(),</span> <span class="s2">&quot;state&quot;</span>
+    <span class="k">return</span> <span class="kc">None</span><span class="p">,</span> <span class="s2">&quot;state&quot;</span>
+
+
+<span class="k">def</span> <span class="nf">resolve_overlay_plot_args</span><span class="p">(</span>
+    <span class="o">*</span><span class="p">,</span>
+    <span class="n">color_pmd_only</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+    <span class="n">color_regions_df</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span> <span class="o">|</span> <span class="kc">None</span><span class="p">,</span> <span class="nb">str</span><span class="p">]:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Normalize convenience plotting options into overlay args.</span>
+
+<span class="sd">    This keeps the public API friendly while allowing plotting callers</span>
+<span class="sd">    to consistently pass ``overlay_regions_df`` and ``overlay_style``.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">overlay_style</span> <span class="o">=</span> <span class="s2">&quot;highlight&quot;</span> <span class="k">if</span> <span class="nb">bool</span><span class="p">(</span><span class="n">color_pmd_only</span><span class="p">)</span> <span class="k">else</span> <span class="s2">&quot;state&quot;</span>
+    <span class="k">return</span> <span class="n">color_regions_df</span><span class="p">,</span> <span class="n">overlay_style</span>
+
+
 <span class="k">def</span> <span class="nf">annotate_plot_df_with_regions</span><span class="p">(</span>
     <span class="n">df_plot</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">,</span>
     <span class="n">regions_df</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">,</span>
     <span class="o">*</span><span class="p">,</span>
     <span class="n">chrom_col</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
     <span class="n">pos_col</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
-    <span class="n">color_pmd_only</span><span class="p">:</span> <span class="nb">bool</span><span class="p">,</span>
+    <span class="n">overlay_style</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;state&quot;</span><span class="p">,</span>
     <span class="n">region_label_col</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;state&quot;</span><span class="p">,</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">,</span> <span class="nb">str</span><span class="p">,</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">],</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]],</span> <span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">]:</span>
     <span class="n">plot_df</span> <span class="o">=</span> <span class="n">df_plot</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
     <span class="n">outside_region_color</span> <span class="o">=</span> <span class="s2">&quot;#7E7E7E&quot;</span>
-    <span class="n">plot_df</span><span class="p">[</span><span class="s2">&quot;__region_color__&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="s2">&quot;non-PMD&quot;</span> <span class="k">if</span> <span class="n">color_pmd_only</span> <span class="k">else</span> <span class="s2">&quot;Outside regions&quot;</span>
+    <span class="n">highlight_color</span> <span class="o">=</span> <span class="s2">&quot;#d62728&quot;</span>
+
+    <span class="k">if</span> <span class="n">overlay_style</span> <span class="ow">not</span> <span class="ow">in</span> <span class="p">{</span><span class="s2">&quot;state&quot;</span><span class="p">,</span> <span class="s2">&quot;highlight&quot;</span><span class="p">}:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+            <span class="s2">&quot;overlay_style must be either &#39;state&#39; or &#39;highlight&#39;. &quot;</span>
+            <span class="sa">f</span><span class="s2">&quot;Received: </span><span class="si">{</span><span class="n">overlay_style</span><span class="si">!r}</span><span class="s2">&quot;</span>
+        <span class="p">)</span>
+
+    <span class="n">plot_df</span><span class="p">[</span><span class="s2">&quot;__region_color__&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span>
+        <span class="s2">&quot;Outside region&quot;</span> <span class="k">if</span> <span class="n">overlay_style</span> <span class="o">==</span> <span class="s2">&quot;highlight&quot;</span> <span class="k">else</span> <span class="s2">&quot;Outside regions&quot;</span>
+    <span class="p">)</span>
 
     <span class="k">if</span> <span class="n">regions_df</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">or</span> <span class="n">regions_df</span><span class="o">.</span><span class="n">empty</span><span class="p">:</span>
-        <span class="k">if</span> <span class="n">color_pmd_only</span><span class="p">:</span>
-            <span class="n">plot_df</span><span class="p">[</span><span class="s2">&quot;__region_color__&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="s2">&quot;non-PMD&quot;</span>
+        <span class="k">if</span> <span class="n">overlay_style</span> <span class="o">==</span> <span class="s2">&quot;highlight&quot;</span><span class="p">:</span>
             <span class="k">return</span> <span class="p">(</span>
                 <span class="n">plot_df</span><span class="p">,</span>
                 <span class="s2">&quot;__region_color__&quot;</span><span class="p">,</span>
-                <span class="p">{</span><span class="s2">&quot;PMD&quot;</span><span class="p">:</span> <span class="s2">&quot;#d62728&quot;</span><span class="p">,</span> <span class="s2">&quot;non-PMD&quot;</span><span class="p">:</span> <span class="s2">&quot;#1f77b4&quot;</span><span class="p">},</span>
-                <span class="p">{</span><span class="s2">&quot;__region_color__&quot;</span><span class="p">:</span> <span class="p">[</span><span class="s2">&quot;PMD&quot;</span><span class="p">,</span> <span class="s2">&quot;non-PMD&quot;</span><span class="p">]},</span>
-                <span class="s2">&quot;PMD status&quot;</span><span class="p">,</span>
-                <span class="s2">&quot;PMD status&quot;</span><span class="p">,</span>
+                <span class="p">{</span>
+                    <span class="s2">&quot;Selected region&quot;</span><span class="p">:</span> <span class="n">highlight_color</span><span class="p">,</span>
+                    <span class="s2">&quot;Outside region&quot;</span><span class="p">:</span> <span class="n">outside_region_color</span><span class="p">,</span>
+                <span class="p">},</span>
+                <span class="p">{</span><span class="s2">&quot;__region_color__&quot;</span><span class="p">:</span> <span class="p">[</span><span class="s2">&quot;Selected region&quot;</span><span class="p">,</span> <span class="s2">&quot;Outside region&quot;</span><span class="p">]},</span>
+                <span class="s2">&quot;Highlighted region&quot;</span><span class="p">,</span>
+                <span class="s2">&quot;Highlighted region&quot;</span><span class="p">,</span>
             <span class="p">)</span>
         <span class="k">return</span> <span class="p">(</span>
             <span class="n">plot_df</span><span class="p">,</span>
@@ -221,26 +286,25 @@
             <span class="p">)</span>
             <span class="k">if</span> <span class="ow">not</span> <span class="n">region_mask</span><span class="o">.</span><span class="n">any</span><span class="p">():</span>
                 <span class="k">continue</span>
-            <span class="k">if</span> <span class="n">color_pmd_only</span><span class="p">:</span>
-                <span class="n">color_label</span> <span class="o">=</span> <span class="p">(</span>
-                    <span class="s2">&quot;PMD&quot;</span>
-                    <span class="k">if</span> <span class="n">normalize_state_label</span><span class="p">(</span><span class="nb">getattr</span><span class="p">(</span><span class="n">region</span><span class="p">,</span> <span class="n">region_label_col</span><span class="p">))</span> <span class="o">==</span> <span class="s2">&quot;PMD&quot;</span>
-                    <span class="k">else</span> <span class="s2">&quot;non-PMD&quot;</span>
-                <span class="p">)</span>
+            <span class="k">if</span> <span class="n">overlay_style</span> <span class="o">==</span> <span class="s2">&quot;highlight&quot;</span><span class="p">:</span>
+                <span class="n">color_label</span> <span class="o">=</span> <span class="s2">&quot;Selected region&quot;</span>
             <span class="k">else</span><span class="p">:</span>
                 <span class="n">color_label</span> <span class="o">=</span> <span class="n">normalize_state_label</span><span class="p">(</span><span class="nb">getattr</span><span class="p">(</span><span class="n">region</span><span class="p">,</span> <span class="n">region_label_col</span><span class="p">))</span>
                 <span class="k">if</span> <span class="n">color_label</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
                     <span class="n">color_label</span> <span class="o">=</span> <span class="s2">&quot;Region&quot;</span>
             <span class="n">plot_df</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">chrom_indices</span><span class="p">[</span><span class="n">region_mask</span><span class="p">],</span> <span class="s2">&quot;__region_color__&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">color_label</span>
 
-    <span class="k">if</span> <span class="n">color_pmd_only</span><span class="p">:</span>
+    <span class="k">if</span> <span class="n">overlay_style</span> <span class="o">==</span> <span class="s2">&quot;highlight&quot;</span><span class="p">:</span>
         <span class="k">return</span> <span class="p">(</span>
             <span class="n">plot_df</span><span class="p">,</span>
             <span class="s2">&quot;__region_color__&quot;</span><span class="p">,</span>
-            <span class="p">{</span><span class="s2">&quot;PMD&quot;</span><span class="p">:</span> <span class="s2">&quot;#d62728&quot;</span><span class="p">,</span> <span class="s2">&quot;non-PMD&quot;</span><span class="p">:</span> <span class="s2">&quot;#1f77b4&quot;</span><span class="p">},</span>
-            <span class="p">{</span><span class="s2">&quot;__region_color__&quot;</span><span class="p">:</span> <span class="p">[</span><span class="s2">&quot;PMD&quot;</span><span class="p">,</span> <span class="s2">&quot;non-PMD&quot;</span><span class="p">]},</span>
-            <span class="s2">&quot;PMD status&quot;</span><span class="p">,</span>
-            <span class="s2">&quot;PMD status&quot;</span><span class="p">,</span>
+            <span class="p">{</span>
+                <span class="s2">&quot;Selected region&quot;</span><span class="p">:</span> <span class="n">highlight_color</span><span class="p">,</span>
+                <span class="s2">&quot;Outside region&quot;</span><span class="p">:</span> <span class="n">outside_region_color</span><span class="p">,</span>
+            <span class="p">},</span>
+            <span class="p">{</span><span class="s2">&quot;__region_color__&quot;</span><span class="p">:</span> <span class="p">[</span><span class="s2">&quot;Selected region&quot;</span><span class="p">,</span> <span class="s2">&quot;Outside region&quot;</span><span class="p">]},</span>
+            <span class="s2">&quot;Highlighted region&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;Highlighted region&quot;</span><span class="p">,</span>
         <span class="p">)</span>
 
     <span class="n">present_labels</span> <span class="o">=</span> <span class="n">plot_df</span><span class="p">[</span><span class="s2">&quot;__region_color__&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">dropna</span><span class="p">()</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="nb">str</span><span class="p">)</span><span class="o">.</span><span class="n">unique</span><span class="p">()</span><span class="o">.</span><span class="n">tolist</span><span class="p">()</span>
@@ -280,10 +344,19 @@
     <span class="n">label_title</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
     <span class="n">show_plot</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
     <span class="n">max_points</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">120_000</span><span class="p">,</span>
-    <span class="n">color_pmd_only</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
-    <span class="n">color_regions_df</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
-    <span class="n">region_label_col</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;state&quot;</span><span class="p">,</span>
+    <span class="n">overlay_regions_df</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">overlay_style</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;state&quot;</span><span class="p">,</span>
+    <span class="n">overlay_label_col</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;state&quot;</span><span class="p">,</span>
+    <span class="n">region_start</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">region_end</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">region_chrom</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">object</span> <span class="o">|</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Create an interactive beta scatter plot.</span>
+
+<span class="sd">    ``region_start``/``region_end``/``region_chrom`` only control the viewport</span>
+<span class="sd">    for the requested region. They do not change point coloring unless an</span>
+<span class="sd">    explicit region overlay is provided through ``overlay_regions_df``.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
     <span class="n">df_plot</span> <span class="o">=</span> <span class="n">df_plot</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
     <span class="n">df_plot</span> <span class="o">=</span> <span class="n">df_plot</span><span class="o">.</span><span class="n">loc</span><span class="p">[:,</span> <span class="o">~</span><span class="n">df_plot</span><span class="o">.</span><span class="n">columns</span><span class="o">.</span><span class="n">duplicated</span><span class="p">()]</span>
     <span class="n">removed_plot</span> <span class="o">=</span> <span class="kc">None</span>
@@ -352,7 +425,7 @@
             <span class="n">keep_idx</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sort</span><span class="p">(</span><span class="n">rng</span><span class="o">.</span><span class="n">choice</span><span class="p">(</span><span class="n">removed_n</span><span class="p">,</span> <span class="n">size</span><span class="o">=</span><span class="n">removed_keep</span><span class="p">,</span> <span class="n">replace</span><span class="o">=</span><span class="kc">False</span><span class="p">))</span>
             <span class="n">removed_plot</span> <span class="o">=</span> <span class="n">removed_plot</span><span class="o">.</span><span class="n">iloc</span><span class="p">[</span><span class="n">keep_idx</span><span class="p">]</span><span class="o">.</span><span class="n">reset_index</span><span class="p">(</span><span class="n">drop</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
 
-    <span class="k">if</span> <span class="n">color_regions_df</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+    <span class="k">if</span> <span class="n">overlay_regions_df</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
         <span class="p">(</span>
             <span class="n">df_plot</span><span class="p">,</span>
             <span class="n">plot_color_col</span><span class="p">,</span>
@@ -362,50 +435,42 @@
             <span class="n">legend_title</span><span class="p">,</span>
         <span class="p">)</span> <span class="o">=</span> <span class="n">annotate_plot_df_with_regions</span><span class="p">(</span>
             <span class="n">df_plot</span><span class="o">=</span><span class="n">df_plot</span><span class="p">,</span>
-            <span class="n">regions_df</span><span class="o">=</span><span class="n">color_regions_df</span><span class="p">,</span>
+            <span class="n">regions_df</span><span class="o">=</span><span class="n">overlay_regions_df</span><span class="p">,</span>
             <span class="n">chrom_col</span><span class="o">=</span><span class="s2">&quot;CpG_chrm&quot;</span><span class="p">,</span>
             <span class="n">pos_col</span><span class="o">=</span><span class="n">x_col</span><span class="p">,</span>
-            <span class="n">color_pmd_only</span><span class="o">=</span><span class="n">color_pmd_only</span><span class="p">,</span>
-            <span class="n">region_label_col</span><span class="o">=</span><span class="n">region_label_col</span><span class="p">,</span>
+            <span class="n">overlay_style</span><span class="o">=</span><span class="n">overlay_style</span><span class="p">,</span>
+            <span class="n">region_label_col</span><span class="o">=</span><span class="n">overlay_label_col</span><span class="p">,</span>
         <span class="p">)</span>
     <span class="k">else</span><span class="p">:</span>
         <span class="k">if</span> <span class="n">label_col</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">df_plot</span><span class="o">.</span><span class="n">columns</span><span class="p">:</span>
             <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
                 <span class="sa">f</span><span class="s2">&quot;Label column &#39;</span><span class="si">{</span><span class="n">label_col</span><span class="si">}</span><span class="s2">&#39; not found in plotting DataFrame.&quot;</span>
             <span class="p">)</span>
-        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">df_plot</span><span class="p">[</span><span class="n">label_col</span><span class="p">]</span><span class="o">.</span><span class="n">iloc</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">Enum</span><span class="p">):</span>
-            <span class="n">df_plot</span><span class="p">[</span><span class="n">label_col</span><span class="p">]</span> <span class="o">=</span> <span class="n">df_plot</span><span class="p">[</span><span class="n">label_col</span><span class="p">]</span><span class="o">.</span><span class="n">apply</span><span class="p">(</span><span class="k">lambda</span> <span class="n">x</span><span class="p">:</span> <span class="n">x</span><span class="o">.</span><span class="n">value</span><span class="p">)</span>
-        <span class="n">df_plot</span><span class="p">[</span><span class="n">label_col</span><span class="p">]</span> <span class="o">=</span> <span class="n">df_plot</span><span class="p">[</span><span class="n">label_col</span><span class="p">]</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="nb">int</span><span class="p">)</span>
+        <span class="n">plot_color_col</span> <span class="o">=</span> <span class="s2">&quot;__plot_label__&quot;</span>
+        <span class="n">df_plot</span><span class="p">[</span><span class="n">plot_color_col</span><span class="p">]</span> <span class="o">=</span> <span class="n">df_plot</span><span class="p">[</span><span class="n">label_col</span><span class="p">]</span><span class="o">.</span><span class="n">apply</span><span class="p">(</span><span class="n">normalize_state_label</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">df_plot</span><span class="p">[</span><span class="n">plot_color_col</span><span class="p">]</span><span class="o">.</span><span class="n">isna</span><span class="p">()</span><span class="o">.</span><span class="n">any</span><span class="p">():</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                <span class="sa">f</span><span class="s2">&quot;Label column &#39;</span><span class="si">{</span><span class="n">label_col</span><span class="si">}</span><span class="s2">&#39; contains empty values that cannot be plotted.&quot;</span>
+            <span class="p">)</span>
 
-        <span class="k">if</span> <span class="n">color_pmd_only</span><span class="p">:</span>
-            <span class="n">plot_color_col</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">label_col</span><span class="si">}</span><span class="s2">_pmd_status&quot;</span>
-            <span class="n">df_plot</span><span class="p">[</span><span class="n">plot_color_col</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">where</span><span class="p">(</span>
-                <span class="n">df_plot</span><span class="p">[</span><span class="n">label_col</span><span class="p">]</span> <span class="o">==</span> <span class="n">MethylationStates</span><span class="o">.</span><span class="n">PMD</span><span class="o">.</span><span class="n">value</span><span class="p">,</span>
-                <span class="s2">&quot;PMD&quot;</span><span class="p">,</span>
-                <span class="s2">&quot;non-PMD&quot;</span><span class="p">,</span>
-            <span class="p">)</span>
-            <span class="n">color_map</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&quot;PMD&quot;</span><span class="p">:</span> <span class="s2">&quot;#d62728&quot;</span><span class="p">,</span> <span class="s2">&quot;non-PMD&quot;</span><span class="p">:</span> <span class="s2">&quot;#1f77b4&quot;</span><span class="p">}</span>
-            <span class="n">category_orders</span> <span class="o">=</span> <span class="p">{</span><span class="n">plot_color_col</span><span class="p">:</span> <span class="p">[</span><span class="s2">&quot;PMD&quot;</span><span class="p">,</span> <span class="s2">&quot;non-PMD&quot;</span><span class="p">]}</span>
-            <span class="n">color_label</span> <span class="o">=</span> <span class="s2">&quot;PMD status&quot;</span>
-            <span class="n">legend_title</span> <span class="o">=</span> <span class="s2">&quot;PMD status&quot;</span>
-        <span class="k">else</span><span class="p">:</span>
-            <span class="n">df_plot</span><span class="p">[</span><span class="n">label_col</span><span class="p">]</span> <span class="o">=</span> <span class="n">df_plot</span><span class="p">[</span><span class="n">label_col</span><span class="p">]</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="nb">str</span><span class="p">)</span>
-            <span class="n">plot_color_col</span> <span class="o">=</span> <span class="n">label_col</span>
-            <span class="n">_</span><span class="p">,</span> <span class="n">_</span><span class="p">,</span> <span class="n">_</span><span class="p">,</span> <span class="n">state_colors_hex</span> <span class="o">=</span> <span class="n">get_biological_state_colors</span><span class="p">()</span>
-            <span class="n">present_state_values</span> <span class="o">=</span> <span class="n">get_present_biological_states</span><span class="p">(</span>
-                <span class="n">df_plot</span><span class="p">[</span><span class="n">label_col</span><span class="p">]</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="nb">int</span><span class="p">)</span><span class="o">.</span><span class="n">to_numpy</span><span class="p">()</span>
-            <span class="p">)</span>
-            <span class="n">color_map</span> <span class="o">=</span> <span class="p">{</span>
-                <span class="nb">str</span><span class="p">(</span><span class="n">state_value</span><span class="p">):</span> <span class="n">state_colors_hex</span><span class="p">[</span><span class="n">state_value</span><span class="p">]</span>
-                <span class="k">for</span> <span class="n">state_value</span> <span class="ow">in</span> <span class="n">present_state_values</span>
-            <span class="p">}</span>
-            <span class="n">category_orders</span> <span class="o">=</span> <span class="p">{</span>
-                <span class="n">plot_color_col</span><span class="p">:</span> <span class="p">[</span>
-                    <span class="nb">str</span><span class="p">(</span><span class="n">state_value</span><span class="p">)</span> <span class="k">for</span> <span class="n">state_value</span> <span class="ow">in</span> <span class="n">present_state_values</span>
-                <span class="p">]</span>
-            <span class="p">}</span>
-            <span class="n">color_label</span> <span class="o">=</span> <span class="n">label_title</span> <span class="k">if</span> <span class="n">label_title</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="k">else</span> <span class="n">label_col</span>
-            <span class="n">legend_title</span> <span class="o">=</span> <span class="s2">&quot;State&quot;</span>
+        <span class="n">_</span><span class="p">,</span> <span class="n">_</span><span class="p">,</span> <span class="n">_</span><span class="p">,</span> <span class="n">state_colors_hex</span> <span class="o">=</span> <span class="n">get_biological_state_colors</span><span class="p">()</span>
+        <span class="n">ordered_state_names</span> <span class="o">=</span> <span class="p">[</span>
+            <span class="n">state</span><span class="o">.</span><span class="n">name</span>
+            <span class="k">for</span> <span class="n">state</span> <span class="ow">in</span> <span class="n">MethylationStates</span>
+            <span class="k">if</span> <span class="n">state</span><span class="o">.</span><span class="n">name</span> <span class="ow">in</span> <span class="nb">set</span><span class="p">(</span><span class="n">df_plot</span><span class="p">[</span><span class="n">plot_color_col</span><span class="p">]</span><span class="o">.</span><span class="n">tolist</span><span class="p">())</span>
+        <span class="p">]</span>
+        <span class="k">for</span> <span class="n">label_name</span> <span class="ow">in</span> <span class="n">df_plot</span><span class="p">[</span><span class="n">plot_color_col</span><span class="p">]</span><span class="o">.</span><span class="n">tolist</span><span class="p">():</span>
+            <span class="k">if</span> <span class="n">label_name</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">ordered_state_names</span><span class="p">:</span>
+                <span class="n">ordered_state_names</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">label_name</span><span class="p">)</span>
+
+        <span class="n">color_map</span> <span class="o">=</span> <span class="p">{</span>
+            <span class="n">state</span><span class="o">.</span><span class="n">name</span><span class="p">:</span> <span class="n">state_colors_hex</span><span class="p">[</span><span class="n">state</span><span class="o">.</span><span class="n">value</span><span class="p">]</span> <span class="k">for</span> <span class="n">state</span> <span class="ow">in</span> <span class="n">MethylationStates</span>
+        <span class="p">}</span>
+        <span class="k">for</span> <span class="n">label_name</span> <span class="ow">in</span> <span class="n">ordered_state_names</span><span class="p">:</span>
+            <span class="n">color_map</span><span class="o">.</span><span class="n">setdefault</span><span class="p">(</span><span class="n">label_name</span><span class="p">,</span> <span class="s2">&quot;#9e9e9e&quot;</span><span class="p">)</span>
+        <span class="n">category_orders</span> <span class="o">=</span> <span class="p">{</span><span class="n">plot_color_col</span><span class="p">:</span> <span class="n">ordered_state_names</span><span class="p">}</span>
+        <span class="n">color_label</span> <span class="o">=</span> <span class="n">label_title</span> <span class="k">if</span> <span class="n">label_title</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="k">else</span> <span class="n">label_col</span>
+        <span class="n">legend_title</span> <span class="o">=</span> <span class="n">label_title</span> <span class="k">if</span> <span class="n">label_title</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="k">else</span> <span class="s2">&quot;State&quot;</span>
 
     <span class="n">title_parts</span> <span class="o">=</span> <span class="p">[]</span>
     <span class="k">if</span> <span class="n">sample_info</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
@@ -435,7 +500,7 @@
         <span class="n">scatter_kwargs</span><span class="p">[</span><span class="s2">&quot;category_orders&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">category_orders</span>
 
     <span class="n">fig</span> <span class="o">=</span> <span class="n">px</span><span class="o">.</span><span class="n">scatter</span><span class="p">(</span><span class="o">**</span><span class="n">scatter_kwargs</span><span class="p">)</span>
-    <span class="n">fig</span><span class="o">.</span><span class="n">update_traces</span><span class="p">(</span><span class="n">marker</span><span class="o">=</span><span class="nb">dict</span><span class="p">(</span><span class="n">size</span><span class="o">=</span><span class="mi">4</span><span class="p">,</span> <span class="n">opacity</span><span class="o">=</span><span class="mf">0.8</span><span class="p">))</span>
+    <span class="n">fig</span><span class="o">.</span><span class="n">update_traces</span><span class="p">(</span><span class="n">marker</span><span class="o">=</span><span class="nb">dict</span><span class="p">(</span><span class="n">size</span><span class="o">=</span><span class="mi">6</span><span class="p">,</span> <span class="n">opacity</span><span class="o">=</span><span class="mf">0.8</span><span class="p">))</span>
 
     <span class="k">if</span> <span class="n">removed_plot</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">removed_plot</span><span class="o">.</span><span class="n">empty</span><span class="p">:</span>
         <span class="n">fig</span><span class="o">.</span><span class="n">add_trace</span><span class="p">(</span>
@@ -444,7 +509,7 @@
                 <span class="n">y</span><span class="o">=</span><span class="n">removed_plot</span><span class="p">[</span><span class="n">y_col</span><span class="p">],</span>
                 <span class="n">mode</span><span class="o">=</span><span class="s2">&quot;markers&quot;</span><span class="p">,</span>
                 <span class="n">name</span><span class="o">=</span><span class="s2">&quot;Removed CpGs&quot;</span><span class="p">,</span>
-                <span class="n">marker</span><span class="o">=</span><span class="nb">dict</span><span class="p">(</span><span class="n">size</span><span class="o">=</span><span class="mi">4</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="s2">&quot;#d3d3d3&quot;</span><span class="p">,</span> <span class="n">opacity</span><span class="o">=</span><span class="mf">0.35</span><span class="p">),</span>
+                <span class="n">marker</span><span class="o">=</span><span class="nb">dict</span><span class="p">(</span><span class="n">size</span><span class="o">=</span><span class="mi">6</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="s2">&quot;#d3d3d3&quot;</span><span class="p">,</span> <span class="n">opacity</span><span class="o">=</span><span class="mf">0.35</span><span class="p">),</span>
                 <span class="n">hovertemplate</span><span class="o">=</span><span class="p">(</span>
                     <span class="s2">&quot;status: removed&lt;br&gt;&quot;</span>
                     <span class="s2">&quot;pos: %</span><span class="si">{x}</span><span class="s2">&lt;br&gt;&quot;</span>
@@ -456,25 +521,55 @@
 
     <span class="n">fig</span><span class="o">.</span><span class="n">update_layout</span><span class="p">(</span>
         <span class="n">legend_title_text</span><span class="o">=</span><span class="n">legend_title</span><span class="p">,</span>
-        <span class="n">plot_bgcolor</span><span class="o">=</span><span class="s2">&quot;white&quot;</span><span class="p">,</span>
+        <span class="n">plot_bgcolor</span><span class="o">=</span><span class="s2">&quot;#f2f2f2&quot;</span><span class="p">,</span>
         <span class="n">paper_bgcolor</span><span class="o">=</span><span class="s2">&quot;white&quot;</span><span class="p">,</span>
     <span class="p">)</span>
 
-    <span class="k">if</span> <span class="n">color_regions_df</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">color_pmd_only</span><span class="p">:</span>
-        <span class="n">state_names</span> <span class="o">=</span> <span class="p">{</span><span class="nb">str</span><span class="p">(</span><span class="n">s</span><span class="o">.</span><span class="n">value</span><span class="p">):</span> <span class="n">s</span><span class="o">.</span><span class="n">name</span> <span class="k">for</span> <span class="n">s</span> <span class="ow">in</span> <span class="n">MethylationStates</span><span class="p">}</span>
-        <span class="n">fig</span><span class="o">.</span><span class="n">for_each_trace</span><span class="p">(</span><span class="k">lambda</span> <span class="n">t</span><span class="p">:</span> <span class="n">t</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="n">state_names</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">t</span><span class="o">.</span><span class="n">name</span><span class="p">,</span> <span class="n">t</span><span class="o">.</span><span class="n">name</span><span class="p">)))</span>
+    <span class="n">region_requested</span> <span class="o">=</span> <span class="nb">any</span><span class="p">(</span>
+        <span class="n">value</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="k">for</span> <span class="n">value</span> <span class="ow">in</span> <span class="p">(</span><span class="n">region_start</span><span class="p">,</span> <span class="n">region_end</span><span class="p">,</span> <span class="n">region_chrom</span><span class="p">)</span>
+    <span class="p">)</span>
+    <span class="k">if</span> <span class="n">region_requested</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">region_start</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">or</span> <span class="n">region_end</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                <span class="s2">&quot;region_start and region_end must both be provided when &quot;</span>
+                <span class="s2">&quot;requesting region zoom.&quot;</span>
+            <span class="p">)</span>
+        <span class="k">if</span> <span class="n">region_chrom</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                <span class="s2">&quot;region_chrom must be provided when requesting region zoom.&quot;</span>
+            <span class="p">)</span>
+
+        <span class="n">resolved_region_chrom</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">region_chrom</span><span class="p">)</span>
+        <span class="n">plotted_chrom</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">chrom</span><span class="p">)</span> <span class="k">if</span> <span class="n">chrom</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="k">else</span> <span class="kc">None</span>
+        <span class="k">if</span> <span class="n">plotted_chrom</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">and</span> <span class="s2">&quot;CpG_chrm&quot;</span> <span class="ow">in</span> <span class="n">df_plot</span><span class="o">.</span><span class="n">columns</span><span class="p">:</span>
+            <span class="n">plotted_chrom_values</span> <span class="o">=</span> <span class="n">df_plot</span><span class="p">[</span><span class="s2">&quot;CpG_chrm&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">dropna</span><span class="p">()</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="nb">str</span><span class="p">)</span><span class="o">.</span><span class="n">unique</span><span class="p">()</span>
+            <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">plotted_chrom_values</span><span class="p">)</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+                <span class="n">plotted_chrom</span> <span class="o">=</span> <span class="n">plotted_chrom_values</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+
+        <span class="k">if</span> <span class="n">plotted_chrom</span> <span class="o">==</span> <span class="n">resolved_region_chrom</span><span class="p">:</span>
+            <span class="n">resolved_region_start</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">region_start</span><span class="p">)</span>
+            <span class="n">resolved_region_end</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">region_end</span><span class="p">)</span>
+            <span class="n">flank_bp</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span>
+                <span class="mi">1000</span><span class="p">,</span>
+                <span class="nb">int</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">ceil</span><span class="p">(</span><span class="nb">max</span><span class="p">(</span><span class="n">resolved_region_end</span> <span class="o">-</span> <span class="n">resolved_region_start</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span> <span class="o">*</span> <span class="mf">0.1</span><span class="p">)),</span>
+            <span class="p">)</span>
+            <span class="n">fig</span><span class="o">.</span><span class="n">update_xaxes</span><span class="p">(</span>
+                <span class="nb">range</span><span class="o">=</span><span class="p">[</span>
+                    <span class="n">resolved_region_start</span> <span class="o">-</span> <span class="n">flank_bp</span><span class="p">,</span>
+                    <span class="n">resolved_region_end</span> <span class="o">+</span> <span class="n">flank_bp</span><span class="p">,</span>
+                <span class="p">]</span>
+            <span class="p">)</span>
 
     <span class="k">if</span> <span class="n">show_plot</span><span class="p">:</span>
         <span class="n">fig</span><span class="o">.</span><span class="n">show</span><span class="p">(</span><span class="n">renderer</span><span class="o">=</span><span class="s2">&quot;notebook&quot;</span><span class="p">)</span>
 
     <span class="k">if</span> <span class="n">out_dir</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
-        <span class="n">suffix</span> <span class="o">=</span> <span class="s2">&quot;_pmd_only&quot;</span> <span class="k">if</span> <span class="n">color_pmd_only</span> <span class="k">else</span> <span class="s2">&quot;&quot;</span>
-        <span class="k">if</span> <span class="n">color_regions_df</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
-            <span class="n">suffix</span> <span class="o">+=</span> <span class="s2">&quot;_region_coloring&quot;</span>
+        <span class="n">suffix</span> <span class="o">=</span> <span class="s2">&quot;&quot;</span>
+        <span class="k">if</span> <span class="n">overlay_regions_df</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">suffix</span> <span class="o">+=</span> <span class="sa">f</span><span class="s2">&quot;_</span><span class="si">{</span><span class="n">overlay_style</span><span class="si">}</span><span class="s2">_overlay&quot;</span>
         <span class="n">fig</span><span class="o">.</span><span class="n">write_html</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">out_dir</span><span class="si">}</span><span class="s2">/interactive_beta_by_</span><span class="si">{</span><span class="n">label_col</span><span class="si">}{</span><span class="n">suffix</span><span class="si">}</span><span class="s2">.html&quot;</span><span class="p">)</span>
 
     <span class="k">return</span> <span class="n">fig</span>
-
 
 <span class="nd">@njit</span>
 <span class="k">def</span> <span class="nf">build_emission_matrix_numba</span><span class="p">(</span>
@@ -642,12 +737,10 @@
 
     <span class="k">return</span> <span class="n">labels</span>
 
-
 <span class="k">def</span> <span class="nf">get_regional_window_labels</span><span class="p">(</span><span class="n">window_specs</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">List</span><span class="p">[</span><span class="nb">str</span><span class="p">]:</span>
     <span class="n">sorted_window_specs</span> <span class="o">=</span> <span class="nb">sorted</span><span class="p">(</span><span class="n">window_specs</span><span class="p">,</span> <span class="n">key</span><span class="o">=</span><span class="k">lambda</span> <span class="n">item</span><span class="p">:</span> <span class="n">item</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
-    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">sorted_window_specs</span><span class="p">)</span> <span class="o">&lt;=</span> <span class="mi">2</span><span class="p">:</span>
-        <span class="k">return</span> <span class="p">[</span><span class="n">label</span> <span class="k">for</span> <span class="n">_</span><span class="p">,</span> <span class="n">label</span> <span class="ow">in</span> <span class="n">sorted_window_specs</span><span class="p">]</span>
-    <span class="k">return</span> <span class="p">[</span><span class="n">label</span> <span class="k">for</span> <span class="n">_</span><span class="p">,</span> <span class="n">label</span> <span class="ow">in</span> <span class="n">sorted_window_specs</span><span class="p">[</span><span class="o">-</span><span class="mi">2</span><span class="p">:]]</span>
+    <span class="n">sorted_window_specs</span> <span class="o">=</span> <span class="nb">sorted</span><span class="p">(</span><span class="n">window_specs</span><span class="p">,</span> <span class="n">key</span><span class="o">=</span><span class="k">lambda</span> <span class="n">item</span><span class="p">:</span> <span class="n">item</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+    <span class="k">return</span> <span class="p">[</span><span class="n">label</span> <span class="k">for</span> <span class="n">_</span><span class="p">,</span> <span class="n">label</span> <span class="ow">in</span> <span class="n">sorted_window_specs</span><span class="p">]</span>
 
 
 <span class="k">def</span> <span class="nf">relabel_by_mean_emission</span><span class="p">(</span>
@@ -701,15 +794,16 @@
             <span class="s2">&quot;intermediate&quot;</span><span class="p">:</span> <span class="n">regional_mean</span><span class="p">(</span><span class="n">c</span><span class="p">,</span> <span class="s2">&quot;int_pct&quot;</span><span class="p">),</span>
             <span class="s2">&quot;high&quot;</span><span class="p">:</span> <span class="n">regional_mean</span><span class="p">(</span><span class="n">c</span><span class="p">,</span> <span class="s2">&quot;high_pct&quot;</span><span class="p">),</span>
             <span class="s2">&quot;low&quot;</span><span class="p">:</span> <span class="n">regional_mean</span><span class="p">(</span><span class="n">c</span><span class="p">,</span> <span class="s2">&quot;low_pct&quot;</span><span class="p">),</span>
+            <span class="s2">&quot;std&quot;</span><span class="p">:</span> <span class="n">regional_mean</span><span class="p">(</span><span class="n">c</span><span class="p">,</span> <span class="s2">&quot;std&quot;</span><span class="p">)</span>
         <span class="p">}</span>
         <span class="k">for</span> <span class="n">c</span> <span class="ow">in</span> <span class="n">clusters</span>
     <span class="p">}</span>
 
     <span class="n">beta_mid</span> <span class="o">=</span> <span class="p">(</span><span class="n">beta_min</span> <span class="o">+</span> <span class="n">beta_max</span><span class="p">)</span> <span class="o">/</span> <span class="mf">2.0</span>
-    <span class="n">beta_span</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="n">beta_max</span> <span class="o">-</span> <span class="n">beta_min</span><span class="p">,</span> <span class="mf">1e-6</span><span class="p">)</span>
+    <span class="n">beta_span_half</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="n">beta_max</span> <span class="o">-</span> <span class="n">beta_min</span><span class="p">,</span> <span class="mf">1e-6</span><span class="p">)</span> <span class="o">/</span> <span class="mf">2.0</span>
 
     <span class="k">def</span> <span class="nf">beta_mid_score</span><span class="p">(</span><span class="n">beta</span><span class="p">:</span> <span class="nb">float</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">float</span><span class="p">:</span>
-        <span class="k">return</span> <span class="nb">max</span><span class="p">(</span><span class="mf">0.0</span><span class="p">,</span> <span class="mf">1.0</span> <span class="o">-</span> <span class="p">(</span><span class="nb">abs</span><span class="p">(</span><span class="n">beta</span> <span class="o">-</span> <span class="n">beta_mid</span><span class="p">)</span> <span class="o">/</span> <span class="n">beta_span</span><span class="p">))</span>
+        <span class="k">return</span> <span class="nb">max</span><span class="p">(</span><span class="mf">0.0</span><span class="p">,</span> <span class="mf">1.0</span> <span class="o">-</span> <span class="p">(</span><span class="nb">abs</span><span class="p">(</span><span class="n">beta</span> <span class="o">-</span> <span class="n">beta_mid</span><span class="p">)</span> <span class="o">/</span> <span class="n">beta_span_half</span><span class="p">))</span>
 
     <span class="k">def</span> <span class="nf">low_score</span><span class="p">(</span><span class="n">cluster</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">float</span><span class="p">:</span>
         <span class="n">s</span> <span class="o">=</span> <span class="n">stats</span><span class="p">[</span><span class="n">cluster</span><span class="p">]</span>
@@ -718,6 +812,7 @@
             <span class="o">+</span> <span class="p">(</span><span class="mf">1.0</span> <span class="o">-</span> <span class="n">s</span><span class="p">[</span><span class="s2">&quot;beta&quot;</span><span class="p">])</span>
             <span class="o">-</span> <span class="p">(</span><span class="mf">0.5</span> <span class="o">*</span> <span class="n">s</span><span class="p">[</span><span class="s2">&quot;intermediate&quot;</span><span class="p">])</span>
             <span class="o">-</span> <span class="p">(</span><span class="mf">0.75</span> <span class="o">*</span> <span class="n">s</span><span class="p">[</span><span class="s2">&quot;high&quot;</span><span class="p">])</span>
+            <span class="o">-</span> <span class="p">(</span><span class="mf">0.5</span> <span class="o">*</span> <span class="n">s</span><span class="p">[</span><span class="s2">&quot;std&quot;</span><span class="p">])</span>
         <span class="p">)</span>
 
     <span class="k">def</span> <span class="nf">high_score</span><span class="p">(</span><span class="n">cluster</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">float</span><span class="p">:</span>
@@ -727,6 +822,7 @@
             <span class="o">+</span> <span class="n">s</span><span class="p">[</span><span class="s2">&quot;beta&quot;</span><span class="p">]</span>
             <span class="o">-</span> <span class="p">(</span><span class="mf">0.5</span> <span class="o">*</span> <span class="n">s</span><span class="p">[</span><span class="s2">&quot;intermediate&quot;</span><span class="p">])</span>
             <span class="o">-</span> <span class="p">(</span><span class="mf">0.75</span> <span class="o">*</span> <span class="n">s</span><span class="p">[</span><span class="s2">&quot;low&quot;</span><span class="p">])</span>
+            <span class="o">-</span> <span class="p">(</span><span class="mf">0.5</span> <span class="o">*</span> <span class="n">s</span><span class="p">[</span><span class="s2">&quot;std&quot;</span><span class="p">])</span>
         <span class="p">)</span>
 
     <span class="k">def</span> <span class="nf">pmd_score</span><span class="p">(</span><span class="n">cluster</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">float</span><span class="p">:</span>
@@ -735,6 +831,7 @@
             <span class="p">(</span><span class="mf">3.0</span> <span class="o">*</span> <span class="n">s</span><span class="p">[</span><span class="s2">&quot;intermediate&quot;</span><span class="p">])</span>
             <span class="o">+</span> <span class="p">(</span><span class="mf">1.0</span> <span class="o">*</span> <span class="n">s</span><span class="p">[</span><span class="s2">&quot;low&quot;</span><span class="p">])</span>
             <span class="o">-</span> <span class="p">(</span><span class="mf">1.5</span> <span class="o">*</span> <span class="n">s</span><span class="p">[</span><span class="s2">&quot;high&quot;</span><span class="p">])</span>
+            <span class="o">-</span> <span class="p">(</span><span class="mf">1.0</span> <span class="o">*</span> <span class="n">s</span><span class="p">[</span><span class="s2">&quot;std&quot;</span><span class="p">])</span>
             <span class="o">+</span> <span class="n">beta_mid_score</span><span class="p">(</span><span class="n">s</span><span class="p">[</span><span class="s2">&quot;beta&quot;</span><span class="p">])</span>
         <span class="p">)</span>
 
@@ -745,6 +842,7 @@
             <span class="o">+</span> <span class="p">(</span><span class="mf">1.0</span> <span class="o">*</span> <span class="n">s</span><span class="p">[</span><span class="s2">&quot;high&quot;</span><span class="p">])</span>
             <span class="o">-</span> <span class="p">(</span><span class="mf">1.0</span> <span class="o">*</span> <span class="n">s</span><span class="p">[</span><span class="s2">&quot;low&quot;</span><span class="p">])</span>
             <span class="o">+</span> <span class="n">beta_mid_score</span><span class="p">(</span><span class="n">s</span><span class="p">[</span><span class="s2">&quot;beta&quot;</span><span class="p">])</span>
+            <span class="o">+</span> <span class="p">(</span><span class="mf">1.0</span> <span class="o">*</span> <span class="n">s</span><span class="p">[</span><span class="s2">&quot;std&quot;</span><span class="p">])</span>
         <span class="p">)</span>
 
     <span class="k">def</span> <span class="nf">state_score</span><span class="p">(</span><span class="n">cluster</span><span class="p">,</span> <span class="n">state</span><span class="p">):</span>

@@ -90,14 +90,15 @@
 <li><p>Prepare an input methylation table with <code class="docutils literal notranslate"><span class="pre">MethylDataPrep</span></code>.</p></li>
 <li><p>Load or train a <code class="docutils literal notranslate"><span class="pre">MethylSegPathway</span></code>.</p></li>
 <li><p>Segment a sample into regions.</p></li>
-<li><p>Post-process those regions with <code class="docutils literal notranslate"><span class="pre">get_clean_regions</span></code>.</p></li>
+<li><p>Build cleaned whole-genome region artifacts with <code class="docutils literal notranslate"><span class="pre">get_clean_regions</span></code> when
+you want cleaned overlays or summary exports.</p></li>
 </ol>
 </section>
 <section id="example">
 <h2>Example<a class="headerlink" href="#example" title="Link to this heading"></a></h2>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">pathlib</span> <span class="kn">import</span> <span class="n">Path</span>
 
-<span class="kn">from</span> <span class="nn">methylseg</span> <span class="kn">import</span> <span class="n">MethylDataPrep</span><span class="p">,</span> <span class="n">MethylSegPathway</span>
+<span class="kn">from</span> <span class="nn">methylseg</span> <span class="kn">import</span> <span class="n">MethylDataPrep</span><span class="p">,</span> <span class="n">MethylSegPathway</span><span class="p">,</span> <span class="n">MethylationStates</span>
 
 <span class="n">reference_dir</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="s2">&quot;data/reference_files&quot;</span><span class="p">)</span>
 <span class="n">sample_name</span> <span class="o">=</span> <span class="s2">&quot;TCGA-BD-A3EP-01A&quot;</span>
@@ -119,8 +120,19 @@
     <span class="n">chrom</span><span class="o">=</span><span class="s2">&quot;chr1&quot;</span><span class="p">,</span>
     <span class="n">force_resegment</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
 <span class="p">)</span>
+<span class="n">_</span><span class="p">,</span> <span class="n">clean_dir</span> <span class="o">=</span> <span class="n">pathway</span><span class="o">.</span><span class="n">get_clean_regions</span><span class="p">(</span>
+    <span class="n">regions_df</span><span class="o">=</span><span class="n">regions</span><span class="p">,</span>
+    <span class="n">sample_id</span><span class="o">=</span><span class="n">sample_info</span><span class="o">.</span><span class="n">sample_id</span><span class="p">,</span>
+    <span class="n">chrom</span><span class="o">=</span><span class="s2">&quot;chr1&quot;</span><span class="p">,</span>
+<span class="p">)</span>
 
-<span class="n">clean_pmds</span> <span class="o">=</span> <span class="n">pathway</span><span class="o">.</span><span class="n">get_clean_regions</span><span class="p">(</span><span class="n">regions_df</span><span class="o">=</span><span class="n">regions</span><span class="p">)</span>
+<span class="n">fig</span> <span class="o">=</span> <span class="n">pathway</span><span class="o">.</span><span class="n">plot_labels</span><span class="p">(</span>
+    <span class="n">sample_info</span><span class="o">=</span><span class="n">sample_info</span><span class="p">,</span>
+    <span class="n">chrom</span><span class="o">=</span><span class="s2">&quot;chr1&quot;</span><span class="p">,</span>
+    <span class="n">overlay_state</span><span class="o">=</span><span class="n">MethylationStates</span><span class="o">.</span><span class="n">PMD</span><span class="p">,</span>
+    <span class="n">use_cleaned_regions</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+    <span class="n">label_title</span><span class="o">=</span><span class="s2">&quot;Cleaned PMD overlay&quot;</span><span class="p">,</span>
+<span class="p">)</span>
 </pre></div>
 </div>
 </section>

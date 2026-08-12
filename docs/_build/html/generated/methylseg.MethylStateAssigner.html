@@ -63,32 +63,7 @@
 </li>
 <li class="toctree-l2"><a class="reference internal" href="../api.html#enums-and-labels">Enums and labels</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../api.html#hmm-backends">HMM backends</a></li>
-<li class="toctree-l2 current"><a class="reference internal" href="../api.html#utility-helpers">Utility helpers</a><ul class="current">
-<li class="toctree-l3"><a class="reference internal" href="methylseg.get_biological_state_colors.html">methylseg.get_biological_state_colors</a></li>
-<li class="toctree-l3"><a class="reference internal" href="methylseg.get_cluster_colors.html">methylseg.get_cluster_colors</a></li>
-<li class="toctree-l3"><a class="reference internal" href="methylseg.CTMethylSegHMM.html">methylseg.CTMethylSegHMM</a></li>
-<li class="toctree-l3"><a class="reference internal" href="methylseg.DAMethylSegHMM.html">methylseg.DAMethylSegHMM</a></li>
-<li class="toctree-l3"><a class="reference internal" href="methylseg.GaussianMethylSegHMM.html">methylseg.GaussianMethylSegHMM</a></li>
-<li class="toctree-l3"><a class="reference internal" href="methylseg.HMMObservationMode.html">methylseg.HMMObservationMode</a></li>
-<li class="toctree-l3"><a class="reference internal" href="methylseg.MethylDataPrep.html">methylseg.MethylDataPrep</a></li>
-<li class="toctree-l3"><a class="reference internal" href="methylseg.MethylSegConfig.html">methylseg.MethylSegConfig</a></li>
-<li class="toctree-l3"><a class="reference internal" href="methylseg.MethylSegHMM.html">methylseg.MethylSegHMM</a></li>
-<li class="toctree-l3"><a class="reference internal" href="methylseg.MethylSegPathway.html">methylseg.MethylSegPathway</a></li>
-<li class="toctree-l3"><a class="reference internal" href="methylseg.MethylSegmentor.html">methylseg.MethylSegmentor</a></li>
-<li class="toctree-l3"><a class="reference internal" href="methylseg.MethylStateAnalyzer.html">methylseg.MethylStateAnalyzer</a></li>
-<li class="toctree-l3 current"><a class="current reference internal" href="#">methylseg.MethylStateAssigner</a><ul>
-<li class="toctree-l4"><a class="reference internal" href="#methylseg.MethylStateAssigner"><code class="docutils literal notranslate"><span class="pre">MethylStateAssigner</span></code></a></li>
-</ul>
-</li>
-<li class="toctree-l3"><a class="reference internal" href="methylseg.MethylStateAssignmentMethod.html">methylseg.MethylStateAssignmentMethod</a></li>
-<li class="toctree-l3"><a class="reference internal" href="methylseg.MethylationStates.html">methylseg.MethylationStates</a></li>
-<li class="toctree-l3"><a class="reference internal" href="methylseg.MultinomialSegHMM.html">methylseg.MultinomialSegHMM</a></li>
-<li class="toctree-l3"><a class="reference internal" href="methylseg.SampleInfo.html">methylseg.SampleInfo</a></li>
-<li class="toctree-l3"><a class="reference internal" href="methylseg.StickyCategoricalMethylSegHMM.html">methylseg.StickyCategoricalMethylSegHMM</a></li>
-<li class="toctree-l3"><a class="reference internal" href="methylseg.get_biological_state_colors.html">methylseg.get_biological_state_colors</a></li>
-<li class="toctree-l3"><a class="reference internal" href="methylseg.get_cluster_colors.html">methylseg.get_cluster_colors</a></li>
-</ul>
-</li>
+<li class="toctree-l2"><a class="reference internal" href="../api.html#utility-helpers">Utility helpers</a></li>
 </ul>
 </li>
 <li class="toctree-l1"><a class="reference internal" href="../tutorials.html">Tutorial Notebook</a></li>
@@ -149,12 +124,13 @@
 <li><p><strong>window_specs</strong> (<em>List</em><em>[</em><em>Tuple</em><em>[</em><em>int</em><em>, </em><em>str</em><em>]</em><em>]</em>) – List of <code class="docutils literal notranslate"><span class="pre">(window_size_bp,</span> <span class="pre">label)</span></code> tuples used to summarize local
 methylation context around each CpG.</p></li>
 <li><p><strong>n_states</strong> (<em>int</em>) – Number of coarse methylation states to learn during clustering.</p></li>
-<li><p><strong>int_low_cutoff</strong> (<em>float</em>)</p></li>
-<li><p><strong>int_high_cutoff</strong> (<em>float</em>)</p></li>
-<li><p><strong>high_cutoff</strong> (<em>float</em>)</p></li>
-<li><p><strong>random_state</strong> (<em>int</em><em> | </em><em>None</em>)</p></li>
-<li><p><strong>cluster_space</strong> (<em>str</em>)</p></li>
-<li><p><strong>n_pca</strong> (<em>int</em><em> | </em><em>None</em>)</p></li>
+<li><p><strong>int_low_cutoff</strong> (<em>float</em>) – Lower cutoff for intermediate methylation state.</p></li>
+<li><p><strong>int_high_cutoff</strong> (<em>float</em>) – Upper cutoff for intermediate methylation state.</p></li>
+<li><p><strong>high_cutoff</strong> (<em>float</em>) – Cutoff for high methylation state.</p></li>
+<li><p><strong>out_dir</strong> – Directory to save output files.</p></li>
+<li><p><strong>random_state</strong> (<em>int</em><em> | </em><em>None</em>) – Random state for reproducibility.</p></li>
+<li><p><strong>cluster_space</strong> (<em>str</em>) – Space in which to perform k-means clustering (‘pca’ or ‘raw’).</p></li>
+<li><p><strong>n_pca</strong> (<em>int</em><em> | </em><em>None</em>) – Number of principal components to use if cluster_space is ‘pca’.</p></li>
 </ul>
 </dd>
 </dl>
@@ -173,46 +149,46 @@ methylation context around each CpG.</p></li>
 <td><p>High-level: apply an already-trained model to a new sample (same features).</p></td>
 </tr>
 <tr class="row-even"><td><p><a class="reference internal" href="#methylseg.MethylStateAssigner.build_emission_matrix" title="methylseg.MethylStateAssigner.build_emission_matrix"><code class="xref py py-obj docutils literal notranslate"><span class="pre">build_emission_matrix</span></code></a>(positions, betas, ...)</p></td>
-<td><p></p></td>
+<td><p>Build emission features for one ordered probe sequence.</p></td>
 </tr>
 <tr class="row-odd"><td><p><a class="reference internal" href="#methylseg.MethylStateAssigner.calculate_kmeans_cluster_metrics" title="methylseg.MethylStateAssigner.calculate_kmeans_cluster_metrics"><code class="xref py py-obj docutils literal notranslate"><span class="pre">calculate_kmeans_cluster_metrics</span></code></a>(...)</p></td>
 <td><p>Calculate clustering-quality metrics in the same feature space used for KMeans.</p></td>
 </tr>
-<tr class="row-even"><td><p><a class="reference internal" href="#methylseg.MethylStateAssigner.create_emission_df" title="methylseg.MethylStateAssigner.create_emission_df"><code class="xref py py-obj docutils literal notranslate"><span class="pre">create_emission_df</span></code></a>(summary_stats[, ...])</p></td>
-<td><p>Convert the <cite>summaries</cite> column into a flat emission feature matrix.</p></td>
-</tr>
-<tr class="row-odd"><td><p><a class="reference internal" href="#methylseg.MethylStateAssigner.fit_kmeans_on_emissions" title="methylseg.MethylStateAssigner.fit_kmeans_on_emissions"><code class="xref py py-obj docutils literal notranslate"><span class="pre">fit_kmeans_on_emissions</span></code></a>(emission_df[, ...])</p></td>
+<tr class="row-even"><td><p><a class="reference internal" href="#methylseg.MethylStateAssigner.fit_kmeans_on_emissions" title="methylseg.MethylStateAssigner.fit_kmeans_on_emissions"><code class="xref py py-obj docutils literal notranslate"><span class="pre">fit_kmeans_on_emissions</span></code></a>(emission_df[, ...])</p></td>
 <td><p>Fit KMeans on emission features using the assigner's configured cluster space.</p></td>
-</tr>
-<tr class="row-even"><td><p><a class="reference internal" href="#methylseg.MethylStateAssigner.generate_multi_window_summary_centered" title="methylseg.MethylStateAssigner.generate_multi_window_summary_centered"><code class="xref py py-obj docutils literal notranslate"><span class="pre">generate_multi_window_summary_centered</span></code></a>(meth_data)</p></td>
-<td><p>Compute per-CpG multi-window summary statistics using windows centered on each CpG.</p></td>
 </tr>
 <tr class="row-odd"><td><p><a class="reference internal" href="#methylseg.MethylStateAssigner.get_pca_loadings" title="methylseg.MethylStateAssigner.get_pca_loadings"><code class="xref py py-obj docutils literal notranslate"><span class="pre">get_pca_loadings</span></code></a>()</p></td>
 <td><p>Return a DataFrame of PCA loadings for the features used in the model.</p></td>
 </tr>
-<tr class="row-even"><td><p><a class="reference internal" href="#methylseg.MethylStateAssigner.plot_kmeans_clusters" title="methylseg.MethylStateAssigner.plot_kmeans_clusters"><code class="xref py py-obj docutils literal notranslate"><span class="pre">plot_kmeans_clusters</span></code></a>(meth_data, labels[, ...])</p></td>
-<td><p></p></td>
+<tr class="row-even"><td><p><a class="reference internal" href="#methylseg.MethylStateAssigner.plot_embedding" title="methylseg.MethylStateAssigner.plot_embedding"><code class="xref py py-obj docutils literal notranslate"><span class="pre">plot_embedding</span></code></a>(emission_df, labels[, ...])</p></td>
+<td><p>Plot PCA or UMAP embeddings for an emission table and state labels.</p></td>
 </tr>
-<tr class="row-odd"><td><p><a class="reference internal" href="#methylseg.MethylStateAssigner.plot_pca_clusters" title="methylseg.MethylStateAssigner.plot_pca_clusters"><code class="xref py py-obj docutils literal notranslate"><span class="pre">plot_pca_clusters</span></code></a>(emission_df, labels[, ...])</p></td>
+<tr class="row-odd"><td><p><a class="reference internal" href="#methylseg.MethylStateAssigner.plot_kmeans_clusters" title="methylseg.MethylStateAssigner.plot_kmeans_clusters"><code class="xref py py-obj docutils literal notranslate"><span class="pre">plot_kmeans_clusters</span></code></a>(meth_data, labels[, ...])</p></td>
+<td><p>Plot genomic beta values colored by KMeans-derived state labels.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#methylseg.MethylStateAssigner.plot_pca_clusters" title="methylseg.MethylStateAssigner.plot_pca_clusters"><code class="xref py py-obj docutils literal notranslate"><span class="pre">plot_pca_clusters</span></code></a>(emission_df, labels[, ...])</p></td>
 <td><p>PCA embedding + loadings, using consistent colors per state.</p></td>
 </tr>
-<tr class="row-even"><td><p><a class="reference internal" href="#methylseg.MethylStateAssigner.plot_pca_clusters_with_region" title="methylseg.MethylStateAssigner.plot_pca_clusters_with_region"><code class="xref py py-obj docutils literal notranslate"><span class="pre">plot_pca_clusters_with_region</span></code></a>(meth_data, ...)</p></td>
-<td><p></p></td>
+<tr class="row-odd"><td><p><a class="reference internal" href="#methylseg.MethylStateAssigner.plot_pca_clusters_with_region" title="methylseg.MethylStateAssigner.plot_pca_clusters_with_region"><code class="xref py py-obj docutils literal notranslate"><span class="pre">plot_pca_clusters_with_region</span></code></a>(meth_data, ...)</p></td>
+<td><p>Plot PCA clusters while highlighting CpGs overlapping a genomic region.</p></td>
 </tr>
-<tr class="row-odd"><td><p><a class="reference internal" href="#methylseg.MethylStateAssigner.plot_train_pca_clusters" title="methylseg.MethylStateAssigner.plot_train_pca_clusters"><code class="xref py py-obj docutils literal notranslate"><span class="pre">plot_train_pca_clusters</span></code></a>([n_pca_plot, ...])</p></td>
+<tr class="row-even"><td><p><a class="reference internal" href="#methylseg.MethylStateAssigner.plot_train_pca_clusters" title="methylseg.MethylStateAssigner.plot_train_pca_clusters"><code class="xref py py-obj docutils literal notranslate"><span class="pre">plot_train_pca_clusters</span></code></a>([n_pca_plot, ...])</p></td>
 <td><p>Convenience wrapper to plot the PCA embedding saved from k-means training.</p></td>
 </tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#methylseg.MethylStateAssigner.plot_training_embedding" title="methylseg.MethylStateAssigner.plot_training_embedding"><code class="xref py py-obj docutils literal notranslate"><span class="pre">plot_training_embedding</span></code></a>(*[, method, ...])</p></td>
+<td><p>Plot embeddings for the cached training sample and labels.</p></td>
+</tr>
 <tr class="row-even"><td><p><a class="reference internal" href="#methylseg.MethylStateAssigner.plot_umap_clusters" title="methylseg.MethylStateAssigner.plot_umap_clusters"><code class="xref py py-obj docutils literal notranslate"><span class="pre">plot_umap_clusters</span></code></a>(emission_df, labels[, ...])</p></td>
-<td><p></p></td>
+<td><p>Plot a 2-D UMAP embedding colored by state labels.</p></td>
 </tr>
 <tr class="row-odd"><td><p><a class="reference internal" href="#methylseg.MethylStateAssigner.prepare_sample_for_clustering" title="methylseg.MethylStateAssigner.prepare_sample_for_clustering"><code class="xref py py-obj docutils literal notranslate"><span class="pre">prepare_sample_for_clustering</span></code></a>(sample_info[, ...])</p></td>
 <td><p>Convenience wrapper to: 1.</p></td>
 </tr>
 <tr class="row-even"><td><p><a class="reference internal" href="#methylseg.MethylStateAssigner.preprocess_emission_features" title="methylseg.MethylStateAssigner.preprocess_emission_features"><code class="xref py py-obj docutils literal notranslate"><span class="pre">preprocess_emission_features</span></code></a>(emission_df, ...)</p></td>
-<td><p></p></td>
+<td><p>Impute and scale emission features for clustering or inference.</p></td>
 </tr>
 <tr class="row-odd"><td><p><a class="reference internal" href="#methylseg.MethylStateAssigner.resolve_feature_cols" title="methylseg.MethylStateAssigner.resolve_feature_cols"><code class="xref py py-obj docutils literal notranslate"><span class="pre">resolve_feature_cols</span></code></a>(emission_df[, feature_cols])</p></td>
-<td><p></p></td>
+<td><p>Resolve the emission columns to use for clustering features.</p></td>
 </tr>
 <tr class="row-even"><td><p><a class="reference internal" href="#methylseg.MethylStateAssigner.train_kmeans_for_sample" title="methylseg.MethylStateAssigner.train_kmeans_for_sample"><code class="xref py py-obj docutils literal notranslate"><span class="pre">train_kmeans_for_sample</span></code></a>(sample_info[, ...])</p></td>
 <td><p>High-level: given a sample ID and training chromosomes, train a KMeans model and return: - model (reusable) - meth_data - emission_df - pca_scores (or None when clustering in raw feature space) - labels</p></td>
@@ -220,71 +196,58 @@ methylation context around each CpG.</p></li>
 </tbody>
 </table>
 <dl class="py method">
-<dt class="sig sig-object py" id="methylseg.MethylStateAssigner.generate_multi_window_summary_centered">
-<span class="sig-name descname"><span class="pre">generate_multi_window_summary_centered</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">meth_data</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">chrom</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/methylseg/methyl_state_assigner.html#MethylStateAssigner.generate_multi_window_summary_centered"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#methylseg.MethylStateAssigner.generate_multi_window_summary_centered" title="Link to this definition"></a></dt>
-<dd><p>Compute per-CpG multi-window summary statistics using windows centered on each CpG.</p>
-<dl class="field-list simple">
-<dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><ul class="simple">
-<li><p><strong>meth_data</strong> (<em>DataFrame</em>)</p></li>
-<li><p><strong>[</strong><strong>'CpG_chrm'</strong> (<em>Must contain columns</em>)</p></li>
-<li><p><strong>'CpG_beg'</strong></p></li>
-<li><p><strong>'CpG_end'</strong></p></li>
-<li><p><strong>'beta'</strong><strong>]</strong><strong>.</strong></p></li>
-<li><p><strong>chrom</strong> (<em>optional chromosome filter.</em>)</p></li>
-</ul>
-</dd>
-<dt class="field-even">Returns<span class="colon">:</span></dt>
-<dd class="field-even"><p><strong>DataFrame</strong></p>
-</dd>
-<dt class="field-odd">Return type<span class="colon">:</span></dt>
-<dd class="field-odd"><p>one row per CpG with a ‘summaries’ dict per row.</p>
-</dd>
-</dl>
-</dd></dl>
-
-<dl class="py method">
-<dt class="sig sig-object py" id="methylseg.MethylStateAssigner.create_emission_df">
-<span class="sig-name descname"><span class="pre">create_emission_df</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">summary_stats</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">windows_to_use</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/methylseg/methyl_state_assigner.html#MethylStateAssigner.create_emission_df"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#methylseg.MethylStateAssigner.create_emission_df" title="Link to this definition"></a></dt>
-<dd><p>Convert the <cite>summaries</cite> column into a flat emission feature matrix.</p>
-<dl class="field-list simple">
-<dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><ul class="simple">
-<li><p><strong>windows_to_use</strong> (<em>list</em><em> of </em><em>window labels to include</em><em> (</em><em>subset</em><em> of </em><em>summary keys</em><em>)</em><em>.</em>) – If None, use all available windows.</p></li>
-<li><p><strong>summary_stats</strong> (<em>DataFrame</em>)</p></li>
-</ul>
-</dd>
-<dt class="field-even">Returns<span class="colon">:</span></dt>
-<dd class="field-even"><p><ul class="simple">
-<li><p><em>DataFrame with columns</em></p></li>
-<li><p><em>’beta’ +</em></p></li>
-<li><p><em>’{label}_avg_meth’, ‘{label}_std’, ‘{label}_high_pct’, ‘{label}_int_pct’,</em></p></li>
-<li><p><em>’{label}_low_pct’,</em></p></li>
-<li><p><em>’{label}_n_cpg’</em></p></li>
-</ul>
-</p>
-</dd>
-<dt class="field-odd">Return type<span class="colon">:</span></dt>
-<dd class="field-odd"><p><em>DataFrame</em></p>
-</dd>
-</dl>
-</dd></dl>
-
-<dl class="py method">
 <dt class="sig sig-object py" id="methylseg.MethylStateAssigner.build_emission_matrix">
 <span class="sig-name descname"><span class="pre">build_emission_matrix</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">positions</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">betas</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">window_specs</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">int_low_cutoff</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">int_high_cutoff</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">high_cutoff</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/methylseg/methyl_state_assigner.html#MethylStateAssigner.build_emission_matrix"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#methylseg.MethylStateAssigner.build_emission_matrix" title="Link to this definition"></a></dt>
-<dd></dd></dl>
+<dd><p>Build emission features for one ordered probe sequence.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>positions</strong> – Genomic positions for each CpG.</p></li>
+<li><p><strong>betas</strong> – Beta values aligned to <code class="docutils literal notranslate"><span class="pre">positions</span></code>.</p></li>
+<li><p><strong>window_specs</strong> – <code class="docutils literal notranslate"><span class="pre">(window_size_bp,</span> <span class="pre">label)</span></code> pairs describing the local summary
+windows to compute.</p></li>
+<li><p><strong>int_low_cutoff</strong> – Thresholds used to derive low/intermediate/high proportions inside
+each window.</p></li>
+<li><p><strong>int_high_cutoff</strong> – Thresholds used to derive low/intermediate/high proportions inside
+each window.</p></li>
+<li><p><strong>high_cutoff</strong> – Thresholds used to derive low/intermediate/high proportions inside
+each window.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><code class="docutils literal notranslate"><span class="pre">(X,</span> <span class="pre">feature_names)</span></code> where <code class="docutils literal notranslate"><span class="pre">X</span></code> is the numeric emission matrix
+and <code class="docutils literal notranslate"><span class="pre">feature_names</span></code> are the corresponding column labels.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>tuple</p>
+</dd>
+</dl>
+</dd></dl>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="methylseg.MethylStateAssigner.preprocess_emission_features">
 <span class="sig-name descname"><span class="pre">preprocess_emission_features</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">emission_df</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">feature_cols</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">fit</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/methylseg/methyl_state_assigner.html#MethylStateAssigner.preprocess_emission_features"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#methylseg.MethylStateAssigner.preprocess_emission_features" title="Link to this definition"></a></dt>
-<dd><dl class="field-list simple">
+<dd><p>Impute and scale emission features for clustering or inference.</p>
+<dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
-<li><p><strong>emission_df</strong> (<em>DataFrame</em>)</p></li>
-<li><p><strong>feature_cols</strong> (<em>List</em><em>[</em><em>str</em><em>]</em>)</p></li>
-<li><p><strong>fit</strong> (<em>bool</em>)</p></li>
+<li><p><strong>emission_df</strong> (<em>DataFrame</em>) – Emission-feature table.</p></li>
+<li><p><strong>feature_cols</strong> (<em>List</em><em>[</em><em>str</em><em>]</em>) – Ordered columns to extract and preprocess.</p></li>
+<li><p><strong>fit</strong> (<em>bool</em>) – If <code class="docutils literal notranslate"><span class="pre">True</span></code>, fit a new imputer/scaler pair and return them alongside
+the transformed matrix. Otherwise, reuse the trained model’s
+preprocessing objects.</p></li>
 </ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Scaled feature matrix, or <code class="docutils literal notranslate"><span class="pre">(scaled_values,</span> <span class="pre">imputer,</span> <span class="pre">scaler)</span></code> when
+<code class="docutils literal notranslate"><span class="pre">fit=True</span></code>.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>numpy.ndarray or tuple</p>
+</dd>
+<dt class="field-even">Raises<span class="colon">:</span></dt>
+<dd class="field-even"><p><strong>ValueError</strong> – If preprocessing cannot produce a finite feature matrix or a
+    required trained preprocessing component is missing.</p>
 </dd>
 </dl>
 </dd></dl>
@@ -292,15 +255,20 @@ methylation context around each CpG.</p></li>
 <dl class="py method">
 <dt class="sig sig-object py" id="methylseg.MethylStateAssigner.resolve_feature_cols">
 <span class="sig-name descname"><span class="pre">resolve_feature_cols</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">emission_df</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">feature_cols</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/methylseg/methyl_state_assigner.html#MethylStateAssigner.resolve_feature_cols"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#methylseg.MethylStateAssigner.resolve_feature_cols" title="Link to this definition"></a></dt>
-<dd><dl class="field-list simple">
+<dd><p>Resolve the emission columns to use for clustering features.</p>
+<dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
-<li><p><strong>emission_df</strong> (<em>DataFrame</em>)</p></li>
-<li><p><strong>feature_cols</strong> (<em>List</em><em>[</em><em>str</em><em>] </em><em>| </em><em>None</em>)</p></li>
+<li><p><strong>emission_df</strong> (<em>DataFrame</em>) – Emission-feature table whose columns should be filtered.</p></li>
+<li><p><strong>feature_cols</strong> (<em>List</em><em>[</em><em>str</em><em>] </em><em>| </em><em>None</em>) – Optional explicit column list. When omitted, uses all non-count
+features.</p></li>
 </ul>
 </dd>
-<dt class="field-even">Return type<span class="colon">:</span></dt>
-<dd class="field-even"><p><em>List</em>[str]</p>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Ordered feature-column names passed to preprocessing and clustering.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>list of str</p>
 </dd>
 </dl>
 </dd></dl>
@@ -356,18 +324,109 @@ Also returns PCA scores for PCA-backed clustering and relabeled assignments.</p>
 </dd></dl>
 
 <dl class="py method">
-<dt class="sig sig-object py" id="methylseg.MethylStateAssigner.plot_umap_clusters">
-<span class="sig-name descname"><span class="pre">plot_umap_clusters</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">emission_df</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">labels</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">chrom</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">sample_name</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">use_pca</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">use_parrallel</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/methylseg/methyl_state_assigner.html#MethylStateAssigner.plot_umap_clusters"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#methylseg.MethylStateAssigner.plot_umap_clusters" title="Link to this definition"></a></dt>
-<dd><dl class="field-list simple">
+<dt class="sig sig-object py" id="methylseg.MethylStateAssigner.plot_embedding">
+<span class="sig-name descname"><span class="pre">plot_embedding</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">emission_df</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">labels</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">meth_data</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">*</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">method</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'pca'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">sample_info</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">chrom</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">n_components</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">2</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">top_n_loadings</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">5</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">hexbin</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">interactive</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">include_metrics</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">include_biplot</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">label_title</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'State'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">region_start</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">region_end</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">region_chrom</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">use_pca_features</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">use_parallel</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">show_plot</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/methylseg/methyl_state_assigner.html#MethylStateAssigner.plot_embedding"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#methylseg.MethylStateAssigner.plot_embedding" title="Link to this definition"></a></dt>
+<dd><p>Plot PCA or UMAP embeddings for an emission table and state labels.</p>
+<dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
-<li><p><strong>emission_df</strong> (<em>DataFrame</em>)</p></li>
-<li><p><strong>labels</strong> (<em>ndarray</em>)</p></li>
-<li><p><strong>chrom</strong> (<em>str</em><em> | </em><em>None</em>)</p></li>
-<li><p><strong>sample_name</strong> (<em>str</em><em> | </em><em>None</em>)</p></li>
-<li><p><strong>use_pca</strong> (<em>bool</em>)</p></li>
-<li><p><strong>use_parrallel</strong> (<em>bool</em>)</p></li>
+<li><p><strong>emission_df</strong> (<em>DataFrame</em>) – Emission-feature table to embed.</p></li>
+<li><p><strong>labels</strong> (<em>ndarray</em>) – Cluster or biological state labels aligned to <code class="docutils literal notranslate"><span class="pre">emission_df</span></code>.</p></li>
+<li><p><strong>meth_data</strong> (<em>DataFrame</em><em> | </em><em>None</em>) – Optional probe-level methylation table used for region-aware PCA
+highlighting.</p></li>
+<li><p><strong>method</strong> (<em>str</em>) – Embedding method, either <code class="docutils literal notranslate"><span class="pre">&quot;pca&quot;</span></code> or <code class="docutils literal notranslate"><span class="pre">&quot;umap&quot;</span></code>.</p></li>
+<li><p><strong>sample_info</strong> (<a class="reference internal" href="methylseg.SampleInfo.html#methylseg.SampleInfo" title="methylseg.helper_classes.SampleInfo"><em>SampleInfo</em></a><em> | </em><em>None</em>) – Optional sample metadata used for plot titles.</p></li>
+<li><p><strong>chrom</strong> (<em>str</em><em> | </em><em>None</em>) – Optional chromosome label used for plot titles and region-aware
+views.</p></li>
+<li><p><strong>n_components</strong> (<em>int</em>) – Number of embedding dimensions to render.</p></li>
+<li><p><strong>top_n_loadings</strong> (<em>int</em>) – Number of PCA loading features to show in tables and biplots.</p></li>
+<li><p><strong>hexbin</strong> (<em>bool</em>) – If <code class="docutils literal notranslate"><span class="pre">True</span></code>, render 2-D PCA as hexbins instead of points.</p></li>
+<li><p><strong>interactive</strong> (<em>bool</em>) – If <code class="docutils literal notranslate"><span class="pre">True</span></code>, use interactive rendering when supported by the chosen
+method.</p></li>
+<li><p><strong>include_metrics</strong> (<em>bool</em>) – Include clustering-quality metrics where available.</p></li>
+<li><p><strong>include_biplot</strong> (<em>bool</em>) – Overlay top PCA loading vectors on 2-D PCA plots.</p></li>
+<li><p><strong>label_title</strong> (<em>str</em>) – Legend or colorbar title.</p></li>
+<li><p><strong>region_start</strong> (<em>int</em><em> | </em><em>None</em>) – Optional genomic interval used to highlight overlapping CpGs in PCA
+space.</p></li>
+<li><p><strong>region_end</strong> (<em>int</em><em> | </em><em>None</em>) – Optional genomic interval used to highlight overlapping CpGs in PCA
+space.</p></li>
+<li><p><strong>region_chrom</strong> (<em>str</em><em> | </em><em>None</em>) – Optional genomic interval used to highlight overlapping CpGs in PCA
+space.</p></li>
+<li><p><strong>use_pca_features</strong> (<em>bool</em>) – For UMAP, project the trained PCA features instead of scaled raw
+features.</p></li>
+<li><p><strong>use_parallel</strong> (<em>bool</em>) – Whether to allow UMAP’s parallel execution mode.</p></li>
+<li><p><strong>show_plot</strong> (<em>bool</em>) – If <code class="docutils literal notranslate"><span class="pre">True</span></code>, display the figure immediately.</p></li>
 </ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Matplotlib or Plotly figure object, depending on the selected
+rendering path.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>object</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="methylseg.MethylStateAssigner.plot_training_embedding">
+<span class="sig-name descname"><span class="pre">plot_training_embedding</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">*</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">method</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'pca'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">n_components</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">2</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">top_n_loadings</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">5</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">hexbin</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">interactive</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">include_metrics</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">include_biplot</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">label_title</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'State'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">region_start</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">region_end</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">region_chrom</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">use_pca_features</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">use_parallel</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">show_plot</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/methylseg/methyl_state_assigner.html#MethylStateAssigner.plot_training_embedding"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#methylseg.MethylStateAssigner.plot_training_embedding" title="Link to this definition"></a></dt>
+<dd><p>Plot embeddings for the cached training sample and labels.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>method</strong> (<em>str</em>) – Embedding method, either <code class="docutils literal notranslate"><span class="pre">&quot;pca&quot;</span></code> or <code class="docutils literal notranslate"><span class="pre">&quot;umap&quot;</span></code>.</p></li>
+<li><p><strong>n_components</strong> (<em>int</em>) – Number of embedding dimensions to render.</p></li>
+<li><p><strong>top_n_loadings</strong> (<em>int</em>) – Number of PCA loading features to show in tables and biplots.</p></li>
+<li><p><strong>hexbin</strong> (<em>bool</em>) – If <code class="docutils literal notranslate"><span class="pre">True</span></code>, render 2-D PCA as hexbins instead of points.</p></li>
+<li><p><strong>interactive</strong> (<em>bool</em>) – If <code class="docutils literal notranslate"><span class="pre">True</span></code>, use interactive rendering when supported.</p></li>
+<li><p><strong>include_metrics</strong> (<em>bool</em>) – Include clustering-quality metrics where available.</p></li>
+<li><p><strong>include_biplot</strong> (<em>bool</em>) – Overlay top PCA loading vectors on 2-D PCA plots.</p></li>
+<li><p><strong>label_title</strong> (<em>str</em>) – Legend or colorbar title.</p></li>
+<li><p><strong>region_start</strong> (<em>int</em><em> | </em><em>None</em>) – Optional genomic interval used to highlight overlapping training
+CpGs in PCA space.</p></li>
+<li><p><strong>region_end</strong> (<em>int</em><em> | </em><em>None</em>) – Optional genomic interval used to highlight overlapping training
+CpGs in PCA space.</p></li>
+<li><p><strong>region_chrom</strong> (<em>str</em><em> | </em><em>None</em>) – Optional genomic interval used to highlight overlapping training
+CpGs in PCA space.</p></li>
+<li><p><strong>use_pca_features</strong> (<em>bool</em>) – For UMAP, project the trained PCA features instead of scaled raw
+features.</p></li>
+<li><p><strong>use_parallel</strong> (<em>bool</em>) – Whether to allow UMAP’s parallel execution mode.</p></li>
+<li><p><strong>show_plot</strong> (<em>bool</em>) – If <code class="docutils literal notranslate"><span class="pre">True</span></code>, display the figure immediately.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Matplotlib or Plotly figure object.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>object</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="methylseg.MethylStateAssigner.plot_umap_clusters">
+<span class="sig-name descname"><span class="pre">plot_umap_clusters</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">emission_df</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">labels</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">chrom</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">sample_name</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">use_pca</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">use_parallel</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">show_plot</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/methylseg/methyl_state_assigner.html#MethylStateAssigner.plot_umap_clusters"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#methylseg.MethylStateAssigner.plot_umap_clusters" title="Link to this definition"></a></dt>
+<dd><p>Plot a 2-D UMAP embedding colored by state labels.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>emission_df</strong> (<em>DataFrame</em>) – Emission-feature table to embed.</p></li>
+<li><p><strong>labels</strong> (<em>ndarray</em>) – State labels aligned to <code class="docutils literal notranslate"><span class="pre">emission_df</span></code>.</p></li>
+<li><p><strong>chrom</strong> (<em>str</em><em> | </em><em>None</em>) – Optional chromosome label used in the plot title.</p></li>
+<li><p><strong>sample_name</strong> (<em>str</em><em> | </em><em>None</em>) – Optional sample identifier used in the plot title.</p></li>
+<li><p><strong>use_pca</strong> (<em>bool</em>) – If <code class="docutils literal notranslate"><span class="pre">True</span></code>, run UMAP on the trained PCA features instead of scaled
+raw features.</p></li>
+<li><p><strong>use_parallel</strong> (<em>bool</em>) – If <code class="docutils literal notranslate"><span class="pre">True</span></code>, allow UMAP to disable a fixed random seed for parallel
+execution.</p></li>
+<li><p><strong>show_plot</strong> (<em>bool</em>) – If <code class="docutils literal notranslate"><span class="pre">True</span></code>, display the figure immediately.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Scatter plot of the UMAP embedding.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>matplotlib.figure.Figure</p>
 </dd>
 </dl>
 </dd></dl>
@@ -375,23 +434,32 @@ Also returns PCA scores for PCA-backed clustering and relabeled assignments.</p>
 <dl class="py method">
 <dt class="sig sig-object py" id="methylseg.MethylStateAssigner.plot_kmeans_clusters">
 <span class="sig-name descname"><span class="pre">plot_kmeans_clusters</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">meth_data</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">labels</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">chrom</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">sample_name</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">feature_cols_for_table</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">interactive</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/methylseg/methyl_state_assigner.html#MethylStateAssigner.plot_kmeans_clusters"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#methylseg.MethylStateAssigner.plot_kmeans_clusters" title="Link to this definition"></a></dt>
-<dd><dl class="field-list simple">
+<dd><p>Plot genomic beta values colored by KMeans-derived state labels.</p>
+<dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
-<li><p><strong>meth_data</strong> (<em>DataFrame</em>)</p></li>
-<li><p><strong>labels</strong> (<em>ndarray</em>)</p></li>
-<li><p><strong>chrom</strong> (<em>str</em><em> | </em><em>None</em>)</p></li>
-<li><p><strong>sample_name</strong> (<em>str</em><em> | </em><em>None</em>)</p></li>
-<li><p><strong>feature_cols_for_table</strong> (<em>List</em><em>[</em><em>str</em><em>] </em><em>| </em><em>None</em>)</p></li>
-<li><p><strong>interactive</strong> (<em>bool</em>)</p></li>
+<li><p><strong>meth_data</strong> (<em>DataFrame</em>) – Probe-level methylation table containing genomic positions and beta
+values.</p></li>
+<li><p><strong>labels</strong> (<em>ndarray</em>) – Cluster or biological state labels aligned to <code class="docutils literal notranslate"><span class="pre">meth_data</span></code>.</p></li>
+<li><p><strong>chrom</strong> (<em>str</em><em> | </em><em>None</em>) – Optional chromosome label used in the plot title.</p></li>
+<li><p><strong>sample_name</strong> (<em>str</em><em> | </em><em>None</em>) – Optional sample identifier used in the plot title.</p></li>
+<li><p><strong>feature_cols_for_table</strong> (<em>List</em><em>[</em><em>str</em><em>] </em><em>| </em><em>None</em>) – Optional feature list to display alongside the static scatter plot.</p></li>
+<li><p><strong>interactive</strong> (<em>bool</em>) – If <code class="docutils literal notranslate"><span class="pre">True</span></code>, render the Plotly version instead of the static
+matplotlib figure.</p></li>
 </ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Matplotlib or Plotly figure object.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>object</p>
 </dd>
 </dl>
 </dd></dl>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="methylseg.MethylStateAssigner.plot_pca_clusters">
-<span class="sig-name descname"><span class="pre">plot_pca_clusters</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">emission_df</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">labels</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">n_pca_plot</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">2</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">top_n_loadings</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">5</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">pca_hexbin</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">interactive</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">include_kmeans_metrics</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">include_biplot</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">label_title</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'State'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">sample_name</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">chrom</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/methylseg/methyl_state_assigner.html#MethylStateAssigner.plot_pca_clusters"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#methylseg.MethylStateAssigner.plot_pca_clusters" title="Link to this definition"></a></dt>
+<span class="sig-name descname"><span class="pre">plot_pca_clusters</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">emission_df</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">labels</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">n_pca_plot</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">2</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">top_n_loadings</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">5</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">pca_hexbin</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">interactive</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">include_kmeans_metrics</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">include_biplot</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">label_title</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'State'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">sample_name</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">chrom</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">show_plot</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/methylseg/methyl_state_assigner.html#MethylStateAssigner.plot_pca_clusters"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#methylseg.MethylStateAssigner.plot_pca_clusters" title="Link to this definition"></a></dt>
 <dd><p>PCA embedding + loadings, using consistent colors per state.</p>
 <p>Set <code class="docutils literal notranslate"><span class="pre">include_kmeans_metrics=False</span></code> to skip the expensive clustering
 quality metric calculation and annotation.</p>
@@ -409,6 +477,7 @@ quality metric calculation and annotation.</p>
 <li><p><strong>label_title</strong> (<em>str</em>)</p></li>
 <li><p><strong>sample_name</strong> (<em>str</em><em> | </em><em>None</em>)</p></li>
 <li><p><strong>chrom</strong> (<em>str</em><em> | </em><em>None</em>)</p></li>
+<li><p><strong>show_plot</strong> (<em>bool</em>)</p></li>
 </ul>
 </dd>
 </dl>
@@ -416,33 +485,42 @@ quality metric calculation and annotation.</p>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="methylseg.MethylStateAssigner.plot_pca_clusters_with_region">
-<span class="sig-name descname"><span class="pre">plot_pca_clusters_with_region</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">meth_data</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">emission_df</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">labels</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">region_start</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">region_end</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">region_chrom</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">n_pca_plot</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">2</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">top_n_loadings</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">5</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">pca_hexbin</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">interactive</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">include_kmeans_metrics</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">include_biplot</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">label_title</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'State'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">sample_name</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">chrom</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/methylseg/methyl_state_assigner.html#MethylStateAssigner.plot_pca_clusters_with_region"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#methylseg.MethylStateAssigner.plot_pca_clusters_with_region" title="Link to this definition"></a></dt>
-<dd><dl class="field-list simple">
+<span class="sig-name descname"><span class="pre">plot_pca_clusters_with_region</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">meth_data</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">emission_df</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">labels</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">region_start</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">region_end</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">region_chrom</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">n_pca_plot</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">2</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">top_n_loadings</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">5</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">pca_hexbin</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">interactive</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">include_kmeans_metrics</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">include_biplot</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">label_title</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'State'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">sample_name</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">chrom</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">show_plot</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/methylseg/methyl_state_assigner.html#MethylStateAssigner.plot_pca_clusters_with_region"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#methylseg.MethylStateAssigner.plot_pca_clusters_with_region" title="Link to this definition"></a></dt>
+<dd><p>Plot PCA clusters while highlighting CpGs overlapping a genomic region.</p>
+<dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
-<li><p><strong>meth_data</strong> (<em>DataFrame</em>)</p></li>
-<li><p><strong>emission_df</strong> (<em>DataFrame</em>)</p></li>
-<li><p><strong>labels</strong> (<em>ndarray</em>)</p></li>
-<li><p><strong>region_start</strong> (<em>int</em>)</p></li>
-<li><p><strong>region_end</strong> (<em>int</em>)</p></li>
-<li><p><strong>region_chrom</strong> (<em>str</em><em> | </em><em>None</em>)</p></li>
-<li><p><strong>n_pca_plot</strong> (<em>int</em>)</p></li>
-<li><p><strong>top_n_loadings</strong> (<em>int</em>)</p></li>
-<li><p><strong>pca_hexbin</strong> (<em>bool</em>)</p></li>
-<li><p><strong>interactive</strong> (<em>bool</em>)</p></li>
-<li><p><strong>include_kmeans_metrics</strong> (<em>bool</em>)</p></li>
-<li><p><strong>include_biplot</strong> (<em>bool</em>)</p></li>
-<li><p><strong>label_title</strong> (<em>str</em>)</p></li>
-<li><p><strong>sample_name</strong> (<em>str</em><em> | </em><em>None</em>)</p></li>
-<li><p><strong>chrom</strong> (<em>str</em><em> | </em><em>None</em>)</p></li>
+<li><p><strong>meth_data</strong> (<em>DataFrame</em>) – Probe-level methylation table containing genomic coordinates.</p></li>
+<li><p><strong>emission_df</strong> (<em>DataFrame</em>) – Emission-feature table aligned to <code class="docutils literal notranslate"><span class="pre">meth_data</span></code>.</p></li>
+<li><p><strong>labels</strong> (<em>ndarray</em>) – Cluster or biological state labels aligned to both tables.</p></li>
+<li><p><strong>region_start</strong> (<em>int</em>) – Inclusive genomic interval used for highlighting.</p></li>
+<li><p><strong>region_end</strong> (<em>int</em>) – Inclusive genomic interval used for highlighting.</p></li>
+<li><p><strong>region_chrom</strong> (<em>str</em><em> | </em><em>None</em>) – Chromosome of the highlighted interval. Required when <code class="docutils literal notranslate"><span class="pre">meth_data</span></code>
+spans multiple chromosomes.</p></li>
+<li><p><strong>n_pca_plot</strong> (<em>int</em>) – Number of PCA dimensions to render.</p></li>
+<li><p><strong>top_n_loadings</strong> (<em>int</em>) – Number of PCA loading features to show in the side table.</p></li>
+<li><p><strong>pca_hexbin</strong> (<em>bool</em>) – If <code class="docutils literal notranslate"><span class="pre">True</span></code>, render 2-D PCA as hexbins instead of points.</p></li>
+<li><p><strong>interactive</strong> (<em>bool</em>) – If <code class="docutils literal notranslate"><span class="pre">True</span></code>, use interactive rendering when supported.</p></li>
+<li><p><strong>include_kmeans_metrics</strong> (<em>bool</em>) – Include clustering-quality metrics in the plot.</p></li>
+<li><p><strong>include_biplot</strong> (<em>bool</em>) – Overlay top PCA loading vectors on 2-D PCA plots.</p></li>
+<li><p><strong>label_title</strong> (<em>str</em>) – Legend or colorbar title.</p></li>
+<li><p><strong>sample_name</strong> (<em>str</em><em> | </em><em>None</em>) – Optional sample identifier used in the plot title.</p></li>
+<li><p><strong>chrom</strong> (<em>str</em><em> | </em><em>None</em>) – Optional chromosome label used in the plot title.</p></li>
+<li><p><strong>show_plot</strong> (<em>bool</em>) – If <code class="docutils literal notranslate"><span class="pre">True</span></code>, display the figure immediately.</p></li>
 </ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Matplotlib or Plotly figure object from the PCA plotting backend.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>object</p>
 </dd>
 </dl>
 </dd></dl>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="methylseg.MethylStateAssigner.plot_train_pca_clusters">
-<span class="sig-name descname"><span class="pre">plot_train_pca_clusters</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">n_pca_plot</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">2</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">top_n_loadings</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">5</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">pca_hexbin</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">interactive</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">include_kmeans_metrics</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">include_biplot</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">region_start</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">region_end</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">region_chrom</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/methylseg/methyl_state_assigner.html#MethylStateAssigner.plot_train_pca_clusters"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#methylseg.MethylStateAssigner.plot_train_pca_clusters" title="Link to this definition"></a></dt>
+<span class="sig-name descname"><span class="pre">plot_train_pca_clusters</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">n_pca_plot</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">2</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">top_n_loadings</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">5</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">pca_hexbin</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">interactive</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">include_kmeans_metrics</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">include_biplot</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">region_start</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">region_end</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">region_chrom</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">show_plot</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/methylseg/methyl_state_assigner.html#MethylStateAssigner.plot_train_pca_clusters"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#methylseg.MethylStateAssigner.plot_train_pca_clusters" title="Link to this definition"></a></dt>
 <dd><p>Convenience wrapper to plot the PCA embedding saved from k-means training.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
@@ -456,6 +534,7 @@ quality metric calculation and annotation.</p>
 <li><p><strong>region_start</strong> (<em>int</em><em> | </em><em>None</em>)</p></li>
 <li><p><strong>region_end</strong> (<em>int</em><em> | </em><em>None</em>)</p></li>
 <li><p><strong>region_chrom</strong> (<em>str</em><em> | </em><em>None</em>)</p></li>
+<li><p><strong>show_plot</strong> (<em>bool</em>)</p></li>
 </ul>
 </dd>
 </dl>
@@ -470,8 +549,7 @@ quality metric calculation and annotation.</p>
 3. Optionally subset windows.</p>
 <dl class="simple">
 <dt>Returns:</dt><dd><p>meth_data (filtered DataFrame),
-emission_matrix (np.ndarray),
-emission_df (pandas DataFrame view)</p>
+emission_df (pandas DataFrame)</p>
 </dd>
 </dl>
 <dl class="field-list simple">
@@ -483,7 +561,7 @@ emission_df (pandas DataFrame view)</p>
 </ul>
 </dd>
 <dt class="field-even">Return type<span class="colon">:</span></dt>
-<dd class="field-even"><p><em>Tuple</em>[<em>DataFrame</em>, <em>ndarray</em>, <em>DataFrame</em>]</p>
+<dd class="field-even"><p><em>Tuple</em>[<em>DataFrame</em>, <em>DataFrame</em>]</p>
 </dd>
 </dl>
 </dd></dl>

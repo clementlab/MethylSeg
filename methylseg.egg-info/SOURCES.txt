@@ -11,9 +11,12 @@ methylseg/methylseg_config.py
 methylseg/methylseg_hmm.py
 methylseg/methylseg_pathway.py
 methylseg/utils.py
+methylseg/visualization.py
 methylseg.egg-info/PKG-INFO
 methylseg.egg-info/SOURCES.txt
 methylseg.egg-info/dependency_links.txt
 methylseg.egg-info/entry_points.txt
 methylseg.egg-info/requires.txt
 methylseg.egg-info/top_level.txt
+tests/test_pathway_summary_defaults.py
+tests/test_plotting_api.py

@@ -89,8 +89,60 @@
 <span class="kn">from</span> <span class="nn">sklearn.preprocessing</span> <span class="kn">import</span> <span class="n">StandardScaler</span>
 
 <span class="n">CODE_DIR</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="vm">__file__</span><span class="p">)</span><span class="o">.</span><span class="n">resolve</span><span class="p">()</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">parent</span>
-<span class="n">FILES</span> <span class="o">=</span> <span class="n">CODE_DIR</span> <span class="o">/</span> <span class="s2">&quot;data&quot;</span> <span class="o">/</span> <span class="s2">&quot;reference_files&quot;</span>
+<span class="n">DATA_DIR</span> <span class="o">=</span> <span class="n">CODE_DIR</span> <span class="o">/</span> <span class="s2">&quot;data&quot;</span>
+<span class="n">FILES</span> <span class="o">=</span> <span class="n">DATA_DIR</span> <span class="o">/</span> <span class="s2">&quot;reference_files&quot;</span>
 <span class="n">CANONICAL_AUTOSOMES</span> <span class="o">=</span> <span class="nb">tuple</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;chr</span><span class="si">{</span><span class="n">i</span><span class="si">}</span><span class="s2">&quot;</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">23</span><span class="p">))</span>
+
+
+<span class="k">class</span> <span class="nc">MethylEnum</span><span class="p">(</span><span class="n">Enum</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Base class for methylseg enums with case-insensitive string parsing.&quot;&quot;&quot;</span>
+
+    <span class="nd">@classmethod</span>
+    <span class="k">def</span> <span class="nf">from_string</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">s</span><span class="p">:</span> <span class="nb">str</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Parse a string or scalar value into an enum member.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        s</span>
+<span class="sd">            Candidate enum name or value. Matching is case-insensitive for</span>
+<span class="sd">            string-valued names and members.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        MethylEnum</span>
+<span class="sd">            Matching enum member from ``cls``.</span>
+
+<span class="sd">        Raises</span>
+<span class="sd">        ------</span>
+<span class="sd">        ValueError</span>
+<span class="sd">            If ``s`` does not match any member name or value.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">s</span> <span class="o">=</span> <span class="n">s</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span>
+        <span class="k">for</span> <span class="n">member</span> <span class="ow">in</span> <span class="bp">cls</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">member</span><span class="o">.</span><span class="n">name</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="o">==</span> <span class="n">s</span><span class="p">:</span>
+                <span class="k">return</span> <span class="n">member</span>
+            <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">member</span><span class="o">.</span><span class="n">value</span><span class="p">,</span> <span class="nb">str</span><span class="p">)</span> <span class="ow">and</span> <span class="n">member</span><span class="o">.</span><span class="n">value</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="o">==</span> <span class="n">s</span><span class="p">:</span>
+                <span class="k">return</span> <span class="n">member</span>
+            <span class="k">if</span> <span class="n">member</span><span class="o">.</span><span class="n">value</span> <span class="o">==</span> <span class="n">s</span><span class="p">:</span>
+                <span class="k">return</span> <span class="n">member</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+            <span class="sa">f</span><span class="s2">&quot;Invalid </span><span class="si">{</span><span class="bp">cls</span><span class="o">.</span><span class="vm">__name__</span><span class="si">}</span><span class="s2"> value: </span><span class="si">{</span><span class="n">s</span><span class="si">}</span><span class="s2">. &quot;</span>
+            <span class="sa">f</span><span class="s2">&quot;Valid options are: </span><span class="si">{</span><span class="p">[</span><span class="n">m</span><span class="o">.</span><span class="n">name</span><span class="w"> </span><span class="k">for</span><span class="w"> </span><span class="n">m</span><span class="w"> </span><span class="ow">in</span><span class="w"> </span><span class="bp">cls</span><span class="p">]</span><span class="si">}</span><span class="s2">&quot;</span>
+        <span class="p">)</span>
+
+    <span class="k">def</span> <span class="fm">__eq__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">other</span><span class="p">):</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">other</span><span class="p">,</span> <span class="nb">str</span><span class="p">):</span>
+            <span class="k">try</span><span class="p">:</span>
+                <span class="n">other</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="vm">__class__</span><span class="o">.</span><span class="n">from_string</span><span class="p">(</span><span class="n">other</span><span class="p">)</span>
+            <span class="k">except</span> <span class="ne">ValueError</span><span class="p">:</span>
+                <span class="k">return</span> <span class="bp">NotImplemented</span>
+        <span class="k">return</span> <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__eq__</span><span class="p">(</span><span class="n">other</span><span class="p">)</span>
+
+    <span class="fm">__hash__</span> <span class="o">=</span> <span class="n">Enum</span><span class="o">.</span><span class="fm">__hash__</span>
+
+    <span class="k">def</span> <span class="fm">__str__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">name</span>
 
 
 <span class="nd">@dataclass</span>
@@ -109,7 +161,7 @@
 
 <div class="viewcode-block" id="MethylStateAssignmentMethod">
 <a class="viewcode-back" href="../../generated/methylseg.MethylStateAssignmentMethod.html#methylseg.MethylStateAssignmentMethod">[docs]</a>
-<span class="k">class</span> <span class="nc">MethylStateAssignmentMethod</span><span class="p">(</span><span class="n">Enum</span><span class="p">):</span>
+<span class="k">class</span> <span class="nc">MethylStateAssignmentMethod</span><span class="p">(</span><span class="n">MethylEnum</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;Strategies for mapping emissions to biological methylation states.&quot;&quot;&quot;</span>
 
     <span class="n">DEFINITION</span> <span class="o">=</span> <span class="s2">&quot;definition&quot;</span>
@@ -118,9 +170,21 @@
 
 
 
+<div class="viewcode-block" id="HMMType">
+<a class="viewcode-back" href="../../generated/methylseg.HMMType.html#methylseg.HMMType">[docs]</a>
+<span class="k">class</span> <span class="nc">HMMType</span><span class="p">(</span><span class="n">MethylEnum</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Supported HMM model types for segmentation.&quot;&quot;&quot;</span>
+
+    <span class="n">CT</span> <span class="o">=</span> <span class="s2">&quot;continuous-time&quot;</span>
+    <span class="n">STICKY</span> <span class="o">=</span> <span class="s2">&quot;sticky&quot;</span>
+    <span class="n">GAUSSIAN</span> <span class="o">=</span> <span class="s2">&quot;gaussian&quot;</span>
+    <span class="n">MULTINOMIAL</span> <span class="o">=</span> <span class="s2">&quot;multinomial&quot;</span></div>
+
+
+
 <div class="viewcode-block" id="HMMObservationMode">
 <a class="viewcode-back" href="../../generated/methylseg.HMMObservationMode.html#methylseg.HMMObservationMode">[docs]</a>
-<span class="k">class</span> <span class="nc">HMMObservationMode</span><span class="p">(</span><span class="n">Enum</span><span class="p">):</span>
+<span class="k">class</span> <span class="nc">HMMObservationMode</span><span class="p">(</span><span class="n">MethylEnum</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;Observation representations supported by the downstream HMM segmentor.&quot;&quot;&quot;</span>
 
     <span class="n">DISCRETE_STATES</span> <span class="o">=</span> <span class="s2">&quot;discrete_states&quot;</span>
@@ -147,6 +211,7 @@
 
     <span class="n">sample_id</span><span class="p">:</span> <span class="nb">str</span>
     <span class="n">meth_data</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span>
+    <span class="n">resolution</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span>
 
     <span class="nd">@classmethod</span>
     <span class="k">def</span> <span class="nf">__from_tsv__</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">sample_name</span><span class="p">,</span> <span class="n">file_name</span><span class="p">,</span> <span class="n">sep</span><span class="o">=</span><span class="s2">&quot;</span><span class="se">\t</span><span class="s2">&quot;</span><span class="p">):</span>
@@ -201,7 +266,6 @@
         <span class="s2">&quot;probe&quot;</span><span class="p">:</span> <span class="p">{</span><span class="s2">&quot;probe&quot;</span><span class="p">,</span> <span class="s2">&quot;probe_id&quot;</span><span class="p">,</span> <span class="s2">&quot;cpg&quot;</span><span class="p">,</span> <span class="s2">&quot;cpg_id&quot;</span><span class="p">},</span>
     <span class="p">}</span>
 
-    <span class="c1">#TODO: Add 27k resolution support</span>
 <div class="viewcode-block" id="MethylDataPrep.__init__">
 <a class="viewcode-back" href="../../generated/methylseg.MethylDataPrep.html#methylseg.MethylDataPrep.__init__">[docs]</a>
     <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span>
@@ -209,7 +273,7 @@
         <span class="n">meth_file</span><span class="p">,</span>
         <span class="n">sample_id</span><span class="p">,</span>
         <span class="n">resolution</span><span class="o">=</span><span class="s2">&quot;auto&quot;</span><span class="p">,</span>
-        <span class="n">min_coverage</span><span class="o">=</span><span class="mi">5</span><span class="p">,</span>
+        <span class="n">min_coverage</span><span class="o">=</span><span class="mi">10</span><span class="p">,</span>
         <span class="n">remove_low_coverage_like_cpgs</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
     <span class="p">):</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
@@ -221,9 +285,11 @@
 <span class="sd">            Unique identifier for the sample.</span>
 <span class="sd">        resolution : str, default=&quot;auto&quot;</span>
 <span class="sd">            Format of the methylation data. Valid options are:</span>
-<span class="sd">            - &quot;auto&quot;: Automatically detect format (450k or WGBS)</span>
+<span class="sd">            - &quot;auto&quot;: Automatically detect format</span>
 <span class="sd">            - &quot;wgbs&quot;: Whole-genome bisulfite sequencing format</span>
 <span class="sd">            - &quot;450k&quot;: Illumina 450k array format</span>
+<span class="sd">            - &quot;27k&quot;: Illumina 27k array format</span>
+<span class="sd">            - &quot;850k&quot;: Illumina 850k array format</span>
 <span class="sd">        min_coverage : int, default=5</span>
 <span class="sd">            Minimum coverage threshold for WGBS data.</span>
 <span class="sd">        remove_low_coverage_like_cpgs : bool, default=False</span>
@@ -266,6 +332,14 @@
                 <span class="k">return</span> <span class="kc">True</span>
 
         <span class="k">return</span> <span class="kc">False</span>
+    
+    <span class="k">def</span> <span class="nf">_is_microarray_format</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">resolution</span> <span class="ow">in</span> <span class="p">{</span><span class="s2">&quot;450k&quot;</span><span class="p">,</span> <span class="s2">&quot;27k&quot;</span><span class="p">,</span> <span class="s2">&quot;850k&quot;</span><span class="p">}:</span>
+            <span class="k">return</span> <span class="kc">True</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">resolution</span> <span class="o">==</span> <span class="s2">&quot;wgbs&quot;</span><span class="p">:</span>
+            <span class="k">return</span> <span class="kc">False</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Unsupported resolution for format inference: </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">resolution</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
 
     <span class="k">def</span> <span class="nf">_promote_header_row</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">df</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">:</span>
         <span class="k">if</span> <span class="n">df</span><span class="o">.</span><span class="n">empty</span> <span class="ow">or</span> <span class="ow">not</span> <span class="nb">all</span><span class="p">(</span><span class="nb">isinstance</span><span class="p">(</span><span class="n">col</span><span class="p">,</span> <span class="nb">int</span><span class="p">)</span> <span class="k">for</span> <span class="n">col</span> <span class="ow">in</span> <span class="n">df</span><span class="o">.</span><span class="n">columns</span><span class="p">):</span>
@@ -290,7 +364,7 @@
                 <span class="n">df</span> <span class="o">=</span> <span class="n">df</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
                 <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">resolution</span> <span class="o">==</span> <span class="s2">&quot;wgbs&quot;</span><span class="p">:</span>
                     <span class="n">df</span><span class="o">.</span><span class="n">columns</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;CpG_chrm&quot;</span><span class="p">,</span> <span class="s2">&quot;CpG_beg&quot;</span><span class="p">,</span> <span class="s2">&quot;CpG_end&quot;</span><span class="p">,</span> <span class="s2">&quot;meth&quot;</span><span class="p">,</span> <span class="s2">&quot;coverage&quot;</span><span class="p">]</span>
-                <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">resolution</span> <span class="o">==</span> <span class="s2">&quot;450k&quot;</span><span class="p">:</span>
+                <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">_is_microarray_format</span><span class="p">():</span>
                     <span class="n">df</span><span class="o">.</span><span class="n">columns</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;CpG_chrm&quot;</span><span class="p">,</span> <span class="s2">&quot;CpG_beg&quot;</span><span class="p">,</span> <span class="s2">&quot;CpG_end&quot;</span><span class="p">,</span> <span class="s2">&quot;beta&quot;</span><span class="p">,</span> <span class="s2">&quot;probe&quot;</span><span class="p">]</span>
                 <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">resolution</span> <span class="o">==</span> <span class="s2">&quot;auto&quot;</span><span class="p">:</span>
                     <span class="n">col5_numeric</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">to_numeric</span><span class="p">(</span><span class="n">df</span><span class="o">.</span><span class="n">iloc</span><span class="p">[:,</span> <span class="mi">4</span><span class="p">],</span> <span class="n">errors</span><span class="o">=</span><span class="s2">&quot;coerce&quot;</span><span class="p">)</span>
@@ -391,6 +465,9 @@
             <span class="n">compression</span><span class="o">=</span><span class="s2">&quot;gzip&quot;</span> <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">meth_file</span><span class="o">.</span><span class="n">suffix</span> <span class="ow">in</span> <span class="p">{</span><span class="s2">&quot;.gz&quot;</span><span class="p">,</span> <span class="s2">&quot;.gzip&quot;</span><span class="p">}</span> <span class="k">else</span> <span class="kc">None</span><span class="p">,</span>
         <span class="p">)</span>
         <span class="n">df</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_promote_header_row</span><span class="p">(</span><span class="n">df</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">df</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">==</span> <span class="mi">4</span><span class="p">:</span>
+            <span class="c1">#default to 450k-like format if only 4 columns are present</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_load_450k</span><span class="p">()</span>
         <span class="k">if</span> <span class="n">df</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">&lt;</span> <span class="mi">5</span><span class="p">:</span>
             <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
                 <span class="sa">f</span><span class="s2">&quot;Expected at least 5 columns for WGBS input: </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">meth_file</span><span class="si">}</span><span class="s2">&quot;</span>
@@ -426,7 +503,9 @@
             <span class="n">sep</span><span class="o">=</span><span class="s2">&quot;</span><span class="se">\t</span><span class="s2">&quot;</span><span class="p">,</span>
             <span class="n">header</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
             <span class="n">low_memory</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
-            <span class="n">compression</span><span class="o">=</span><span class="s2">&quot;gzip&quot;</span> <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">meth_file</span><span class="o">.</span><span class="n">suffix</span> <span class="ow">in</span> <span class="p">{</span><span class="s2">&quot;.gz&quot;</span><span class="p">,</span> <span class="s2">&quot;.gzip&quot;</span><span class="p">}</span> <span class="k">else</span> <span class="s2">&quot;infer&quot;</span><span class="p">,</span>
+            <span class="n">compression</span><span class="o">=</span><span class="p">(</span>
+                <span class="s2">&quot;gzip&quot;</span> <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">meth_file</span><span class="o">.</span><span class="n">suffix</span> <span class="ow">in</span> <span class="p">{</span><span class="s2">&quot;.gz&quot;</span><span class="p">,</span> <span class="s2">&quot;.gzip&quot;</span><span class="p">}</span> <span class="k">else</span> <span class="s2">&quot;infer&quot;</span>
+            <span class="p">),</span>
         <span class="p">)</span>
         <span class="k">if</span> <span class="n">df</span><span class="o">.</span><span class="n">empty</span><span class="p">:</span>
             <span class="k">return</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span>
@@ -458,6 +537,22 @@
 <div class="viewcode-block" id="MethylDataPrep.prepare_dataframe">
 <a class="viewcode-back" href="../../generated/methylseg.MethylDataPrep.html#methylseg.MethylDataPrep.prepare_dataframe">[docs]</a>
     <span class="k">def</span> <span class="nf">prepare_dataframe</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">,</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">]:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Load and normalize the configured methylation file.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        tuple of pandas.DataFrame</span>
+<span class="sd">            Two data frames containing the filtered canonical methylation table</span>
+<span class="sd">            and the rows removed during preparation. The filtered table contains</span>
+<span class="sd">            ``CpG_chrm``, ``CpG_beg``, ``CpG_end``, and ``beta`` columns.</span>
+
+<span class="sd">        Raises</span>
+<span class="sd">        ------</span>
+<span class="sd">        ValueError</span>
+<span class="sd">            If the requested ``resolution`` is unsupported or the input cannot</span>
+<span class="sd">            be normalized into the canonical schema.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">resolution</span> <span class="o">==</span> <span class="s2">&quot;wgbs&quot;</span><span class="p">:</span>
             <span class="n">filtered_df</span><span class="p">,</span> <span class="n">removed_df</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_load_wgbs</span><span class="p">()</span>
         <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">resolution</span> <span class="o">==</span> <span class="s2">&quot;450k&quot;</span><span class="p">:</span>
@@ -472,13 +567,45 @@
 <div class="viewcode-block" id="MethylDataPrep.prepare">
 <a class="viewcode-back" href="../../generated/methylseg.MethylDataPrep.html#methylseg.MethylDataPrep.prepare">[docs]</a>
     <span class="k">def</span> <span class="nf">prepare</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="n">SampleInfo</span><span class="p">,</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">]:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Prepare the methylation file and wrap it in ``SampleInfo``.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        tuple</span>
+<span class="sd">            A ``(sample_info, removed_df)`` pair where ``sample_info`` contains</span>
+<span class="sd">            the normalized methylation rows and ``removed_df`` contains excluded</span>
+<span class="sd">            input rows indexed by original row position when available.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
         <span class="n">filtered_df</span><span class="p">,</span> <span class="n">removed_df</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">prepare_dataframe</span><span class="p">()</span>
-        <span class="k">return</span> <span class="n">SampleInfo</span><span class="p">(</span><span class="n">sample_id</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">sample_id</span><span class="p">,</span> <span class="n">meth_data</span><span class="o">=</span><span class="n">filtered_df</span><span class="p">),</span> <span class="n">removed_df</span></div>
+        <span class="k">return</span> <span class="p">(</span>
+            <span class="n">SampleInfo</span><span class="p">(</span>
+                <span class="n">sample_id</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">sample_id</span><span class="p">,</span>
+                <span class="n">meth_data</span><span class="o">=</span><span class="n">filtered_df</span><span class="p">,</span>
+                <span class="n">resolution</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">resolution</span><span class="p">,</span>
+            <span class="p">),</span>
+            <span class="n">removed_df</span><span class="p">,</span>
+        <span class="p">)</span></div>
 
 
 <div class="viewcode-block" id="MethylDataPrep.write_prepared_tsv">
 <a class="viewcode-back" href="../../generated/methylseg.MethylDataPrep.html#methylseg.MethylDataPrep.write_prepared_tsv">[docs]</a>
     <span class="k">def</span> <span class="nf">write_prepared_tsv</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">out_file</span><span class="p">,</span> <span class="n">sep</span><span class="o">=</span><span class="s2">&quot;</span><span class="se">\t</span><span class="s2">&quot;</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Path</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Write the prepared methylation table to disk.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        out_file</span>
+<span class="sd">            Destination path for the normalized TSV-like output.</span>
+<span class="sd">        sep</span>
+<span class="sd">            Delimiter used when writing the prepared table.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        pathlib.Path</span>
+<span class="sd">            Resolved output path that was written.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
         <span class="n">out_file</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">out_file</span><span class="p">)</span>
         <span class="n">out_file</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">mkdir</span><span class="p">(</span><span class="n">parents</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">exist_ok</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
         <span class="n">filtered_df</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">prepare_dataframe</span><span class="p">()</span>
@@ -490,16 +617,13 @@
 
 <div class="viewcode-block" id="MethylationStates">
 <a class="viewcode-back" href="../../generated/methylseg.MethylationStates.html#methylseg.MethylationStates">[docs]</a>
-<span class="k">class</span> <span class="nc">MethylationStates</span><span class="p">(</span><span class="n">Enum</span><span class="p">):</span>
+<span class="k">class</span> <span class="nc">MethylationStates</span><span class="p">(</span><span class="n">MethylEnum</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;Canonical biological methylation states used throughout the package.&quot;&quot;&quot;</span>
 
     <span class="n">LOW</span> <span class="o">=</span> <span class="mi">0</span>
     <span class="n">PMD</span> <span class="o">=</span> <span class="mi">1</span>
     <span class="n">INTERMEDIATE</span> <span class="o">=</span> <span class="mi">2</span>
     <span class="n">HIGH</span> <span class="o">=</span> <span class="mi">3</span>
-
-    <span class="k">def</span> <span class="fm">__str__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">name</span>
 
     <span class="k">def</span> <span class="fm">__lt__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">other</span><span class="p">):</span>
         <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">other</span><span class="p">,</span> <span class="n">MethylationStates</span><span class="p">):</span>
@@ -510,6 +634,20 @@
 <a class="viewcode-back" href="../../generated/methylseg.MethylationStates.html#methylseg.MethylationStates.convert_to_numeric">[docs]</a>
     <span class="nd">@staticmethod</span>
     <span class="k">def</span> <span class="nf">convert_to_numeric</span><span class="p">(</span><span class="n">arr</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Convert methylation-state labels into integer codes.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        arr</span>
+<span class="sd">            Array-like of ``MethylationStates`` values or already numeric state</span>
+<span class="sd">            labels.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        numpy.ndarray</span>
+<span class="sd">            Integer array suitable for model fitting, serialization, or plotting.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
         <span class="n">arr</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">arr</span><span class="p">)</span>
         <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">arr</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">Enum</span><span class="p">):</span>
             <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="n">a</span><span class="o">.</span><span class="n">value</span> <span class="k">for</span> <span class="n">a</span> <span class="ow">in</span> <span class="n">arr</span><span class="p">],</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">int</span><span class="p">)</span>

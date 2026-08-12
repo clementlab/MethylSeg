@@ -9,6 +9,12 @@
    .. automethod:: __init__
 
    
+   .. rubric:: Methods
+
+   .. autosummary::
+   
+      ~MethylStateAssignmentMethod.from_string
+   
    
 
    

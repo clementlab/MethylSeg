@@ -19,6 +19,7 @@ Requires-Dist: scikit-learn>=1.5
 Requires-Dist: seaborn>=0.13
 Requires-Dist: tqdm>=4.66
 Requires-Dist: umap-learn>=0.5
+Requires-Dist: gdown>=6.0
 Provides-Extra: docs
 Requires-Dist: ipykernel; extra == "docs"
 Requires-Dist: nbsphinx>=0.9.6; extra == "docs"
@@ -52,7 +53,7 @@ for local environment management.
 ```python
 from pathlib import Path
 
-from methylseg import MethylDataPrep, MethylSegPathway
+from methylseg import MethylDataPrep, MethylSegPathway, MethylationStates
 
 reference_dir = Path("data/reference_files")
 sample_name = "TCGA-BD-A3EP-01A"
@@ -70,7 +71,19 @@ regions = pathway.generate_regions(
     chrom="chr1",
     force_resegment=True,
 )
-clean_pmds = pathway.get_clean_regions(regions_df=regions)
+_, clean_dir = pathway.get_clean_regions(
+    regions_df=regions,
+    sample_id=sample_info.sample_id,
+    chrom="chr1",
+)
+
+fig = pathway.plot_labels(
+    sample_info=sample_info,
+    chrom="chr1",
+    overlay_state=MethylationStates.PMD,
+    use_cleaned_regions=True,
+    label_title="Cleaned PMD overlay",
+)
 ```
 
 ## Package Layout
@@ -93,7 +106,7 @@ clean_pmds = pathway.get_clean_regions(regions_df=regions)
 
 [ ] Think about what should be saved and what should be returned
 
-[ ] Remove legacy code that is not used anymore
+[ x ] Remove legacy code that is not used anymore
 split into multiple files to clean up codebase
 
 [ x ] Rename PMR to PMD throughout codebase for clarity and consistency with literature
@@ -104,3 +117,5 @@ clean up plotting functions to make them easier for public use
 [ ] Add a function that runs full pipeline from raw input to figures and saves the outputs including running the cleaning step
 
 [ ] Add a function to run on all chromosomes and generate all summary files like methyltool compatator
+
+[ ] Move plotting into a visualization module

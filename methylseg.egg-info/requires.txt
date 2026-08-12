@@ -13,6 +13,7 @@ scikit-learn>=1.5
 seaborn>=0.13
 tqdm>=4.66
 umap-learn>=0.5
+gdown>=6.0
 
 [docs]
 ipykernel

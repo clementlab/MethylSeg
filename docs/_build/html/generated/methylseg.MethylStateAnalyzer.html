@@ -63,32 +63,7 @@
 </li>
 <li class="toctree-l2"><a class="reference internal" href="../api.html#enums-and-labels">Enums and labels</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../api.html#hmm-backends">HMM backends</a></li>
-<li class="toctree-l2 current"><a class="reference internal" href="../api.html#utility-helpers">Utility helpers</a><ul class="current">
-<li class="toctree-l3"><a class="reference internal" href="methylseg.get_biological_state_colors.html">methylseg.get_biological_state_colors</a></li>
-<li class="toctree-l3"><a class="reference internal" href="methylseg.get_cluster_colors.html">methylseg.get_cluster_colors</a></li>
-<li class="toctree-l3"><a class="reference internal" href="methylseg.CTMethylSegHMM.html">methylseg.CTMethylSegHMM</a></li>
-<li class="toctree-l3"><a class="reference internal" href="methylseg.DAMethylSegHMM.html">methylseg.DAMethylSegHMM</a></li>
-<li class="toctree-l3"><a class="reference internal" href="methylseg.GaussianMethylSegHMM.html">methylseg.GaussianMethylSegHMM</a></li>
-<li class="toctree-l3"><a class="reference internal" href="methylseg.HMMObservationMode.html">methylseg.HMMObservationMode</a></li>
-<li class="toctree-l3"><a class="reference internal" href="methylseg.MethylDataPrep.html">methylseg.MethylDataPrep</a></li>
-<li class="toctree-l3"><a class="reference internal" href="methylseg.MethylSegConfig.html">methylseg.MethylSegConfig</a></li>
-<li class="toctree-l3"><a class="reference internal" href="methylseg.MethylSegHMM.html">methylseg.MethylSegHMM</a></li>
-<li class="toctree-l3"><a class="reference internal" href="methylseg.MethylSegPathway.html">methylseg.MethylSegPathway</a></li>
-<li class="toctree-l3"><a class="reference internal" href="methylseg.MethylSegmentor.html">methylseg.MethylSegmentor</a></li>
-<li class="toctree-l3 current"><a class="current reference internal" href="#">methylseg.MethylStateAnalyzer</a><ul>
-<li class="toctree-l4"><a class="reference internal" href="#methylseg.MethylStateAnalyzer"><code class="docutils literal notranslate"><span class="pre">MethylStateAnalyzer</span></code></a></li>
-</ul>
-</li>
-<li class="toctree-l3"><a class="reference internal" href="methylseg.MethylStateAssigner.html">methylseg.MethylStateAssigner</a></li>
-<li class="toctree-l3"><a class="reference internal" href="methylseg.MethylStateAssignmentMethod.html">methylseg.MethylStateAssignmentMethod</a></li>
-<li class="toctree-l3"><a class="reference internal" href="methylseg.MethylationStates.html">methylseg.MethylationStates</a></li>
-<li class="toctree-l3"><a class="reference internal" href="methylseg.MultinomialSegHMM.html">methylseg.MultinomialSegHMM</a></li>
-<li class="toctree-l3"><a class="reference internal" href="methylseg.SampleInfo.html">methylseg.SampleInfo</a></li>
-<li class="toctree-l3"><a class="reference internal" href="methylseg.StickyCategoricalMethylSegHMM.html">methylseg.StickyCategoricalMethylSegHMM</a></li>
-<li class="toctree-l3"><a class="reference internal" href="methylseg.get_biological_state_colors.html">methylseg.get_biological_state_colors</a></li>
-<li class="toctree-l3"><a class="reference internal" href="methylseg.get_cluster_colors.html">methylseg.get_cluster_colors</a></li>
-</ul>
-</li>
+<li class="toctree-l2"><a class="reference internal" href="../api.html#utility-helpers">Utility helpers</a></li>
 </ul>
 </li>
 <li class="toctree-l1"><a class="reference internal" href="../tutorials.html">Tutorial Notebook</a></li>
@@ -148,7 +123,7 @@
 <td><p></p></td>
 </tr>
 <tr class="row-even"><td><p><a class="reference internal" href="#methylseg.MethylStateAnalyzer.define_states_by_rules" title="methylseg.MethylStateAnalyzer.define_states_by_rules"><code class="xref py py-obj docutils literal notranslate"><span class="pre">define_states_by_rules</span></code></a>(sample_info[, chrom, ...])</p></td>
-<td><p></p></td>
+<td><p>Apply the current rule-based cutoff set to a sample or emission table.</p></td>
 </tr>
 <tr class="row-odd"><td><p><a class="reference internal" href="#methylseg.MethylStateAnalyzer.define_states_by_rules_param" title="methylseg.MethylStateAnalyzer.define_states_by_rules_param"><code class="xref py py-obj docutils literal notranslate"><span class="pre">define_states_by_rules_param</span></code></a>(meth_emissions, ...)</p></td>
 <td><p>Apply rule-based state labels with tunable per-window PMD cutoffs.</p></td>
@@ -163,18 +138,21 @@
 <td><p>Tune rule-based cutoffs with random search against KMeans labels.</p></td>
 </tr>
 <tr class="row-odd"><td><p><a class="reference internal" href="#methylseg.MethylStateAnalyzer.plot_feature_distributions_by_kmeans_state" title="methylseg.MethylStateAnalyzer.plot_feature_distributions_by_kmeans_state"><code class="xref py py-obj docutils literal notranslate"><span class="pre">plot_feature_distributions_by_kmeans_state</span></code></a>([...])</p></td>
-<td><p></p></td>
+<td><p>Plot per-feature histograms stratified by learned KMeans state.</p></td>
 </tr>
 <tr class="row-even"><td><p><a class="reference internal" href="#methylseg.MethylStateAnalyzer.plot_interactive_beta_by_label" title="methylseg.MethylStateAnalyzer.plot_interactive_beta_by_label"><code class="xref py py-obj docutils literal notranslate"><span class="pre">plot_interactive_beta_by_label</span></code></a>([label_type, ...])</p></td>
-<td><p>Interactive scatter: genomic position vs beta, colored by label.</p></td>
+<td><p>Backward-compatible wrapper for interactive analyzer-owned label plots.</p></td>
 </tr>
-<tr class="row-odd"><td><p><a class="reference internal" href="#methylseg.MethylStateAnalyzer.pretty_print_rules" title="methylseg.MethylStateAnalyzer.pretty_print_rules"><code class="xref py py-obj docutils literal notranslate"><span class="pre">pretty_print_rules</span></code></a>()</p></td>
+<tr class="row-odd"><td><p><a class="reference internal" href="#methylseg.MethylStateAnalyzer.plot_labels" title="methylseg.MethylStateAnalyzer.plot_labels"><code class="xref py py-obj docutils literal notranslate"><span class="pre">plot_labels</span></code></a>([sample_info, chrom, ...])</p></td>
+<td><p>Plot genomic-position vs beta for analyzer-owned labels.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#methylseg.MethylStateAnalyzer.pretty_print_rules" title="methylseg.MethylStateAnalyzer.pretty_print_rules"><code class="xref py py-obj docutils literal notranslate"><span class="pre">pretty_print_rules</span></code></a>()</p></td>
 <td><p>Print the active rule-based state definitions in a compact form.</p></td>
 </tr>
-<tr class="row-even"><td><p><a class="reference internal" href="#methylseg.MethylStateAnalyzer.set_state_cutoffs" title="methylseg.MethylStateAnalyzer.set_state_cutoffs"><code class="xref py py-obj docutils literal notranslate"><span class="pre">set_state_cutoffs</span></code></a>([beta_low_max, ...])</p></td>
+<tr class="row-odd"><td><p><a class="reference internal" href="#methylseg.MethylStateAnalyzer.set_state_cutoffs" title="methylseg.MethylStateAnalyzer.set_state_cutoffs"><code class="xref py py-obj docutils literal notranslate"><span class="pre">set_state_cutoffs</span></code></a>([beta_low_max, ...])</p></td>
 <td><p>Simple manual state cutoff setter with clean pythonic defaults.</p></td>
 </tr>
-<tr class="row-odd"><td><p><a class="reference internal" href="#methylseg.MethylStateAnalyzer.set_state_cutoffs_from_yaml" title="methylseg.MethylStateAnalyzer.set_state_cutoffs_from_yaml"><code class="xref py py-obj docutils literal notranslate"><span class="pre">set_state_cutoffs_from_yaml</span></code></a>(yaml_file)</p></td>
+<tr class="row-even"><td><p><a class="reference internal" href="#methylseg.MethylStateAnalyzer.set_state_cutoffs_from_yaml" title="methylseg.MethylStateAnalyzer.set_state_cutoffs_from_yaml"><code class="xref py py-obj docutils literal notranslate"><span class="pre">set_state_cutoffs_from_yaml</span></code></a>(yaml_file)</p></td>
 <td><p>Load rule cutoffs from a YAML file written by <code class="docutils literal notranslate"><span class="pre">MethylSegConfig</span></code>.</p></td>
 </tr>
 </tbody>
@@ -182,7 +160,14 @@
 <dl class="py method">
 <dt class="sig sig-object py" id="methylseg.MethylStateAnalyzer.plot_feature_distributions_by_kmeans_state">
 <span class="sig-name descname"><span class="pre">plot_feature_distributions_by_kmeans_state</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">show_plots</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/methylseg/methyl_state_analyzer.html#MethylStateAnalyzer.plot_feature_distributions_by_kmeans_state"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#methylseg.MethylStateAnalyzer.plot_feature_distributions_by_kmeans_state" title="Link to this definition"></a></dt>
-<dd></dd></dl>
+<dd><p>Plot per-feature histograms stratified by learned KMeans state.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>show_plots</strong> – If <code class="docutils literal notranslate"><span class="pre">True</span></code>, display each figure immediately. Otherwise, save plots
+to <code class="docutils literal notranslate"><span class="pre">out_dir</span></code> when configured.</p>
+</dd>
+</dl>
+</dd></dl>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="methylseg.MethylStateAnalyzer.define_states_by_rules_param">
@@ -252,15 +237,25 @@ defaults are created for each window label in <code class="docutils literal notr
 <dl class="py method">
 <dt class="sig sig-object py" id="methylseg.MethylStateAnalyzer.define_states_by_rules">
 <span class="sig-name descname"><span class="pre">define_states_by_rules</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">sample_info</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">chrom</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">sample_emissions</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/methylseg/methyl_state_analyzer.html#MethylStateAnalyzer.define_states_by_rules"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#methylseg.MethylStateAnalyzer.define_states_by_rules" title="Link to this definition"></a></dt>
-<dd><dl class="field-list simple">
+<dd><p>Apply the current rule-based cutoff set to a sample or emission table.</p>
+<dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
-<li><p><strong>sample_info</strong> (<a class="reference internal" href="methylseg.SampleInfo.html#methylseg.SampleInfo" title="methylseg.helper_classes.SampleInfo"><em>SampleInfo</em></a>)</p></li>
-<li><p><strong>sample_emissions</strong> (<em>DataFrame</em><em> | </em><em>None</em>)</p></li>
+<li><p><strong>sample_info</strong> (<a class="reference internal" href="methylseg.SampleInfo.html#methylseg.SampleInfo" title="methylseg.helper_classes.SampleInfo"><em>SampleInfo</em></a>) – Prepared methylation sample used when <code class="docutils literal notranslate"><span class="pre">sample_emissions</span></code> is not
+supplied.</p></li>
+<li><p><strong>chrom</strong> – Optional chromosome restriction passed through to emission
+preparation.</p></li>
+<li><p><strong>sample_emissions</strong> (<em>DataFrame</em><em> | </em><em>None</em>) – Precomputed emission table to label directly.</p></li>
 </ul>
 </dd>
-<dt class="field-even">Return type<span class="colon">:</span></dt>
-<dd class="field-even"><p><em>ndarray</em></p>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Rule-based <code class="docutils literal notranslate"><span class="pre">MethylationStates</span></code> assignments for each emission row.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>numpy.ndarray</p>
+</dd>
+<dt class="field-even">Raises<span class="colon">:</span></dt>
+<dd class="field-even"><p><strong>ValueError</strong> – If rule cutoffs have not been defined.</p>
 </dd>
 </dl>
 </dd></dl>
@@ -326,22 +321,57 @@ low_max = 0.246</p>
 <dl class="py method">
 <dt class="sig sig-object py" id="methylseg.MethylStateAnalyzer.plot_interactive_beta_by_label">
 <span class="sig-name descname"><span class="pre">plot_interactive_beta_by_label</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">label_type</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'kmeans'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">use_train_data</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">chrom</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">sample_info</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">sample_info_removed</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">x_col</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'CpG_beg'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">y_col</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'beta'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">label_title</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">show_plot</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">max_points</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">120000</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">color_pmd_only</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">color_regions_df</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/methylseg/methyl_state_analyzer.html#MethylStateAnalyzer.plot_interactive_beta_by_label"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#methylseg.MethylStateAnalyzer.plot_interactive_beta_by_label" title="Link to this definition"></a></dt>
-<dd><p>Interactive scatter: genomic position vs beta, colored by label.</p>
+<dd><p>Backward-compatible wrapper for interactive analyzer-owned label plots.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
-<li><p><strong>label_type</strong> (<em>str</em>)</p></li>
-<li><p><strong>use_train_data</strong> (<em>bool</em>)</p></li>
-<li><p><strong>chrom</strong> (<em>str</em><em> | </em><em>None</em>)</p></li>
+<li><p><strong>label_type</strong> (<em>str</em>) – Label source to visualize, typically <code class="docutils literal notranslate"><span class="pre">&quot;kmeans&quot;</span></code> or
+<code class="docutils literal notranslate"><span class="pre">&quot;rule_based&quot;</span></code>.</p></li>
+<li><p><strong>use_train_data</strong> (<em>bool</em>) – If <code class="docutils literal notranslate"><span class="pre">True</span></code>, plot cached training labels instead of a new sample.</p></li>
+<li><p><strong>chrom</strong> (<em>str</em><em> | </em><em>None</em>) – Optional chromosome restriction when plotting a new sample.</p></li>
+<li><p><strong>sample_info</strong> (<a class="reference internal" href="methylseg.SampleInfo.html#methylseg.SampleInfo" title="methylseg.helper_classes.SampleInfo"><em>SampleInfo</em></a><em> | </em><em>None</em>) – Sample to analyze when <code class="docutils literal notranslate"><span class="pre">use_train_data</span></code> is <code class="docutils literal notranslate"><span class="pre">False</span></code>.</p></li>
+<li><p><strong>sample_info_removed</strong> (<em>DataFrame</em><em> | </em><em>None</em>) – Optional table of filtered CpGs to overlay as removed points.</p></li>
+<li><p><strong>x_col</strong> (<em>str</em>) – Probe-level columns used for the scatter plot axes.</p></li>
+<li><p><strong>y_col</strong> (<em>str</em>) – Probe-level columns used for the scatter plot axes.</p></li>
+<li><p><strong>label_title</strong> (<em>str</em><em> | </em><em>None</em>) – Legend title override.</p></li>
+<li><p><strong>show_plot</strong> (<em>bool</em>) – If <code class="docutils literal notranslate"><span class="pre">True</span></code>, display the plot immediately.</p></li>
+<li><p><strong>max_points</strong> (<em>int</em>) – Maximum number of probe rows to render in the interactive scatter.</p></li>
+<li><p><strong>color_pmd_only</strong> (<em>bool</em>) – Legacy overlay controls translated into <code class="docutils literal notranslate"><span class="pre">overlay_regions_df</span></code>.</p></li>
+<li><p><strong>color_regions_df</strong> (<em>DataFrame</em><em> | </em><em>None</em>) – Legacy overlay controls translated into <code class="docutils literal notranslate"><span class="pre">overlay_regions_df</span></code>.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Interactive scatter plot returned by <code class="docutils literal notranslate"><span class="pre">plot_labels</span></code>.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>plotly.graph_objects.Figure</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="methylseg.MethylStateAnalyzer.plot_labels">
+<span class="sig-name descname"><span class="pre">plot_labels</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">sample_info</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">chrom</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">sample_info_removed</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">label_source</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'kmeans'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">overlay_regions_df</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">overlay_style</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'state'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">region_start</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">region_end</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">region_chrom</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">x_col</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'CpG_beg'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">y_col</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'beta'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">label_title</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">show_plot</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">max_points</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">120000</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/methylseg/methyl_state_analyzer.html#MethylStateAnalyzer.plot_labels"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#methylseg.MethylStateAnalyzer.plot_labels" title="Link to this definition"></a></dt>
+<dd><p>Plot genomic-position vs beta for analyzer-owned labels.</p>
+<p>Region args only zoom the x-axis viewport; they do not create a
+highlight overlay unless one is passed explicitly.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
 <li><p><strong>sample_info</strong> (<a class="reference internal" href="methylseg.SampleInfo.html#methylseg.SampleInfo" title="methylseg.helper_classes.SampleInfo"><em>SampleInfo</em></a><em> | </em><em>None</em>)</p></li>
+<li><p><strong>chrom</strong> (<em>str</em><em> | </em><em>None</em>)</p></li>
 <li><p><strong>sample_info_removed</strong> (<em>DataFrame</em><em> | </em><em>None</em>)</p></li>
+<li><p><strong>label_source</strong> (<em>str</em>)</p></li>
+<li><p><strong>overlay_regions_df</strong> (<em>DataFrame</em><em> | </em><em>None</em>)</p></li>
+<li><p><strong>overlay_style</strong> (<em>str</em>)</p></li>
+<li><p><strong>region_start</strong> (<em>int</em><em> | </em><em>None</em>)</p></li>
+<li><p><strong>region_end</strong> (<em>int</em><em> | </em><em>None</em>)</p></li>
+<li><p><strong>region_chrom</strong> (<em>str</em><em> | </em><em>None</em>)</p></li>
 <li><p><strong>x_col</strong> (<em>str</em>)</p></li>
 <li><p><strong>y_col</strong> (<em>str</em>)</p></li>
 <li><p><strong>label_title</strong> (<em>str</em><em> | </em><em>None</em>)</p></li>
 <li><p><strong>show_plot</strong> (<em>bool</em>)</p></li>
 <li><p><strong>max_points</strong> (<em>int</em>)</p></li>
-<li><p><strong>color_pmd_only</strong> (<em>bool</em>)</p></li>
-<li><p><strong>color_regions_df</strong> (<em>DataFrame</em><em> | </em><em>None</em>)</p></li>
 </ul>
 </dd>
 </dl>

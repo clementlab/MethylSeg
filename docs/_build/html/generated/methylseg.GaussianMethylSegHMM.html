@@ -52,7 +52,6 @@
 <li class="toctree-l2"><a class="reference internal" href="../api.html#enums-and-labels">Enums and labels</a></li>
 <li class="toctree-l2 current"><a class="reference internal" href="../api.html#hmm-backends">HMM backends</a><ul class="current">
 <li class="toctree-l3"><a class="reference internal" href="methylseg.MethylSegHMM.html">methylseg.MethylSegHMM</a></li>
-<li class="toctree-l3"><a class="reference internal" href="methylseg.DAMethylSegHMM.html">methylseg.DAMethylSegHMM</a></li>
 <li class="toctree-l3"><a class="reference internal" href="methylseg.MultinomialSegHMM.html">methylseg.MultinomialSegHMM</a></li>
 <li class="toctree-l3"><a class="reference internal" href="methylseg.StickyCategoricalMethylSegHMM.html">methylseg.StickyCategoricalMethylSegHMM</a></li>
 <li class="toctree-l3 current"><a class="current reference internal" href="#">methylseg.GaussianMethylSegHMM</a><ul>
@@ -62,32 +61,7 @@
 <li class="toctree-l3"><a class="reference internal" href="methylseg.CTMethylSegHMM.html">methylseg.CTMethylSegHMM</a></li>
 </ul>
 </li>
-<li class="toctree-l2 current"><a class="reference internal" href="../api.html#utility-helpers">Utility helpers</a><ul class="current">
-<li class="toctree-l3"><a class="reference internal" href="methylseg.get_biological_state_colors.html">methylseg.get_biological_state_colors</a></li>
-<li class="toctree-l3"><a class="reference internal" href="methylseg.get_cluster_colors.html">methylseg.get_cluster_colors</a></li>
-<li class="toctree-l3"><a class="reference internal" href="methylseg.CTMethylSegHMM.html">methylseg.CTMethylSegHMM</a></li>
-<li class="toctree-l3"><a class="reference internal" href="methylseg.DAMethylSegHMM.html">methylseg.DAMethylSegHMM</a></li>
-<li class="toctree-l3 current"><a class="current reference internal" href="#">methylseg.GaussianMethylSegHMM</a><ul>
-<li class="toctree-l4"><a class="reference internal" href="#methylseg.GaussianMethylSegHMM"><code class="docutils literal notranslate"><span class="pre">GaussianMethylSegHMM</span></code></a></li>
-</ul>
-</li>
-<li class="toctree-l3"><a class="reference internal" href="methylseg.HMMObservationMode.html">methylseg.HMMObservationMode</a></li>
-<li class="toctree-l3"><a class="reference internal" href="methylseg.MethylDataPrep.html">methylseg.MethylDataPrep</a></li>
-<li class="toctree-l3"><a class="reference internal" href="methylseg.MethylSegConfig.html">methylseg.MethylSegConfig</a></li>
-<li class="toctree-l3"><a class="reference internal" href="methylseg.MethylSegHMM.html">methylseg.MethylSegHMM</a></li>
-<li class="toctree-l3"><a class="reference internal" href="methylseg.MethylSegPathway.html">methylseg.MethylSegPathway</a></li>
-<li class="toctree-l3"><a class="reference internal" href="methylseg.MethylSegmentor.html">methylseg.MethylSegmentor</a></li>
-<li class="toctree-l3"><a class="reference internal" href="methylseg.MethylStateAnalyzer.html">methylseg.MethylStateAnalyzer</a></li>
-<li class="toctree-l3"><a class="reference internal" href="methylseg.MethylStateAssigner.html">methylseg.MethylStateAssigner</a></li>
-<li class="toctree-l3"><a class="reference internal" href="methylseg.MethylStateAssignmentMethod.html">methylseg.MethylStateAssignmentMethod</a></li>
-<li class="toctree-l3"><a class="reference internal" href="methylseg.MethylationStates.html">methylseg.MethylationStates</a></li>
-<li class="toctree-l3"><a class="reference internal" href="methylseg.MultinomialSegHMM.html">methylseg.MultinomialSegHMM</a></li>
-<li class="toctree-l3"><a class="reference internal" href="methylseg.SampleInfo.html">methylseg.SampleInfo</a></li>
-<li class="toctree-l3"><a class="reference internal" href="methylseg.StickyCategoricalMethylSegHMM.html">methylseg.StickyCategoricalMethylSegHMM</a></li>
-<li class="toctree-l3"><a class="reference internal" href="methylseg.get_biological_state_colors.html">methylseg.get_biological_state_colors</a></li>
-<li class="toctree-l3"><a class="reference internal" href="methylseg.get_cluster_colors.html">methylseg.get_cluster_colors</a></li>
-</ul>
-</li>
+<li class="toctree-l2"><a class="reference internal" href="../api.html#utility-helpers">Utility helpers</a></li>
 </ul>
 </li>
 <li class="toctree-l1"><a class="reference internal" href="../tutorials.html">Tutorial Notebook</a></li>
@@ -163,22 +137,22 @@
 <td><p></p></td>
 </tr>
 <tr class="row-even"><td><p><a class="reference internal" href="#methylseg.GaussianMethylSegHMM.create_model" title="methylseg.GaussianMethylSegHMM.create_model"><code class="xref py py-obj docutils literal notranslate"><span class="pre">create_model</span></code></a>()</p></td>
-<td><p></p></td>
+<td><p>Create the underlying <code class="docutils literal notranslate"><span class="pre">hmmlearn.GaussianHMM</span></code> instance.</p></td>
 </tr>
 <tr class="row-odd"><td><p><a class="reference internal" href="#methylseg.GaussianMethylSegHMM.fit" title="methylseg.GaussianMethylSegHMM.fit"><code class="xref py py-obj docutils literal notranslate"><span class="pre">fit</span></code></a>(emissions[, sample_info, chrom])</p></td>
-<td><p></p></td>
+<td><p>Fit the Gaussian HMM on continuous emission features.</p></td>
 </tr>
 <tr class="row-even"><td><p><a class="reference internal" href="#methylseg.GaussianMethylSegHMM.format_fit" title="methylseg.GaussianMethylSegHMM.format_fit"><code class="xref py py-obj docutils literal notranslate"><span class="pre">format_fit</span></code></a>(emissions)</p></td>
-<td><p></p></td>
+<td><p>Validate and coerce continuous emissions into a 2-D float matrix.</p></td>
 </tr>
 <tr class="row-odd"><td><p><a class="reference internal" href="#methylseg.GaussianMethylSegHMM.format_predict" title="methylseg.GaussianMethylSegHMM.format_predict"><code class="xref py py-obj docutils literal notranslate"><span class="pre">format_predict</span></code></a>(emissions)</p></td>
-<td><p></p></td>
+<td><p>Format continuous emission features for prediction.</p></td>
 </tr>
 <tr class="row-even"><td><p><a class="reference internal" href="#methylseg.GaussianMethylSegHMM.initialize_from_kmeans" title="methylseg.GaussianMethylSegHMM.initialize_from_kmeans"><code class="xref py py-obj docutils literal notranslate"><span class="pre">initialize_from_kmeans</span></code></a>(X_scaled, km_labels)</p></td>
-<td><p></p></td>
+<td><p>Seed Gaussian HMM parameters from clustered feature vectors.</p></td>
 </tr>
 <tr class="row-odd"><td><p><a class="reference internal" href="#methylseg.GaussianMethylSegHMM.predict" title="methylseg.GaussianMethylSegHMM.predict"><code class="xref py py-obj docutils literal notranslate"><span class="pre">predict</span></code></a>(emissions)</p></td>
-<td><p></p></td>
+<td><p>Predict hidden states from continuous emission features.</p></td>
 </tr>
 </tbody>
 </table>
@@ -206,27 +180,44 @@
 <dl class="py method">
 <dt class="sig sig-object py" id="methylseg.GaussianMethylSegHMM.create_model">
 <span class="sig-name descname"><span class="pre">create_model</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/methylseg/methylseg_hmm.html#GaussianMethylSegHMM.create_model"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#methylseg.GaussianMethylSegHMM.create_model" title="Link to this definition"></a></dt>
-<dd></dd></dl>
+<dd><p>Create the underlying <code class="docutils literal notranslate"><span class="pre">hmmlearn.GaussianHMM</span></code> instance.</p>
+</dd></dl>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="methylseg.GaussianMethylSegHMM.format_fit">
 <span class="sig-name descname"><span class="pre">format_fit</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">emissions</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/methylseg/methylseg_hmm.html#GaussianMethylSegHMM.format_fit"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#methylseg.GaussianMethylSegHMM.format_fit" title="Link to this definition"></a></dt>
-<dd></dd></dl>
+<dd><p>Validate and coerce continuous emissions into a 2-D float matrix.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>emissions</strong> – Continuous emission features with shape
+<code class="docutils literal notranslate"><span class="pre">(n_observations,</span> <span class="pre">n_features)</span></code>.</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Float64 feature matrix ready for Gaussian HMM fitting.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>numpy.ndarray</p>
+</dd>
+</dl>
+</dd></dl>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="methylseg.GaussianMethylSegHMM.format_predict">
 <span class="sig-name descname"><span class="pre">format_predict</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">emissions</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/methylseg/methylseg_hmm.html#GaussianMethylSegHMM.format_predict"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#methylseg.GaussianMethylSegHMM.format_predict" title="Link to this definition"></a></dt>
-<dd></dd></dl>
+<dd><p>Format continuous emission features for prediction.</p>
+</dd></dl>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="methylseg.GaussianMethylSegHMM.initialize_from_kmeans">
 <span class="sig-name descname"><span class="pre">initialize_from_kmeans</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">X_scaled</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">km_labels</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">lengths</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/methylseg/methylseg_hmm.html#GaussianMethylSegHMM.initialize_from_kmeans"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#methylseg.GaussianMethylSegHMM.initialize_from_kmeans" title="Link to this definition"></a></dt>
-<dd><dl class="field-list simple">
+<dd><p>Seed Gaussian HMM parameters from clustered feature vectors.</p>
+<dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
-<li><p><strong>X_scaled</strong> (<em>ndarray</em>)</p></li>
-<li><p><strong>km_labels</strong> (<em>ndarray</em>)</p></li>
-<li><p><strong>lengths</strong> (<em>List</em><em>[</em><em>int</em><em>] </em><em>| </em><em>None</em>)</p></li>
+<li><p><strong>X_scaled</strong> (<em>ndarray</em>) – Scaled continuous emission matrix.</p></li>
+<li><p><strong>km_labels</strong> (<em>ndarray</em>) – Integer cluster assignments used to initialize means, variances, and
+transition structure.</p></li>
+<li><p><strong>lengths</strong> (<em>List</em><em>[</em><em>int</em><em>] </em><em>| </em><em>None</em>) – Optional per-sequence lengths for multi-chromosome fitting.</p></li>
 </ul>
 </dd>
 </dl>
@@ -235,12 +226,34 @@
 <dl class="py method">
 <dt class="sig sig-object py" id="methylseg.GaussianMethylSegHMM.fit">
 <span class="sig-name descname"><span class="pre">fit</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">emissions</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">sample_info</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">chrom</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/methylseg/methylseg_hmm.html#GaussianMethylSegHMM.fit"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#methylseg.GaussianMethylSegHMM.fit" title="Link to this definition"></a></dt>
-<dd></dd></dl>
+<dd><p>Fit the Gaussian HMM on continuous emission features.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>emissions</strong> – Continuous emission matrix.</p></li>
+<li><p><strong>sample_info</strong> – Unused placeholder for API compatibility.</p></li>
+<li><p><strong>chrom</strong> – Unused placeholder for API compatibility.</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="methylseg.GaussianMethylSegHMM.predict">
 <span class="sig-name descname"><span class="pre">predict</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">emissions</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/methylseg/methylseg_hmm.html#GaussianMethylSegHMM.predict"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#methylseg.GaussianMethylSegHMM.predict" title="Link to this definition"></a></dt>
-<dd></dd></dl>
+<dd><p>Predict hidden states from continuous emission features.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>emissions</strong> – Continuous emission matrix.</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Predicted HMM state sequence.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>numpy.ndarray</p>
+</dd>
+</dl>
+</dd></dl>
 
 </dd></dl>
 

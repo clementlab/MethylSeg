@@ -75,13 +75,26 @@
   <h1>Source code for methylseg.methylseg_config</h1><div class="highlight"><pre>
 <span></span><span class="sd">&quot;&quot;&quot;Serialization helpers for saving and restoring methylseg workflow settings.&quot;&quot;&quot;</span>
 
+<span class="kn">from</span> <span class="nn">__future__</span> <span class="kn">import</span> <span class="n">annotations</span>
+
+<span class="kn">from</span> <span class="nn">enum</span> <span class="kn">import</span> <span class="n">Enum</span>
 <span class="kn">from</span> <span class="nn">pathlib</span> <span class="kn">import</span> <span class="n">Path</span>
+<span class="kn">from</span> <span class="nn">typing</span> <span class="kn">import</span> <span class="n">TYPE_CHECKING</span>
 
 <span class="kn">import</span> <span class="nn">joblib</span>
 <span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+<span class="kn">import</span> <span class="nn">pandas</span> <span class="k">as</span> <span class="nn">pd</span>
 <span class="kn">import</span> <span class="nn">yaml</span>
 
-<span class="kn">from</span> <span class="nn">.helper_classes</span> <span class="kn">import</span> <span class="n">HMMObservationMode</span><span class="p">,</span> <span class="n">MethylStateAssignmentMethod</span>
+<span class="kn">from</span> <span class="nn">.helper_classes</span> <span class="kn">import</span> <span class="p">(</span>
+    <span class="n">HMMObservationMode</span><span class="p">,</span>
+    <span class="n">MethylStateAssignmentMethod</span><span class="p">,</span>
+    <span class="n">MethylationStates</span><span class="p">,</span>
+    <span class="n">SampleInfo</span><span class="p">,</span>
+<span class="p">)</span>
+
+<span class="k">if</span> <span class="n">TYPE_CHECKING</span><span class="p">:</span>
+    <span class="kn">from</span> <span class="nn">.methylseg_pathway</span> <span class="kn">import</span> <span class="n">MethylSegPathway</span>
 
 
 <div class="viewcode-block" id="MethylSegConfig">
@@ -95,39 +108,250 @@
 <div class="viewcode-block" id="MethylSegConfig.__init__">
 <a class="viewcode-back" href="../../generated/methylseg.MethylSegConfig.html#methylseg.MethylSegConfig.__init__">[docs]</a>
     <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">config_dict</span><span class="p">:</span> <span class="nb">dict</span><span class="p">):</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">config</span> <span class="o">=</span> <span class="n">config_dict</span></div>
+        <span class="bp">self</span><span class="o">.</span><span class="n">config</span> <span class="o">=</span> <span class="n">config_dict</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">source_path</span><span class="p">:</span> <span class="n">Path</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span></div>
 
+
+    <span class="nd">@staticmethod</span>
+    <span class="k">def</span> <span class="nf">_resolve_artifact_path</span><span class="p">(</span>
+        <span class="n">yaml_dir</span><span class="p">:</span> <span class="n">Path</span><span class="p">,</span>
+        <span class="n">raw_path</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="n">Path</span><span class="p">,</span>
+        <span class="n">field_name</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Path</span><span class="p">:</span>
+        <span class="n">path</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">raw_path</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">path</span><span class="o">.</span><span class="n">is_absolute</span><span class="p">():</span>
+            <span class="n">path</span> <span class="o">=</span> <span class="p">(</span><span class="n">yaml_dir</span> <span class="o">/</span> <span class="n">path</span><span class="p">)</span><span class="o">.</span><span class="n">resolve</span><span class="p">()</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">path</span> <span class="o">=</span> <span class="n">path</span><span class="o">.</span><span class="n">resolve</span><span class="p">()</span>
+
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">path</span><span class="o">.</span><span class="n">exists</span><span class="p">():</span>
+            <span class="k">raise</span> <span class="ne">FileNotFoundError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Missing artifact for </span><span class="si">{</span><span class="n">field_name</span><span class="si">}</span><span class="s2">: </span><span class="si">{</span><span class="n">path</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">path</span>
+
+    <span class="nd">@staticmethod</span>
+    <span class="k">def</span> <span class="nf">_relativize_artifact_path</span><span class="p">(</span><span class="n">base_dir</span><span class="p">:</span> <span class="n">Path</span><span class="p">,</span> <span class="n">path</span><span class="p">:</span> <span class="n">Path</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="k">return</span> <span class="nb">str</span><span class="p">(</span><span class="n">path</span><span class="o">.</span><span class="n">resolve</span><span class="p">()</span><span class="o">.</span><span class="n">relative_to</span><span class="p">(</span><span class="n">base_dir</span><span class="o">.</span><span class="n">resolve</span><span class="p">()))</span>
+        <span class="k">except</span> <span class="ne">ValueError</span><span class="p">:</span>
+            <span class="k">return</span> <span class="nb">str</span><span class="p">(</span><span class="n">path</span><span class="o">.</span><span class="n">resolve</span><span class="p">())</span>
+
+    <span class="nd">@staticmethod</span>
+    <span class="k">def</span> <span class="nf">_normalize_train_chroms</span><span class="p">(</span><span class="n">train_chroms</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">train_chroms</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">return</span> <span class="kc">None</span>
+
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">train_chroms</span><span class="p">,</span> <span class="nb">str</span><span class="p">):</span>
+            <span class="k">return</span> <span class="p">[</span><span class="n">train_chroms</span><span class="p">]</span>
+
+        <span class="k">return</span> <span class="p">[</span><span class="nb">str</span><span class="p">(</span><span class="n">chrom</span><span class="p">)</span> <span class="k">for</span> <span class="n">chrom</span> <span class="ow">in</span> <span class="n">train_chroms</span><span class="p">]</span>
+
+    <span class="nd">@staticmethod</span>
+    <span class="k">def</span> <span class="nf">_normalize_window_specs</span><span class="p">(</span><span class="n">window_specs</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="nb">tuple</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="nb">str</span><span class="p">]]:</span>
+        <span class="n">normalized_specs</span> <span class="o">=</span> <span class="p">[]</span>
+
+        <span class="k">for</span> <span class="n">spec</span> <span class="ow">in</span> <span class="n">window_specs</span><span class="p">:</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">spec</span><span class="p">,</span> <span class="p">(</span><span class="nb">list</span><span class="p">,</span> <span class="nb">tuple</span><span class="p">))</span> <span class="ow">or</span> <span class="nb">len</span><span class="p">(</span><span class="n">spec</span><span class="p">)</span> <span class="o">!=</span> <span class="mi">2</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                    <span class="s2">&quot;window_specs entries must be length-2 sequences of (size, label).&quot;</span>
+                <span class="p">)</span>
+
+            <span class="n">size</span><span class="p">,</span> <span class="n">label</span> <span class="o">=</span> <span class="n">spec</span>
+            <span class="n">normalized_specs</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="nb">int</span><span class="p">(</span><span class="n">size</span><span class="p">),</span> <span class="nb">str</span><span class="p">(</span><span class="n">label</span><span class="p">)))</span>
+
+        <span class="k">return</span> <span class="n">normalized_specs</span>
+
+    <span class="nd">@staticmethod</span>
+    <span class="k">def</span> <span class="nf">_validate_state_cutoffs</span><span class="p">(</span><span class="n">state_cutoffs</span><span class="p">:</span> <span class="nb">dict</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">:</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">state_cutoffs</span><span class="p">,</span> <span class="nb">dict</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;state_cutoffs must be a dictionary.&quot;</span><span class="p">)</span>
+
+        <span class="n">required_top_level</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&quot;beta_low_max&quot;</span><span class="p">,</span> <span class="s2">&quot;beta_high_min&quot;</span><span class="p">,</span> <span class="s2">&quot;pmd_cutoffs&quot;</span><span class="p">}</span>
+
+        <span class="n">missing_top_level</span> <span class="o">=</span> <span class="n">required_top_level</span><span class="o">.</span><span class="n">difference</span><span class="p">(</span><span class="n">state_cutoffs</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">missing_top_level</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                <span class="sa">f</span><span class="s2">&quot;state_cutoffs is missing required keys: &quot;</span>
+                <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="nb">sorted</span><span class="p">(</span><span class="n">missing_top_level</span><span class="p">)</span><span class="si">}</span><span class="s2">&quot;</span>
+            <span class="p">)</span>
+
+        <span class="n">pmd_cutoffs</span> <span class="o">=</span> <span class="n">state_cutoffs</span><span class="p">[</span><span class="s2">&quot;pmd_cutoffs&quot;</span><span class="p">]</span>
+
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">pmd_cutoffs</span><span class="p">,</span> <span class="nb">dict</span><span class="p">)</span> <span class="ow">or</span> <span class="ow">not</span> <span class="n">pmd_cutoffs</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;state_cutoffs[&#39;pmd_cutoffs&#39;] must be a non-empty dict.&quot;</span><span class="p">)</span>
+
+        <span class="n">normalized_cutoffs</span> <span class="o">=</span> <span class="p">{</span>
+            <span class="s2">&quot;beta_low_max&quot;</span><span class="p">:</span> <span class="nb">float</span><span class="p">(</span><span class="n">state_cutoffs</span><span class="p">[</span><span class="s2">&quot;beta_low_max&quot;</span><span class="p">]),</span>
+            <span class="s2">&quot;beta_high_min&quot;</span><span class="p">:</span> <span class="nb">float</span><span class="p">(</span><span class="n">state_cutoffs</span><span class="p">[</span><span class="s2">&quot;beta_high_min&quot;</span><span class="p">]),</span>
+            <span class="s2">&quot;pmd_cutoffs&quot;</span><span class="p">:</span> <span class="p">{},</span>
+        <span class="p">}</span>
+
+        <span class="k">for</span> <span class="n">label</span><span class="p">,</span> <span class="n">cutoff_cfg</span> <span class="ow">in</span> <span class="n">pmd_cutoffs</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+
+            <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">cutoff_cfg</span><span class="p">,</span> <span class="nb">dict</span><span class="p">):</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;pmd_cutoffs[&#39;</span><span class="si">{</span><span class="n">label</span><span class="si">}</span><span class="s2">&#39;] must be a dict.&quot;</span><span class="p">)</span>
+
+            <span class="n">missing_keys</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&quot;int_min&quot;</span><span class="p">,</span> <span class="s2">&quot;std_max&quot;</span><span class="p">,</span> <span class="s2">&quot;high_max&quot;</span><span class="p">}</span><span class="o">.</span><span class="n">difference</span><span class="p">(</span><span class="n">cutoff_cfg</span><span class="p">)</span>
+
+            <span class="k">if</span> <span class="n">missing_keys</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                    <span class="sa">f</span><span class="s2">&quot;pmd_cutoffs[&#39;</span><span class="si">{</span><span class="n">label</span><span class="si">}</span><span class="s2">&#39;] is missing keys: &quot;</span>
+                    <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="nb">sorted</span><span class="p">(</span><span class="n">missing_keys</span><span class="p">)</span><span class="si">}</span><span class="s2">&quot;</span>
+                <span class="p">)</span>
+
+            <span class="n">normalized_cutoffs</span><span class="p">[</span><span class="s2">&quot;pmd_cutoffs&quot;</span><span class="p">][</span><span class="n">label</span><span class="p">]</span> <span class="o">=</span> <span class="p">{</span>
+                <span class="s2">&quot;int_min&quot;</span><span class="p">:</span> <span class="nb">float</span><span class="p">(</span><span class="n">cutoff_cfg</span><span class="p">[</span><span class="s2">&quot;int_min&quot;</span><span class="p">]),</span>
+                <span class="s2">&quot;std_max&quot;</span><span class="p">:</span> <span class="nb">float</span><span class="p">(</span><span class="n">cutoff_cfg</span><span class="p">[</span><span class="s2">&quot;std_max&quot;</span><span class="p">]),</span>
+                <span class="s2">&quot;high_max&quot;</span><span class="p">:</span> <span class="nb">float</span><span class="p">(</span><span class="n">cutoff_cfg</span><span class="p">[</span><span class="s2">&quot;high_max&quot;</span><span class="p">]),</span>
+                <span class="s2">&quot;low_max&quot;</span><span class="p">:</span> <span class="nb">float</span><span class="p">(</span><span class="n">cutoff_cfg</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;low_max&quot;</span><span class="p">,</span> <span class="n">cutoff_cfg</span><span class="p">[</span><span class="s2">&quot;high_max&quot;</span><span class="p">])),</span>
+            <span class="p">}</span>
+
+        <span class="k">return</span> <span class="n">normalized_cutoffs</span>
+
+    <span class="nd">@staticmethod</span>
+    <span class="k">def</span> <span class="nf">_normalize_table_for_feather</span><span class="p">(</span><span class="n">table</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">:</span>
+        <span class="n">normalized_table</span> <span class="o">=</span> <span class="n">table</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+
+        <span class="k">for</span> <span class="n">column_name</span> <span class="ow">in</span> <span class="n">normalized_table</span><span class="o">.</span><span class="n">columns</span><span class="p">:</span>
+
+            <span class="n">column</span> <span class="o">=</span> <span class="n">normalized_table</span><span class="p">[</span><span class="n">column_name</span><span class="p">]</span>
+
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">pd</span><span class="o">.</span><span class="n">api</span><span class="o">.</span><span class="n">types</span><span class="o">.</span><span class="n">is_object_dtype</span><span class="p">(</span><span class="n">column</span><span class="o">.</span><span class="n">dtype</span><span class="p">):</span>
+                <span class="k">continue</span>
+
+            <span class="n">non_null_values</span> <span class="o">=</span> <span class="n">column</span><span class="o">.</span><span class="n">dropna</span><span class="p">()</span>
+
+            <span class="k">if</span> <span class="n">non_null_values</span><span class="o">.</span><span class="n">empty</span><span class="p">:</span>
+                <span class="k">continue</span>
+
+            <span class="k">if</span> <span class="nb">all</span><span class="p">(</span><span class="nb">isinstance</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="n">Enum</span><span class="p">)</span> <span class="k">for</span> <span class="n">value</span> <span class="ow">in</span> <span class="n">non_null_values</span><span class="p">):</span>
+                <span class="n">normalized_table</span><span class="p">[</span><span class="n">column_name</span><span class="p">]</span> <span class="o">=</span> <span class="n">column</span><span class="o">.</span><span class="n">map</span><span class="p">(</span>
+                    <span class="k">lambda</span> <span class="n">value</span><span class="p">:</span> <span class="n">value</span><span class="o">.</span><span class="n">value</span> <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="n">Enum</span><span class="p">)</span> <span class="k">else</span> <span class="n">value</span>
+                <span class="p">)</span>
+                <span class="k">continue</span>
+
+            <span class="k">if</span> <span class="nb">all</span><span class="p">(</span><span class="nb">isinstance</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="p">(</span><span class="nb">str</span><span class="p">,</span> <span class="nb">bytes</span><span class="p">))</span> <span class="k">for</span> <span class="n">value</span> <span class="ow">in</span> <span class="n">non_null_values</span><span class="p">):</span>
+                <span class="n">normalized_table</span><span class="p">[</span><span class="n">column_name</span><span class="p">]</span> <span class="o">=</span> <span class="n">column</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="s2">&quot;string&quot;</span><span class="p">)</span>
+                <span class="k">continue</span>
+
+            <span class="n">normalized_table</span><span class="p">[</span><span class="n">column_name</span><span class="p">]</span> <span class="o">=</span> <span class="n">column</span><span class="o">.</span><span class="n">map</span><span class="p">(</span>
+                <span class="k">lambda</span> <span class="n">value</span><span class="p">:</span> <span class="p">(</span>
+                    <span class="nb">str</span><span class="p">(</span><span class="n">value</span><span class="p">)</span> <span class="k">if</span> <span class="n">value</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">pd</span><span class="o">.</span><span class="n">isna</span><span class="p">(</span><span class="n">value</span><span class="p">)</span> <span class="k">else</span> <span class="n">value</span>
+                <span class="p">)</span>
+            <span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">normalized_table</span>
+
+    <span class="nd">@staticmethod</span>
+    <span class="k">def</span> <span class="nf">_coerce_state_value</span><span class="p">(</span><span class="n">value</span><span class="p">):</span>
+        <span class="k">if</span> <span class="n">value</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">or</span> <span class="n">pd</span><span class="o">.</span><span class="n">isna</span><span class="p">(</span><span class="n">value</span><span class="p">):</span>
+            <span class="k">return</span> <span class="n">value</span>
+
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="n">MethylationStates</span><span class="p">):</span>
+            <span class="k">return</span> <span class="n">value</span>
+
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="nb">str</span><span class="p">):</span>
+            <span class="k">try</span><span class="p">:</span>
+                <span class="k">return</span> <span class="n">MethylationStates</span><span class="o">.</span><span class="n">from_string</span><span class="p">(</span><span class="n">value</span><span class="p">)</span>
+            <span class="k">except</span> <span class="ne">ValueError</span><span class="p">:</span>
+                <span class="k">try</span><span class="p">:</span>
+                    <span class="k">return</span> <span class="n">MethylationStates</span><span class="p">(</span><span class="nb">int</span><span class="p">(</span><span class="n">value</span><span class="p">))</span>
+                <span class="k">except</span> <span class="p">(</span><span class="ne">TypeError</span><span class="p">,</span> <span class="ne">ValueError</span><span class="p">):</span>
+                    <span class="k">return</span> <span class="n">value</span>
+
+        <span class="k">try</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">MethylationStates</span><span class="p">(</span><span class="nb">int</span><span class="p">(</span><span class="n">value</span><span class="p">))</span>
+        <span class="k">except</span> <span class="p">(</span><span class="ne">TypeError</span><span class="p">,</span> <span class="ne">ValueError</span><span class="p">):</span>
+            <span class="k">return</span> <span class="n">value</span>
+
+    <span class="nd">@classmethod</span>
+    <span class="k">def</span> <span class="nf">_restore_table_after_feather</span><span class="p">(</span>
+        <span class="bp">cls</span><span class="p">,</span>
+        <span class="n">table_name</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+        <span class="n">table</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">,</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">:</span>
+
+        <span class="n">restored_table</span> <span class="o">=</span> <span class="n">table</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+
+        <span class="k">if</span> <span class="s2">&quot;kmeans_label&quot;</span> <span class="ow">in</span> <span class="n">restored_table</span><span class="o">.</span><span class="n">columns</span><span class="p">:</span>
+            <span class="n">restored_table</span><span class="p">[</span><span class="s2">&quot;kmeans_label&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span>
+                <span class="n">restored_table</span><span class="p">[</span><span class="s2">&quot;kmeans_label&quot;</span><span class="p">]</span>
+                <span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="nb">str</span><span class="p">)</span>
+            <span class="p">)</span>
+
+        <span class="k">if</span> <span class="s2">&quot;rule_based_label&quot;</span> <span class="ow">in</span> <span class="n">restored_table</span><span class="o">.</span><span class="n">columns</span><span class="p">:</span>
+            <span class="n">restored_table</span><span class="p">[</span><span class="s2">&quot;rule_based_label&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span>
+                <span class="n">restored_table</span><span class="p">[</span><span class="s2">&quot;rule_based_label&quot;</span><span class="p">]</span>
+                <span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="nb">str</span><span class="p">)</span>
+            <span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">table_name</span> <span class="o">==</span> <span class="s2">&quot;train_labels&quot;</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">restored_table</span><span class="o">.</span><span class="n">empty</span><span class="p">:</span>
+            <span class="n">restored_table</span><span class="o">.</span><span class="n">iloc</span><span class="p">[:,</span> <span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="n">restored_table</span><span class="o">.</span><span class="n">iloc</span><span class="p">[:,</span> <span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">map</span><span class="p">(</span>
+                <span class="bp">cls</span><span class="o">.</span><span class="n">_coerce_state_value</span>
+            <span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">restored_table</span>
+
+    <span class="nd">@staticmethod</span>
+    <span class="k">def</span> <span class="nf">_write_feather_table</span><span class="p">(</span><span class="n">table</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">,</span> <span class="n">table_path</span><span class="p">:</span> <span class="n">Path</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">normalized_table</span> <span class="o">=</span> <span class="n">MethylSegConfig</span><span class="o">.</span><span class="n">_normalize_table_for_feather</span><span class="p">(</span><span class="n">table</span><span class="p">)</span>
+
+        <span class="n">normalized_table</span><span class="o">.</span><span class="n">reset_index</span><span class="p">(</span><span class="n">drop</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span><span class="o">.</span><span class="n">to_feather</span><span class="p">(</span><span class="n">table_path</span><span class="p">)</span>
 
 <div class="viewcode-block" id="MethylSegConfig.from_instance">
 <a class="viewcode-back" href="../../generated/methylseg.MethylSegConfig.html#methylseg.MethylSegConfig.from_instance">[docs]</a>
     <span class="nd">@classmethod</span>
     <span class="k">def</span> <span class="nf">from_instance</span><span class="p">(</span>
-        <span class="bp">cls</span><span class="p">,</span> <span class="n">inst</span><span class="p">:</span> <span class="s2">&quot;MethylSegPathway&quot;</span><span class="p">,</span> <span class="n">out_dir</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="bp">cls</span><span class="p">,</span>
+        <span class="n">inst</span><span class="p">:</span> <span class="s2">&quot;MethylSegPathway&quot;</span><span class="p">,</span>
+        <span class="n">out_dir</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">include_learned</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
     <span class="p">)</span> <span class="o">-&gt;</span> <span class="s2">&quot;MethylSegConfig&quot;</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">        Build a serializable config dict from a MethylSegPathway instance.</span>
+<span class="sd">        Serialize a fitted pathway into a portable configuration bundle.</span>
 
-<span class="sd">        - DataFrames are saved to feather files in inst.out_dir (or out_dir if provided).</span>
-<span class="sd">        - scikit-learn objects (kmeans, pca, scaler) are joblib-dumped (optional).</span>
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        inst</span>
+<span class="sd">            Fitted ``MethylSegPathway`` instance to serialize.</span>
+<span class="sd">        out_dir</span>
+<span class="sd">            Directory where the YAML-adjacent artifacts should be written. When</span>
+<span class="sd">            omitted, uses the pathway output directory.</span>
+<span class="sd">        include_learned</span>
+<span class="sd">            If ``True``, also write learned models and training artifacts such as</span>
+<span class="sd">            PCA scores, labels, and feather tables.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        MethylSegConfig</span>
+<span class="sd">            Config wrapper whose ``config`` dictionary references any artifacts</span>
+<span class="sd">            written during serialization.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
-        <span class="n">base_dir</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">out_dir</span> <span class="ow">or</span> <span class="n">inst</span><span class="o">.</span><span class="n">out_dir</span> <span class="ow">or</span> <span class="s2">&quot;.&quot;</span><span class="p">)</span>
+
+        <span class="n">base_dir</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">out_dir</span> <span class="ow">or</span> <span class="n">inst</span><span class="o">.</span><span class="n">out_dir</span> <span class="ow">or</span> <span class="s2">&quot;.&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">resolve</span><span class="p">()</span>
         <span class="n">base_dir</span><span class="o">.</span><span class="n">mkdir</span><span class="p">(</span><span class="n">parents</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">exist_ok</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
 
         <span class="n">cfg</span> <span class="o">=</span> <span class="p">{}</span>
 
-        <span class="c1"># pathway-level params</span>
         <span class="n">cfg</span><span class="p">[</span><span class="s2">&quot;pathway&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="p">{</span>
             <span class="s2">&quot;data_path&quot;</span><span class="p">:</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">inst</span><span class="p">,</span> <span class="s2">&quot;data_path&quot;</span><span class="p">,</span> <span class="kc">None</span><span class="p">),</span>
             <span class="s2">&quot;meth_ref_path&quot;</span><span class="p">:</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">inst</span><span class="p">,</span> <span class="s2">&quot;meth_ref_path&quot;</span><span class="p">,</span> <span class="kc">None</span><span class="p">),</span>
             <span class="s2">&quot;samples_info_path&quot;</span><span class="p">:</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">inst</span><span class="p">,</span> <span class="s2">&quot;samples_info_path&quot;</span><span class="p">,</span> <span class="kc">None</span><span class="p">),</span>
-            <span class="s2">&quot;out_dir&quot;</span><span class="p">:</span> <span class="nb">str</span><span class="p">(</span><span class="n">base_dir</span><span class="p">),</span>
-            <span class="s2">&quot;train_sample&quot;</span><span class="p">:</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">inst</span><span class="p">,</span> <span class="s2">&quot;train_sample&quot;</span><span class="p">,</span> <span class="kc">None</span><span class="p">),</span>
+            <span class="s2">&quot;out_dir&quot;</span><span class="p">:</span> <span class="s2">&quot;.&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;train_sample&quot;</span><span class="p">:</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">inst</span><span class="p">,</span> <span class="s2">&quot;train_sample_name&quot;</span><span class="p">,</span> <span class="kc">None</span><span class="p">),</span>
+            <span class="s2">&quot;train_sample_file&quot;</span><span class="p">:</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">inst</span><span class="p">,</span> <span class="s2">&quot;train_sample_file&quot;</span><span class="p">,</span> <span class="kc">None</span><span class="p">),</span>
             <span class="s2">&quot;train_chroms&quot;</span><span class="p">:</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">inst</span><span class="p">,</span> <span class="s2">&quot;train_chroms&quot;</span><span class="p">,</span> <span class="kc">None</span><span class="p">),</span>
             <span class="s2">&quot;max_cpg_per_chrom&quot;</span><span class="p">:</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">inst</span><span class="p">,</span> <span class="s2">&quot;max_cpg_per_chrom&quot;</span><span class="p">,</span> <span class="kc">None</span><span class="p">),</span>
             <span class="s2">&quot;random_state&quot;</span><span class="p">:</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">inst</span><span class="p">,</span> <span class="s2">&quot;random_state&quot;</span><span class="p">,</span> <span class="kc">None</span><span class="p">),</span>
+            <span class="s2">&quot;cluster_space&quot;</span><span class="p">:</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">inst</span><span class="p">,</span> <span class="s2">&quot;cluster_space&quot;</span><span class="p">,</span> <span class="kc">None</span><span class="p">),</span>
+            <span class="s2">&quot;n_pca&quot;</span><span class="p">:</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">inst</span><span class="p">,</span> <span class="s2">&quot;n_pca&quot;</span><span class="p">,</span> <span class="kc">None</span><span class="p">),</span>
+            <span class="s2">&quot;min_region_length&quot;</span><span class="p">:</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">inst</span><span class="p">,</span> <span class="s2">&quot;min_region_length&quot;</span><span class="p">,</span> <span class="kc">None</span><span class="p">),</span>
+            <span class="s2">&quot;min_region_cpgs&quot;</span><span class="p">:</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">inst</span><span class="p">,</span> <span class="s2">&quot;min_region_cpgs&quot;</span><span class="p">,</span> <span class="kc">None</span><span class="p">),</span>
+            <span class="s2">&quot;merge_gap_bp&quot;</span><span class="p">:</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">inst</span><span class="p">,</span> <span class="s2">&quot;merge_gap_bp&quot;</span><span class="p">,</span> <span class="kc">None</span><span class="p">),</span>
         <span class="p">}</span>
 
-        <span class="c1"># Assigner params</span>
         <span class="n">cfg</span><span class="p">[</span><span class="s2">&quot;state_assigner&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="p">{</span>
             <span class="s2">&quot;window_specs&quot;</span><span class="p">:</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">inst</span><span class="o">.</span><span class="n">assigner</span><span class="p">,</span> <span class="s2">&quot;window_specs&quot;</span><span class="p">,</span> <span class="kc">None</span><span class="p">),</span>
             <span class="s2">&quot;n_states&quot;</span><span class="p">:</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">inst</span><span class="o">.</span><span class="n">assigner</span><span class="p">,</span> <span class="s2">&quot;n_states&quot;</span><span class="p">,</span> <span class="kc">None</span><span class="p">),</span>
@@ -136,79 +360,82 @@
             <span class="s2">&quot;high_cutoff&quot;</span><span class="p">:</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">inst</span><span class="o">.</span><span class="n">assigner</span><span class="p">,</span> <span class="s2">&quot;high_cutoff&quot;</span><span class="p">,</span> <span class="kc">None</span><span class="p">),</span>
         <span class="p">}</span>
 
-        <span class="c1"># --- Save rule-based state cutoffs if present ---</span>
         <span class="k">if</span> <span class="nb">hasattr</span><span class="p">(</span><span class="n">inst</span><span class="o">.</span><span class="n">analyzer</span><span class="p">,</span> <span class="s2">&quot;state_cutoffs&quot;</span><span class="p">):</span>
-            <span class="n">cfg</span><span class="p">[</span><span class="s2">&quot;state_cutoffs&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="p">{</span>
-                <span class="s2">&quot;cutoffs&quot;</span><span class="p">:</span> <span class="n">inst</span><span class="o">.</span><span class="n">analyzer</span><span class="o">.</span><span class="n">state_cutoffs</span><span class="p">,</span>
-                <span class="s2">&quot;set_manually&quot;</span><span class="p">:</span> <span class="nb">bool</span><span class="p">(</span>
-                    <span class="nb">getattr</span><span class="p">(</span><span class="n">inst</span><span class="o">.</span><span class="n">analyzer</span><span class="p">,</span> <span class="s2">&quot;cutoffs_set_manually&quot;</span><span class="p">,</span> <span class="kc">False</span><span class="p">)</span>
-                <span class="p">),</span>
-            <span class="p">}</span>
+            <span class="n">cfg</span><span class="p">[</span><span class="s2">&quot;state_cutoffs&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="bp">cls</span><span class="o">.</span><span class="n">_validate_state_cutoffs</span><span class="p">(</span>
+                <span class="n">inst</span><span class="o">.</span><span class="n">analyzer</span><span class="o">.</span><span class="n">state_cutoffs</span>
+            <span class="p">)</span>
 
-        <span class="c1"># --- Save array-like hmm_params to files and build a serializable copy ---</span>
+            <span class="n">cfg</span><span class="p">[</span><span class="s2">&quot;state_cutoffs_set_manually&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="nb">bool</span><span class="p">(</span>
+                <span class="nb">getattr</span><span class="p">(</span><span class="n">inst</span><span class="o">.</span><span class="n">analyzer</span><span class="p">,</span> <span class="s2">&quot;cutoffs_set_manually&quot;</span><span class="p">,</span> <span class="kc">False</span><span class="p">)</span>
+            <span class="p">)</span>
+
         <span class="n">hmm_params</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">inst</span><span class="p">,</span> <span class="s2">&quot;hmm_params&quot;</span><span class="p">,</span> <span class="p">{})</span> <span class="ow">or</span> <span class="p">{}</span>
-        <span class="c1"># We&#39;ll write arrays to out_dir/hmm_params/</span>
+
         <span class="n">hmm_param_dir</span> <span class="o">=</span> <span class="n">base_dir</span> <span class="o">/</span> <span class="s2">&quot;hmm_params&quot;</span>
         <span class="n">hmm_param_dir</span><span class="o">.</span><span class="n">mkdir</span><span class="p">(</span><span class="n">exist_ok</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">parents</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
 
         <span class="n">serializable_hmm_params</span> <span class="o">=</span> <span class="p">{}</span>
+
         <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">hmm_params</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
-            <span class="c1"># numpy arrays</span>
+
             <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">v</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">):</span>
+
                 <span class="n">filename</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">k</span><span class="si">}</span><span class="s2">.npy&quot;</span>
                 <span class="n">p</span> <span class="o">=</span> <span class="n">hmm_param_dir</span> <span class="o">/</span> <span class="n">filename</span>
-                <span class="c1"># ensure float dtype if numeric (cthmm may require float)</span>
-                <span class="k">try</span><span class="p">:</span>
-                    <span class="n">np</span><span class="o">.</span><span class="n">save</span><span class="p">(</span><span class="n">p</span><span class="p">,</span> <span class="n">v</span><span class="p">)</span>
-                <span class="k">except</span> <span class="ne">Exception</span><span class="p">:</span>
-                    <span class="c1"># try to coerce to numpy array then save</span>
-                    <span class="n">np</span><span class="o">.</span><span class="n">save</span><span class="p">(</span><span class="n">p</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">v</span><span class="p">))</span>
-                <span class="n">serializable_hmm_params</span><span class="p">[</span><span class="n">k</span><span class="p">]</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&quot;__npy_path__&quot;</span><span class="p">:</span> <span class="nb">str</span><span class="p">(</span><span class="n">p</span><span class="p">)}</span>
-            <span class="c1"># long lists/tuples — treat similar to array</span>
+
+                <span class="n">np</span><span class="o">.</span><span class="n">save</span><span class="p">(</span><span class="n">p</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">v</span><span class="p">))</span>
+
+                <span class="n">serializable_hmm_params</span><span class="p">[</span><span class="n">k</span><span class="p">]</span> <span class="o">=</span> <span class="p">{</span>
+                    <span class="s2">&quot;__npy_path__&quot;</span><span class="p">:</span> <span class="bp">cls</span><span class="o">.</span><span class="n">_relativize_artifact_path</span><span class="p">(</span><span class="n">base_dir</span><span class="p">,</span> <span class="n">p</span><span class="p">)</span>
+                <span class="p">}</span>
+
             <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">v</span><span class="p">,</span> <span class="p">(</span><span class="nb">list</span><span class="p">,</span> <span class="nb">tuple</span><span class="p">)):</span>
-                <span class="c1"># heuristics: if short (len &lt;= 20) keep inline; else save</span>
-                <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">v</span><span class="p">)</span> <span class="o">&lt;=</span> <span class="mi">20</span><span class="p">:</span>
-                    <span class="n">serializable_hmm_params</span><span class="p">[</span><span class="n">k</span><span class="p">]</span> <span class="o">=</span> <span class="n">v</span>
-                <span class="k">else</span><span class="p">:</span>
-                    <span class="n">p</span> <span class="o">=</span> <span class="n">hmm_param_dir</span> <span class="o">/</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">k</span><span class="si">}</span><span class="s2">.npy&quot;</span>
-                    <span class="n">np</span><span class="o">.</span><span class="n">save</span><span class="p">(</span><span class="n">p</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">v</span><span class="p">))</span>
-                    <span class="n">serializable_hmm_params</span><span class="p">[</span><span class="n">k</span><span class="p">]</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&quot;__npy_path__&quot;</span><span class="p">:</span> <span class="nb">str</span><span class="p">(</span><span class="n">p</span><span class="p">)}</span>
+                <span class="n">serializable_hmm_params</span><span class="p">[</span><span class="n">k</span><span class="p">]</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">v</span><span class="p">)</span>
+
             <span class="k">else</span><span class="p">:</span>
-                <span class="c1"># scalar, string, dict, etc. — assume yaml serializable</span>
                 <span class="n">serializable_hmm_params</span><span class="p">[</span><span class="n">k</span><span class="p">]</span> <span class="o">=</span> <span class="n">v</span>
 
-        <span class="n">cfg</span><span class="p">[</span><span class="s2">&quot;hmm&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&quot;type&quot;</span><span class="p">:</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">inst</span><span class="p">,</span> <span class="s2">&quot;hmm_type&quot;</span><span class="p">,</span> <span class="kc">None</span><span class="p">)}</span>
+        <span class="n">cfg</span><span class="p">[</span><span class="s2">&quot;hmm&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="p">{</span>
+            <span class="s2">&quot;type&quot;</span><span class="p">:</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">inst</span><span class="p">,</span> <span class="s2">&quot;hmm_type&quot;</span><span class="p">,</span> <span class="kc">None</span><span class="p">),</span>
+            <span class="s2">&quot;params&quot;</span><span class="p">:</span> <span class="n">serializable_hmm_params</span><span class="p">,</span>
+        <span class="p">}</span>
+
         <span class="n">hmm_observation_mode</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">inst</span><span class="p">,</span> <span class="s2">&quot;hmm_observation_mode&quot;</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="nb">hasattr</span><span class="p">(</span><span class="nb">getattr</span><span class="p">(</span><span class="n">inst</span><span class="p">,</span> <span class="s2">&quot;hmm_type&quot;</span><span class="p">,</span> <span class="kc">None</span><span class="p">),</span> <span class="s2">&quot;value&quot;</span><span class="p">):</span>
+            <span class="n">cfg</span><span class="p">[</span><span class="s2">&quot;hmm&quot;</span><span class="p">][</span><span class="s2">&quot;type&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">inst</span><span class="p">,</span> <span class="s2">&quot;hmm_type&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">value</span>
+
         <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">hmm_observation_mode</span><span class="p">,</span> <span class="n">HMMObservationMode</span><span class="p">):</span>
             <span class="n">hmm_observation_mode</span> <span class="o">=</span> <span class="n">hmm_observation_mode</span><span class="o">.</span><span class="n">value</span>
-        <span class="n">cfg</span><span class="p">[</span><span class="s2">&quot;hmm&quot;</span><span class="p">][</span><span class="s2">&quot;observation_mode&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">hmm_observation_mode</span>
-        <span class="n">cfg</span><span class="p">[</span><span class="s2">&quot;hmm&quot;</span><span class="p">][</span><span class="s2">&quot;params&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">serializable_hmm_params</span>
 
-        <span class="c1"># Analyzer/segmenter basic settings</span>
+        <span class="n">cfg</span><span class="p">[</span><span class="s2">&quot;hmm&quot;</span><span class="p">][</span><span class="s2">&quot;observation_mode&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">hmm_observation_mode</span>
+
         <span class="n">state_assignment_method</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span>
             <span class="n">inst</span><span class="o">.</span><span class="n">segmentor</span><span class="p">,</span>
             <span class="s2">&quot;state_assignment_method&quot;</span><span class="p">,</span>
             <span class="nb">getattr</span><span class="p">(</span><span class="n">inst</span><span class="p">,</span> <span class="s2">&quot;state_assignment_method&quot;</span><span class="p">,</span> <span class="kc">None</span><span class="p">),</span>
         <span class="p">)</span>
+
         <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">state_assignment_method</span><span class="p">,</span> <span class="n">MethylStateAssignmentMethod</span><span class="p">):</span>
             <span class="n">state_assignment_method</span> <span class="o">=</span> <span class="n">state_assignment_method</span><span class="o">.</span><span class="n">value</span>
+
         <span class="n">segmenter_hmm_observation_mode</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span>
             <span class="n">inst</span><span class="o">.</span><span class="n">segmentor</span><span class="p">,</span>
             <span class="s2">&quot;hmm_observation_mode&quot;</span><span class="p">,</span>
             <span class="nb">getattr</span><span class="p">(</span><span class="n">inst</span><span class="p">,</span> <span class="s2">&quot;hmm_observation_mode&quot;</span><span class="p">,</span> <span class="kc">None</span><span class="p">),</span>
         <span class="p">)</span>
+
         <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">segmenter_hmm_observation_mode</span><span class="p">,</span> <span class="n">HMMObservationMode</span><span class="p">):</span>
             <span class="n">segmenter_hmm_observation_mode</span> <span class="o">=</span> <span class="n">segmenter_hmm_observation_mode</span><span class="o">.</span><span class="n">value</span>
+
         <span class="n">cfg</span><span class="p">[</span><span class="s2">&quot;segmenter&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="p">{</span>
             <span class="s2">&quot;state_assignment_method&quot;</span><span class="p">:</span> <span class="n">state_assignment_method</span><span class="p">,</span>
             <span class="s2">&quot;hmm_observation_mode&quot;</span><span class="p">:</span> <span class="n">segmenter_hmm_observation_mode</span><span class="p">,</span>
-            <span class="s2">&quot;out_dir&quot;</span><span class="p">:</span> <span class="nb">str</span><span class="p">(</span><span class="n">base_dir</span><span class="p">),</span>
+            <span class="s2">&quot;out_dir&quot;</span><span class="p">:</span> <span class="s2">&quot;.&quot;</span><span class="p">,</span>
         <span class="p">}</span>
 
-        <span class="c1"># Paths for dataframes and models to be saved</span>
         <span class="n">saved</span> <span class="o">=</span> <span class="p">{}</span>
 
-        <span class="c1"># Save key DataFrames (if present) as feather and record their relative paths</span>
         <span class="n">df_items</span> <span class="o">=</span> <span class="p">{</span>
             <span class="s2">&quot;train_meth&quot;</span><span class="p">:</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">inst</span><span class="o">.</span><span class="n">assigner</span><span class="p">,</span> <span class="s2">&quot;train_meth&quot;</span><span class="p">,</span> <span class="kc">None</span><span class="p">),</span>
             <span class="s2">&quot;training_summary_df&quot;</span><span class="p">:</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">inst</span><span class="o">.</span><span class="n">assigner</span><span class="p">,</span> <span class="s2">&quot;training_summary_df&quot;</span><span class="p">,</span> <span class="kc">None</span><span class="p">),</span>
@@ -222,55 +449,237 @@
         <span class="p">}</span>
 
         <span class="k">for</span> <span class="n">name</span><span class="p">,</span> <span class="n">df</span> <span class="ow">in</span> <span class="n">df_items</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
-            <span class="k">if</span> <span class="n">df</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+
+            <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">df</span><span class="p">,</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">):</span>
                 <span class="k">continue</span>
+
             <span class="n">path</span> <span class="o">=</span> <span class="n">base_dir</span> <span class="o">/</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">name</span><span class="si">}</span><span class="s2">.feather&quot;</span>
-            <span class="c1"># pandas may raise on non-DataFrame - skip safely</span>
-            <span class="k">try</span><span class="p">:</span>
-                <span class="n">df</span><span class="o">.</span><span class="n">reset_index</span><span class="p">(</span><span class="n">drop</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span><span class="o">.</span><span class="n">to_feather</span><span class="p">(</span><span class="n">path</span><span class="p">)</span>
-                <span class="n">saved</span><span class="p">[</span><span class="n">name</span><span class="p">]</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">path</span><span class="p">)</span>
-            <span class="k">except</span> <span class="ne">Exception</span><span class="p">:</span>
-                <span class="c1"># not a dataframe or failed to write; skip</span>
-                <span class="k">continue</span>
+
+            <span class="n">MethylSegConfig</span><span class="o">.</span><span class="n">_write_feather_table</span><span class="p">(</span><span class="n">df</span><span class="p">,</span> <span class="n">path</span><span class="p">)</span>
+
+            <span class="n">saved</span><span class="p">[</span><span class="n">name</span><span class="p">]</span> <span class="o">=</span> <span class="bp">cls</span><span class="o">.</span><span class="n">_relativize_artifact_path</span><span class="p">(</span><span class="n">base_dir</span><span class="p">,</span> <span class="n">path</span><span class="p">)</span>
 
         <span class="n">cfg</span><span class="p">[</span><span class="s2">&quot;saved_tables&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">saved</span>
 
-        <span class="c1"># Save model artifacts (kmeans, pca, scaler) using joblib if present</span>
+        <span class="k">if</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">inst</span><span class="p">,</span> <span class="s2">&quot;train_sample_info&quot;</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+
+            <span class="n">sample_path</span> <span class="o">=</span> <span class="n">base_dir</span> <span class="o">/</span> <span class="s2">&quot;train_sample_meth.feather&quot;</span>
+
+            <span class="n">MethylSegConfig</span><span class="o">.</span><span class="n">_write_feather_table</span><span class="p">(</span>
+                <span class="n">inst</span><span class="o">.</span><span class="n">train_sample_info</span><span class="o">.</span><span class="n">meth_data</span><span class="o">.</span><span class="n">reset_index</span><span class="p">(</span><span class="n">drop</span><span class="o">=</span><span class="kc">True</span><span class="p">),</span>
+                <span class="n">sample_path</span><span class="p">,</span>
+            <span class="p">)</span>
+
+            <span class="n">cfg</span><span class="p">[</span><span class="s2">&quot;train_sample_info&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="p">{</span>
+                <span class="s2">&quot;sample_id&quot;</span><span class="p">:</span> <span class="n">inst</span><span class="o">.</span><span class="n">train_sample_info</span><span class="o">.</span><span class="n">sample_id</span><span class="p">,</span>
+                <span class="s2">&quot;meth_data_path&quot;</span><span class="p">:</span> <span class="bp">cls</span><span class="o">.</span><span class="n">_relativize_artifact_path</span><span class="p">(</span>
+                    <span class="n">base_dir</span><span class="p">,</span>
+                    <span class="n">sample_path</span><span class="p">,</span>
+                <span class="p">),</span>
+            <span class="p">}</span>
+
+        <span class="n">cfg</span><span class="p">[</span><span class="s2">&quot;train_sample&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="p">{</span>
+            <span class="s2">&quot;name&quot;</span><span class="p">:</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">inst</span><span class="p">,</span> <span class="s2">&quot;train_sample_name&quot;</span><span class="p">,</span> <span class="kc">None</span><span class="p">),</span>
+            <span class="s2">&quot;file&quot;</span><span class="p">:</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">inst</span><span class="p">,</span> <span class="s2">&quot;train_sample_file&quot;</span><span class="p">,</span> <span class="kc">None</span><span class="p">),</span>
+        <span class="p">}</span>
+
         <span class="n">models_saved</span> <span class="o">=</span> <span class="p">{}</span>
+
         <span class="n">model_dir</span> <span class="o">=</span> <span class="n">base_dir</span> <span class="o">/</span> <span class="s2">&quot;models&quot;</span>
         <span class="n">model_dir</span><span class="o">.</span><span class="n">mkdir</span><span class="p">(</span><span class="n">exist_ok</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
-        <span class="k">if</span> <span class="nb">hasattr</span><span class="p">(</span><span class="n">inst</span><span class="o">.</span><span class="n">assigner</span><span class="p">,</span> <span class="s2">&quot;model&quot;</span><span class="p">)</span> <span class="ow">and</span> <span class="n">inst</span><span class="o">.</span><span class="n">assigner</span><span class="o">.</span><span class="n">model</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+
+        <span class="k">if</span> <span class="p">(</span>
+            <span class="n">include_learned</span>
+            <span class="ow">and</span> <span class="nb">hasattr</span><span class="p">(</span><span class="n">inst</span><span class="o">.</span><span class="n">assigner</span><span class="p">,</span> <span class="s2">&quot;model&quot;</span><span class="p">)</span>
+            <span class="ow">and</span> <span class="n">inst</span><span class="o">.</span><span class="n">assigner</span><span class="o">.</span><span class="n">model</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span>
+        <span class="p">):</span>
+
             <span class="n">model</span> <span class="o">=</span> <span class="n">inst</span><span class="o">.</span><span class="n">assigner</span><span class="o">.</span><span class="n">model</span>
-            <span class="c1"># Save the sklearn components separately</span>
-            <span class="k">try</span><span class="p">:</span>
-                <span class="k">if</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">model</span><span class="p">,</span> <span class="s2">&quot;kmeans&quot;</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
-                    <span class="n">joblib</span><span class="o">.</span><span class="n">dump</span><span class="p">(</span><span class="n">model</span><span class="o">.</span><span class="n">kmeans</span><span class="p">,</span> <span class="n">model_dir</span> <span class="o">/</span> <span class="s2">&quot;kmeans.joblib&quot;</span><span class="p">)</span>
-                    <span class="n">models_saved</span><span class="p">[</span><span class="s2">&quot;kmeans&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">model_dir</span> <span class="o">/</span> <span class="s2">&quot;kmeans.joblib&quot;</span><span class="p">)</span>
-                <span class="k">if</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">model</span><span class="p">,</span> <span class="s2">&quot;pca&quot;</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
-                    <span class="n">joblib</span><span class="o">.</span><span class="n">dump</span><span class="p">(</span><span class="n">model</span><span class="o">.</span><span class="n">pca</span><span class="p">,</span> <span class="n">model_dir</span> <span class="o">/</span> <span class="s2">&quot;pca.joblib&quot;</span><span class="p">)</span>
-                    <span class="n">models_saved</span><span class="p">[</span><span class="s2">&quot;pca&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">model_dir</span> <span class="o">/</span> <span class="s2">&quot;pca.joblib&quot;</span><span class="p">)</span>
-                <span class="k">if</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">model</span><span class="p">,</span> <span class="s2">&quot;scaler&quot;</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
-                    <span class="n">joblib</span><span class="o">.</span><span class="n">dump</span><span class="p">(</span><span class="n">model</span><span class="o">.</span><span class="n">scaler</span><span class="p">,</span> <span class="n">model_dir</span> <span class="o">/</span> <span class="s2">&quot;scaler.joblib&quot;</span><span class="p">)</span>
-                    <span class="n">models_saved</span><span class="p">[</span><span class="s2">&quot;scaler&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">model_dir</span> <span class="o">/</span> <span class="s2">&quot;scaler.joblib&quot;</span><span class="p">)</span>
-                <span class="k">if</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">model</span><span class="p">,</span> <span class="s2">&quot;imputer&quot;</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
-                    <span class="n">joblib</span><span class="o">.</span><span class="n">dump</span><span class="p">(</span><span class="n">model</span><span class="o">.</span><span class="n">imputer</span><span class="p">,</span> <span class="n">model_dir</span> <span class="o">/</span> <span class="s2">&quot;imputer.joblib&quot;</span><span class="p">)</span>
-                    <span class="n">models_saved</span><span class="p">[</span><span class="s2">&quot;imputer&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">model_dir</span> <span class="o">/</span> <span class="s2">&quot;imputer.joblib&quot;</span><span class="p">)</span>
-                <span class="c1"># save feature_cols + n_states</span>
-                <span class="n">models_saved</span><span class="p">[</span><span class="s2">&quot;feature_cols&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">model</span><span class="o">.</span><span class="n">feature_cols</span><span class="p">)</span>
-                <span class="n">models_saved</span><span class="p">[</span><span class="s2">&quot;n_states&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">model</span><span class="o">.</span><span class="n">n_states</span><span class="p">)</span>
-            <span class="k">except</span> <span class="ne">Exception</span><span class="p">:</span>
-                <span class="c1"># if model objects are not serializable, skip with a warning in the YAML</span>
-                <span class="n">models_saved</span><span class="p">[</span><span class="s2">&quot;warning&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="s2">&quot;failed to joblib.dump some model parts&quot;</span>
+
+            <span class="k">if</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">model</span><span class="p">,</span> <span class="s2">&quot;kmeans&quot;</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+
+                <span class="n">kmeans_path</span> <span class="o">=</span> <span class="n">model_dir</span> <span class="o">/</span> <span class="s2">&quot;kmeans.joblib&quot;</span>
+
+                <span class="n">joblib</span><span class="o">.</span><span class="n">dump</span><span class="p">(</span><span class="n">model</span><span class="o">.</span><span class="n">kmeans</span><span class="p">,</span> <span class="n">kmeans_path</span><span class="p">)</span>
+
+                <span class="n">models_saved</span><span class="p">[</span><span class="s2">&quot;kmeans&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="bp">cls</span><span class="o">.</span><span class="n">_relativize_artifact_path</span><span class="p">(</span>
+                    <span class="n">base_dir</span><span class="p">,</span>
+                    <span class="n">kmeans_path</span><span class="p">,</span>
+                <span class="p">)</span>
+
+            <span class="k">if</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">model</span><span class="p">,</span> <span class="s2">&quot;pca&quot;</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+
+                <span class="n">pca_path</span> <span class="o">=</span> <span class="n">model_dir</span> <span class="o">/</span> <span class="s2">&quot;pca.joblib&quot;</span>
+
+                <span class="n">joblib</span><span class="o">.</span><span class="n">dump</span><span class="p">(</span><span class="n">model</span><span class="o">.</span><span class="n">pca</span><span class="p">,</span> <span class="n">pca_path</span><span class="p">)</span>
+
+                <span class="n">models_saved</span><span class="p">[</span><span class="s2">&quot;pca&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="bp">cls</span><span class="o">.</span><span class="n">_relativize_artifact_path</span><span class="p">(</span>
+                    <span class="n">base_dir</span><span class="p">,</span>
+                    <span class="n">pca_path</span><span class="p">,</span>
+                <span class="p">)</span>
+
+            <span class="k">if</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">model</span><span class="p">,</span> <span class="s2">&quot;scaler&quot;</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+
+                <span class="n">scaler_path</span> <span class="o">=</span> <span class="n">model_dir</span> <span class="o">/</span> <span class="s2">&quot;scaler.joblib&quot;</span>
+
+                <span class="n">joblib</span><span class="o">.</span><span class="n">dump</span><span class="p">(</span><span class="n">model</span><span class="o">.</span><span class="n">scaler</span><span class="p">,</span> <span class="n">scaler_path</span><span class="p">)</span>
+
+                <span class="n">models_saved</span><span class="p">[</span><span class="s2">&quot;scaler&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="bp">cls</span><span class="o">.</span><span class="n">_relativize_artifact_path</span><span class="p">(</span>
+                    <span class="n">base_dir</span><span class="p">,</span>
+                    <span class="n">scaler_path</span><span class="p">,</span>
+                <span class="p">)</span>
+
+            <span class="k">if</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">model</span><span class="p">,</span> <span class="s2">&quot;imputer&quot;</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+
+                <span class="n">imputer_path</span> <span class="o">=</span> <span class="n">model_dir</span> <span class="o">/</span> <span class="s2">&quot;imputer.joblib&quot;</span>
+
+                <span class="n">joblib</span><span class="o">.</span><span class="n">dump</span><span class="p">(</span><span class="n">model</span><span class="o">.</span><span class="n">imputer</span><span class="p">,</span> <span class="n">imputer_path</span><span class="p">)</span>
+
+                <span class="n">models_saved</span><span class="p">[</span><span class="s2">&quot;imputer&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="bp">cls</span><span class="o">.</span><span class="n">_relativize_artifact_path</span><span class="p">(</span>
+                    <span class="n">base_dir</span><span class="p">,</span>
+                    <span class="n">imputer_path</span><span class="p">,</span>
+                <span class="p">)</span>
+
+            <span class="n">models_saved</span><span class="p">[</span><span class="s2">&quot;feature_cols&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">model</span><span class="o">.</span><span class="n">feature_cols</span><span class="p">)</span>
+            <span class="n">models_saved</span><span class="p">[</span><span class="s2">&quot;n_states&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">model</span><span class="o">.</span><span class="n">n_states</span><span class="p">)</span>
+            <span class="n">models_saved</span><span class="p">[</span><span class="s2">&quot;cluster_space&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span>
+                <span class="n">model</span><span class="p">,</span>
+                <span class="s2">&quot;cluster_space&quot;</span><span class="p">,</span>
+                <span class="kc">None</span><span class="p">,</span>
+            <span class="p">)</span>
+            <span class="n">models_saved</span><span class="p">[</span><span class="s2">&quot;n_pca&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">model</span><span class="p">,</span> <span class="s2">&quot;n_pca&quot;</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
+
         <span class="n">cfg</span><span class="p">[</span><span class="s2">&quot;models&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">models_saved</span>
 
+        <span class="c1">#</span>
+        <span class="c1"># TRAINING ARTIFACTS</span>
+        <span class="c1">#</span>
+
+        <span class="k">if</span> <span class="p">(</span>
+            <span class="n">include_learned</span>
+        <span class="p">):</span>
+
+            <span class="n">training_dir</span> <span class="o">=</span> <span class="n">base_dir</span> <span class="o">/</span> <span class="s2">&quot;training_artifacts&quot;</span>
+            <span class="n">training_dir</span><span class="o">.</span><span class="n">mkdir</span><span class="p">(</span><span class="n">exist_ok</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+
+            <span class="n">training_cfg</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">object</span><span class="p">]</span> <span class="o">=</span> <span class="p">{}</span>
+
+            <span class="n">assigner_tables</span> <span class="o">=</span> <span class="p">{</span>
+                <span class="s2">&quot;train_meth&quot;</span><span class="p">:</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">inst</span><span class="o">.</span><span class="n">assigner</span><span class="p">,</span> <span class="s2">&quot;train_meth&quot;</span><span class="p">,</span> <span class="kc">None</span><span class="p">),</span>
+                <span class="s2">&quot;train_emission_df&quot;</span><span class="p">:</span> <span class="nb">getattr</span><span class="p">(</span>
+                    <span class="n">inst</span><span class="o">.</span><span class="n">assigner</span><span class="p">,</span>
+                    <span class="s2">&quot;train_emission_df&quot;</span><span class="p">,</span>
+                    <span class="kc">None</span><span class="p">,</span>
+                <span class="p">),</span>
+                <span class="s2">&quot;training_summary_df&quot;</span><span class="p">:</span> <span class="nb">getattr</span><span class="p">(</span>
+                    <span class="n">inst</span><span class="o">.</span><span class="n">assigner</span><span class="p">,</span>
+                    <span class="s2">&quot;training_summary_df&quot;</span><span class="p">,</span>
+                    <span class="kc">None</span><span class="p">,</span>
+                <span class="p">),</span>
+                <span class="s2">&quot;train_joint&quot;</span><span class="p">:</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">inst</span><span class="o">.</span><span class="n">analyzer</span><span class="p">,</span> <span class="s2">&quot;train_joint&quot;</span><span class="p">,</span> <span class="kc">None</span><span class="p">),</span>
+            <span class="p">}</span>
+
+            <span class="k">for</span> <span class="n">table_name</span><span class="p">,</span> <span class="n">table_value</span> <span class="ow">in</span> <span class="n">assigner_tables</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+
+                <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">table_value</span><span class="p">,</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">):</span>
+
+                    <span class="n">table_path</span> <span class="o">=</span> <span class="n">training_dir</span> <span class="o">/</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">table_name</span><span class="si">}</span><span class="s2">.feather&quot;</span>
+
+                    <span class="n">MethylSegConfig</span><span class="o">.</span><span class="n">_write_feather_table</span><span class="p">(</span>
+                        <span class="n">table_value</span><span class="p">,</span>
+                        <span class="n">table_path</span><span class="p">,</span>
+                    <span class="p">)</span>
+
+                    <span class="n">training_cfg</span><span class="p">[</span><span class="n">table_name</span><span class="p">]</span> <span class="o">=</span> <span class="bp">cls</span><span class="o">.</span><span class="n">_relativize_artifact_path</span><span class="p">(</span>
+                        <span class="n">base_dir</span><span class="p">,</span>
+                        <span class="n">table_path</span><span class="p">,</span>
+                    <span class="p">)</span>
+
+            <span class="n">train_labels</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="n">inst</span><span class="o">.</span><span class="n">assigner</span><span class="p">,</span> <span class="s2">&quot;train_labels&quot;</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
+
+            <span class="k">if</span> <span class="n">train_labels</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+
+                <span class="n">labels_path</span> <span class="o">=</span> <span class="n">training_dir</span> <span class="o">/</span> <span class="s2">&quot;train_labels.npy&quot;</span>
+
+                <span class="n">numeric_labels</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span>
+                    <span class="n">MethylationStates</span><span class="o">.</span><span class="n">convert_to_numeric</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">train_labels</span><span class="p">)),</span>
+                    <span class="n">dtype</span><span class="o">=</span><span class="nb">int</span><span class="p">,</span>
+                <span class="p">)</span>
+
+                <span class="n">np</span><span class="o">.</span><span class="n">save</span><span class="p">(</span><span class="n">labels_path</span><span class="p">,</span> <span class="n">numeric_labels</span><span class="p">)</span>
+
+                <span class="n">training_cfg</span><span class="p">[</span><span class="s2">&quot;train_labels&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="bp">cls</span><span class="o">.</span><span class="n">_relativize_artifact_path</span><span class="p">(</span>
+                    <span class="n">base_dir</span><span class="p">,</span>
+                    <span class="n">labels_path</span><span class="p">,</span>
+                <span class="p">)</span>
+
+            <span class="n">train_pca_scores</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span>
+                <span class="n">inst</span><span class="o">.</span><span class="n">assigner</span><span class="p">,</span>
+                <span class="s2">&quot;train_pca_scores&quot;</span><span class="p">,</span>
+                <span class="kc">None</span><span class="p">,</span>
+            <span class="p">)</span>
+
+            <span class="k">if</span> <span class="n">train_pca_scores</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+
+                <span class="n">pca_scores_path</span> <span class="o">=</span> <span class="n">training_dir</span> <span class="o">/</span> <span class="s2">&quot;train_pca_scores.npy&quot;</span>
+
+                <span class="n">np</span><span class="o">.</span><span class="n">save</span><span class="p">(</span><span class="n">pca_scores_path</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">train_pca_scores</span><span class="p">))</span>
+
+                <span class="n">training_cfg</span><span class="p">[</span><span class="s2">&quot;train_pca_scores&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="bp">cls</span><span class="o">.</span><span class="n">_relativize_artifact_path</span><span class="p">(</span>
+                    <span class="n">base_dir</span><span class="p">,</span>
+                    <span class="n">pca_scores_path</span><span class="p">,</span>
+                <span class="p">)</span>
+
+            <span class="k">if</span> <span class="n">training_cfg</span><span class="p">:</span>
+                <span class="n">cfg</span><span class="p">[</span><span class="s2">&quot;training_artifacts&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">training_cfg</span>
+
         <span class="k">return</span> <span class="bp">cls</span><span class="p">(</span><span class="n">cfg</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="MethylSegConfig.get_state_cutoffs">
+<a class="viewcode-back" href="../../generated/methylseg.MethylSegConfig.html#methylseg.MethylSegConfig.get_state_cutoffs">[docs]</a>
+    <span class="k">def</span> <span class="nf">get_state_cutoffs</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span> <span class="o">|</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Return the normalized rule-based cutoff configuration, if present.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        dict or None</span>
+<span class="sd">            State-cutoff mapping compatible with</span>
+<span class="sd">            ``MethylStateAnalyzer.set_state_cutoffs`` or ``None`` when the</span>
+<span class="sd">            serialized config does not include rule thresholds.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="n">state_cutoffs</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;state_cutoffs&quot;</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">state_cutoffs</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">return</span> <span class="kc">None</span>
+
+        <span class="k">if</span> <span class="s2">&quot;cutoffs&quot;</span> <span class="ow">in</span> <span class="n">state_cutoffs</span> <span class="ow">and</span> <span class="nb">isinstance</span><span class="p">(</span>
+            <span class="n">state_cutoffs</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;cutoffs&quot;</span><span class="p">),</span> <span class="nb">dict</span>
+        <span class="p">):</span>
+            <span class="k">return</span> <span class="n">state_cutoffs</span><span class="p">[</span><span class="s2">&quot;cutoffs&quot;</span><span class="p">]</span>
+
+        <span class="k">return</span> <span class="n">state_cutoffs</span></div>
 
 
 <div class="viewcode-block" id="MethylSegConfig.to_yaml">
 <a class="viewcode-back" href="../../generated/methylseg.MethylSegConfig.html#methylseg.MethylSegConfig.to_yaml">[docs]</a>
     <span class="k">def</span> <span class="nf">to_yaml</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">yaml_path</span><span class="p">:</span> <span class="nb">str</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Write the serialized configuration dictionary to YAML.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        yaml_path</span>
+<span class="sd">            Output path for the YAML configuration file. Parent directories are</span>
+<span class="sd">            created automatically.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
         <span class="n">yaml_path</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">yaml_path</span><span class="p">)</span>
+
         <span class="n">yaml_path</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">mkdir</span><span class="p">(</span><span class="n">parents</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">exist_ok</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+
         <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">yaml_path</span><span class="p">,</span> <span class="s2">&quot;w&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">fh</span><span class="p">:</span>
             <span class="n">yaml</span><span class="o">.</span><span class="n">safe_dump</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="p">,</span> <span class="n">fh</span><span class="p">,</span> <span class="n">sort_keys</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span></div>
 
@@ -279,9 +688,417 @@
 <a class="viewcode-back" href="../../generated/methylseg.MethylSegConfig.html#methylseg.MethylSegConfig.from_yaml">[docs]</a>
     <span class="nd">@classmethod</span>
     <span class="k">def</span> <span class="nf">from_yaml</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">yaml_path</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="s2">&quot;MethylSegConfig&quot;</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Load a serialized methylseg configuration from YAML.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        yaml_path</span>
+<span class="sd">            Path to a YAML file previously written by ``to_yaml``.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        MethylSegConfig</span>
+<span class="sd">            Config wrapper with ``source_path`` set to the loaded YAML file.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
         <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">yaml_path</span><span class="p">,</span> <span class="s2">&quot;r&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">fh</span><span class="p">:</span>
             <span class="n">data</span> <span class="o">=</span> <span class="n">yaml</span><span class="o">.</span><span class="n">safe_load</span><span class="p">(</span><span class="n">fh</span><span class="p">)</span>
-        <span class="k">return</span> <span class="bp">cls</span><span class="p">(</span><span class="n">data</span><span class="p">)</span></div>
+
+        <span class="n">config</span> <span class="o">=</span> <span class="bp">cls</span><span class="p">(</span><span class="n">data</span><span class="p">)</span>
+        <span class="n">config</span><span class="o">.</span><span class="n">source_path</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">yaml_path</span><span class="p">)</span><span class="o">.</span><span class="n">resolve</span><span class="p">()</span>
+
+        <span class="k">return</span> <span class="n">config</span></div>
+
+
+<div class="viewcode-block" id="MethylSegConfig.build_pathway">
+<a class="viewcode-back" href="../../generated/methylseg.MethylSegConfig.html#methylseg.MethylSegConfig.build_pathway">[docs]</a>
+    <span class="k">def</span> <span class="nf">build_pathway</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">load_learned</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Reconstruct a ``MethylSegPathway`` from the serialized config.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        load_learned</span>
+<span class="sd">            If ``True``, attempt to restore saved training artifacts, learned</span>
+<span class="sd">            KMeans preprocessing components, and persisted tables referenced by</span>
+<span class="sd">            the config.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        MethylSegPathway</span>
+<span class="sd">            Rehydrated pathway configured from the serialized YAML bundle.</span>
+
+<span class="sd">        Raises</span>
+<span class="sd">        ------</span>
+<span class="sd">        ValueError</span>
+<span class="sd">            If the loaded config is missing required sections or has invalid</span>
+<span class="sd">            field shapes.</span>
+<span class="sd">        FileNotFoundError</span>
+<span class="sd">            If an expected serialized artifact referenced by the config is</span>
+<span class="sd">            missing on disk.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="kn">from</span> <span class="nn">.helper_classes</span> <span class="kn">import</span> <span class="n">KMeansMethylationModel</span>
+        <span class="kn">from</span> <span class="nn">.methylseg_pathway</span> <span class="kn">import</span> <span class="n">MethylSegPathway</span>
+
+        <span class="n">cfg</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">config</span>
+
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">cfg</span><span class="p">,</span> <span class="nb">dict</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Serialized methylseg config must be a YAML mapping.&quot;</span><span class="p">)</span>
+
+        <span class="n">pathway_cfg</span> <span class="o">=</span> <span class="n">cfg</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;pathway&quot;</span><span class="p">,</span> <span class="p">{})</span>
+        <span class="n">state_assigner_cfg</span> <span class="o">=</span> <span class="n">cfg</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;state_assigner&quot;</span><span class="p">,</span> <span class="p">{})</span>
+        <span class="n">hmm_cfg</span> <span class="o">=</span> <span class="n">cfg</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;hmm&quot;</span><span class="p">,</span> <span class="p">{})</span>
+        <span class="n">segmenter_cfg</span> <span class="o">=</span> <span class="n">cfg</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;segmenter&quot;</span><span class="p">,</span> <span class="p">{})</span>
+
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">pathway_cfg</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                <span class="s2">&quot;Serialized config is missing the required &quot;</span> <span class="s2">&quot;&#39;pathway&#39; section.&quot;</span>
+            <span class="p">)</span>
+
+        <span class="n">n_states</span> <span class="o">=</span> <span class="n">state_assigner_cfg</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;n_states&quot;</span><span class="p">,</span> <span class="mi">4</span><span class="p">)</span>
+
+        <span class="n">int_low_cutoff</span> <span class="o">=</span> <span class="n">state_assigner_cfg</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;int_low_cutoff&quot;</span><span class="p">,</span> <span class="mf">0.2</span><span class="p">)</span>
+        <span class="n">int_high_cutoff</span> <span class="o">=</span> <span class="n">state_assigner_cfg</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;int_high_cutoff&quot;</span><span class="p">,</span> <span class="mf">0.7</span><span class="p">)</span>
+        <span class="n">high_cutoff</span> <span class="o">=</span> <span class="n">state_assigner_cfg</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;high_cutoff&quot;</span><span class="p">,</span> <span class="mf">0.8</span><span class="p">)</span>
+
+        <span class="n">window_specs</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_normalize_window_specs</span><span class="p">(</span>
+            <span class="n">state_assigner_cfg</span><span class="o">.</span><span class="n">get</span><span class="p">(</span>
+                <span class="s2">&quot;window_specs&quot;</span><span class="p">,</span>
+                <span class="p">[(</span><span class="mi">500_000</span><span class="p">,</span> <span class="s2">&quot;500kb&quot;</span><span class="p">)],</span>
+            <span class="p">)</span>
+        <span class="p">)</span>
+
+        <span class="n">train_chroms</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_normalize_train_chroms</span><span class="p">(</span><span class="n">pathway_cfg</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;train_chroms&quot;</span><span class="p">))</span>
+
+        <span class="n">max_cpg_per_chrom</span> <span class="o">=</span> <span class="n">pathway_cfg</span><span class="o">.</span><span class="n">get</span><span class="p">(</span>
+            <span class="s2">&quot;max_cpg_per_chrom&quot;</span><span class="p">,</span>
+            <span class="mi">50_000</span><span class="p">,</span>
+        <span class="p">)</span>
+
+        <span class="n">out_dir</span> <span class="o">=</span> <span class="n">pathway_cfg</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;out_dir&quot;</span><span class="p">,</span> <span class="s2">&quot;.&quot;</span><span class="p">)</span>
+        <span class="n">random_state</span> <span class="o">=</span> <span class="n">pathway_cfg</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;random_state&quot;</span><span class="p">,</span> <span class="mi">42</span><span class="p">)</span>
+
+        <span class="n">cluster_space</span> <span class="o">=</span> <span class="n">pathway_cfg</span><span class="o">.</span><span class="n">get</span><span class="p">(</span>
+            <span class="s2">&quot;cluster_space&quot;</span><span class="p">,</span>
+            <span class="n">hmm_cfg</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;cluster_space&quot;</span><span class="p">,</span> <span class="s2">&quot;pca&quot;</span><span class="p">),</span>
+        <span class="p">)</span>
+
+        <span class="n">n_pca</span> <span class="o">=</span> <span class="n">pathway_cfg</span><span class="o">.</span><span class="n">get</span><span class="p">(</span>
+            <span class="s2">&quot;n_pca&quot;</span><span class="p">,</span>
+            <span class="n">hmm_cfg</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;n_pca&quot;</span><span class="p">,</span> <span class="mi">5</span><span class="p">),</span>
+        <span class="p">)</span>
+
+        <span class="n">hmm_type</span> <span class="o">=</span> <span class="n">hmm_cfg</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;type&quot;</span><span class="p">,</span> <span class="s2">&quot;continuous-time&quot;</span><span class="p">)</span>
+
+        <span class="n">min_region_length</span> <span class="o">=</span> <span class="n">pathway_cfg</span><span class="o">.</span><span class="n">get</span><span class="p">(</span>
+            <span class="s2">&quot;min_region_length&quot;</span><span class="p">,</span>
+            <span class="mi">10_000</span><span class="p">,</span>
+        <span class="p">)</span>
+
+        <span class="n">min_region_cpgs</span> <span class="o">=</span> <span class="n">pathway_cfg</span><span class="o">.</span><span class="n">get</span><span class="p">(</span>
+            <span class="s2">&quot;min_region_cpgs&quot;</span><span class="p">,</span>
+            <span class="mi">1</span><span class="p">,</span>
+        <span class="p">)</span>
+
+        <span class="n">merge_gap_bp</span> <span class="o">=</span> <span class="n">pathway_cfg</span><span class="o">.</span><span class="n">get</span><span class="p">(</span>
+            <span class="s2">&quot;merge_gap_bp&quot;</span><span class="p">,</span>
+            <span class="mi">0</span><span class="p">,</span>
+        <span class="p">)</span>
+
+        <span class="n">state_assignment_method</span> <span class="o">=</span> <span class="n">segmenter_cfg</span><span class="o">.</span><span class="n">get</span><span class="p">(</span>
+            <span class="s2">&quot;state_assignment_method&quot;</span><span class="p">,</span>
+            <span class="n">MethylStateAssignmentMethod</span><span class="o">.</span><span class="n">DEFINITION</span><span class="o">.</span><span class="n">value</span><span class="p">,</span>
+        <span class="p">)</span>
+
+        <span class="n">hmm_observation_mode</span> <span class="o">=</span> <span class="n">hmm_cfg</span><span class="o">.</span><span class="n">get</span><span class="p">(</span>
+            <span class="s2">&quot;observation_mode&quot;</span><span class="p">,</span>
+            <span class="n">HMMObservationMode</span><span class="o">.</span><span class="n">DISCRETE_STATES</span><span class="o">.</span><span class="n">value</span><span class="p">,</span>
+        <span class="p">)</span>
+
+        <span class="n">yaml_dir</span> <span class="o">=</span> <span class="p">(</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">source_path</span><span class="o">.</span><span class="n">parent</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">source_path</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span>
+            <span class="k">else</span> <span class="n">Path</span><span class="p">(</span><span class="n">out_dir</span><span class="p">)</span><span class="o">.</span><span class="n">resolve</span><span class="p">()</span>
+        <span class="p">)</span>
+
+        <span class="c1">#</span>
+        <span class="c1"># HMM PARAMS</span>
+        <span class="c1">#</span>
+
+        <span class="n">hmm_params_cfg</span> <span class="o">=</span> <span class="n">hmm_cfg</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;params&quot;</span><span class="p">,</span> <span class="p">{})</span>
+
+        <span class="n">loaded_hmm_params</span> <span class="o">=</span> <span class="p">{}</span>
+
+        <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">hmm_params_cfg</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+
+            <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">v</span><span class="p">,</span> <span class="nb">dict</span><span class="p">)</span> <span class="ow">and</span> <span class="s2">&quot;__npy_path__&quot;</span> <span class="ow">in</span> <span class="n">v</span><span class="p">:</span>
+
+                <span class="n">npy_path</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_resolve_artifact_path</span><span class="p">(</span>
+                    <span class="n">yaml_dir</span><span class="p">,</span>
+                    <span class="n">v</span><span class="p">[</span><span class="s2">&quot;__npy_path__&quot;</span><span class="p">],</span>
+                    <span class="n">field_name</span><span class="o">=</span><span class="sa">f</span><span class="s2">&quot;hmm.params.</span><span class="si">{</span><span class="n">k</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">,</span>
+                <span class="p">)</span>
+
+                <span class="n">loaded_hmm_params</span><span class="p">[</span><span class="n">k</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">load</span><span class="p">(</span>
+                    <span class="n">npy_path</span><span class="p">,</span>
+                    <span class="n">allow_pickle</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+                <span class="p">)</span>
+
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">loaded_hmm_params</span><span class="p">[</span><span class="n">k</span><span class="p">]</span> <span class="o">=</span> <span class="n">v</span>
+
+        <span class="c1">#</span>
+        <span class="c1"># TRAIN SAMPLE</span>
+        <span class="c1">#</span>
+
+        <span class="n">train_sample_info</span> <span class="o">=</span> <span class="kc">None</span>
+
+        <span class="k">if</span> <span class="s2">&quot;train_sample_info&quot;</span> <span class="ow">in</span> <span class="n">cfg</span><span class="p">:</span>
+
+            <span class="n">sample_cfg</span> <span class="o">=</span> <span class="n">cfg</span><span class="p">[</span><span class="s2">&quot;train_sample_info&quot;</span><span class="p">]</span>
+
+            <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">sample_cfg</span><span class="p">,</span> <span class="nb">dict</span><span class="p">):</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;train_sample_info must be a dictionary.&quot;</span><span class="p">)</span>
+
+            <span class="k">if</span> <span class="s2">&quot;sample_id&quot;</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">sample_cfg</span> <span class="ow">or</span> <span class="s2">&quot;meth_data_path&quot;</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">sample_cfg</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                    <span class="s2">&quot;train_sample_info must contain &quot;</span>
+                    <span class="s2">&quot;&#39;sample_id&#39; and &#39;meth_data_path&#39;.&quot;</span>
+                <span class="p">)</span>
+
+            <span class="n">meth_path</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_resolve_artifact_path</span><span class="p">(</span>
+                <span class="n">yaml_dir</span><span class="p">,</span>
+                <span class="n">sample_cfg</span><span class="p">[</span><span class="s2">&quot;meth_data_path&quot;</span><span class="p">],</span>
+                <span class="n">field_name</span><span class="o">=</span><span class="s2">&quot;train_sample_info.meth_data_path&quot;</span><span class="p">,</span>
+            <span class="p">)</span>
+
+            <span class="n">meth_df</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">read_feather</span><span class="p">(</span><span class="n">meth_path</span><span class="p">)</span>
+
+            <span class="n">train_sample_info</span> <span class="o">=</span> <span class="n">SampleInfo</span><span class="p">(</span>
+                <span class="n">sample_id</span><span class="o">=</span><span class="n">sample_cfg</span><span class="p">[</span><span class="s2">&quot;sample_id&quot;</span><span class="p">],</span>
+                <span class="n">meth_data</span><span class="o">=</span><span class="n">meth_df</span><span class="p">,</span>
+            <span class="p">)</span>
+
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Serialized config is missing &quot;</span> <span class="s2">&quot;&#39;train_sample_info&#39;.&quot;</span><span class="p">)</span>
+
+        <span class="n">train_sample_cfg</span> <span class="o">=</span> <span class="n">cfg</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;train_sample&quot;</span><span class="p">,</span> <span class="p">{})</span>
+
+        <span class="n">train_sample_name</span> <span class="o">=</span> <span class="n">train_sample_cfg</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;name&quot;</span><span class="p">)</span>
+        <span class="n">train_sample_file</span> <span class="o">=</span> <span class="n">train_sample_cfg</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;file&quot;</span><span class="p">)</span>
+
+        <span class="c1">#</span>
+        <span class="c1"># BUILD INSTANCE</span>
+        <span class="c1">#</span>
+
+        <span class="n">inst</span> <span class="o">=</span> <span class="n">MethylSegPathway</span><span class="p">(</span>
+            <span class="n">n_states</span><span class="o">=</span><span class="n">n_states</span><span class="p">,</span>
+            <span class="n">int_low_cutoff</span><span class="o">=</span><span class="n">int_low_cutoff</span><span class="p">,</span>
+            <span class="n">int_high_cutoff</span><span class="o">=</span><span class="n">int_high_cutoff</span><span class="p">,</span>
+            <span class="n">high_cutoff</span><span class="o">=</span><span class="n">high_cutoff</span><span class="p">,</span>
+            <span class="n">window_specs</span><span class="o">=</span><span class="n">window_specs</span><span class="p">,</span>
+            <span class="n">train_sample_info</span><span class="o">=</span><span class="n">train_sample_info</span><span class="p">,</span>
+            <span class="n">train_sample_file</span><span class="o">=</span><span class="n">train_sample_file</span><span class="p">,</span>
+            <span class="n">train_sample_name</span><span class="o">=</span><span class="n">train_sample_name</span><span class="p">,</span>
+            <span class="n">train_chroms</span><span class="o">=</span><span class="n">train_chroms</span><span class="p">,</span>
+            <span class="n">max_cpg_per_chrom</span><span class="o">=</span><span class="n">max_cpg_per_chrom</span><span class="p">,</span>
+            <span class="n">out_dir</span><span class="o">=</span><span class="n">out_dir</span><span class="p">,</span>
+            <span class="n">random_state</span><span class="o">=</span><span class="n">random_state</span><span class="p">,</span>
+            <span class="n">cluster_space</span><span class="o">=</span><span class="n">cluster_space</span><span class="p">,</span>
+            <span class="n">n_pca</span><span class="o">=</span><span class="n">n_pca</span><span class="p">,</span>
+            <span class="n">hmm_type</span><span class="o">=</span><span class="n">hmm_type</span><span class="p">,</span>
+            <span class="n">hmm_params</span><span class="o">=</span><span class="n">loaded_hmm_params</span><span class="p">,</span>
+            <span class="n">min_region_length</span><span class="o">=</span><span class="n">min_region_length</span><span class="p">,</span>
+            <span class="n">min_region_cpgs</span><span class="o">=</span><span class="n">min_region_cpgs</span><span class="p">,</span>
+            <span class="n">merge_gap_bp</span><span class="o">=</span><span class="n">merge_gap_bp</span><span class="p">,</span>
+            <span class="n">state_assignment_method</span><span class="o">=</span><span class="n">state_assignment_method</span><span class="p">,</span>
+            <span class="n">hmm_observation_mode</span><span class="o">=</span><span class="n">hmm_observation_mode</span><span class="p">,</span>
+        <span class="p">)</span>
+
+        <span class="c1">#</span>
+        <span class="c1"># LOAD MODELS</span>
+        <span class="c1">#</span>
+
+        <span class="k">if</span> <span class="n">load_learned</span> <span class="ow">and</span> <span class="s2">&quot;models&quot;</span> <span class="ow">in</span> <span class="n">cfg</span><span class="p">:</span>
+
+            <span class="n">model_cfg</span> <span class="o">=</span> <span class="n">cfg</span><span class="p">[</span><span class="s2">&quot;models&quot;</span><span class="p">]</span>
+
+            <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">model_cfg</span><span class="p">,</span> <span class="nb">dict</span><span class="p">):</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;models must be a dictionary.&quot;</span><span class="p">)</span>
+
+            <span class="n">kmeans</span> <span class="o">=</span> <span class="p">(</span>
+                <span class="n">joblib</span><span class="o">.</span><span class="n">load</span><span class="p">(</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">_resolve_artifact_path</span><span class="p">(</span>
+                        <span class="n">yaml_dir</span><span class="p">,</span>
+                        <span class="n">model_cfg</span><span class="p">[</span><span class="s2">&quot;kmeans&quot;</span><span class="p">],</span>
+                        <span class="n">field_name</span><span class="o">=</span><span class="s2">&quot;models.kmeans&quot;</span><span class="p">,</span>
+                    <span class="p">)</span>
+                <span class="p">)</span>
+                <span class="k">if</span> <span class="s2">&quot;kmeans&quot;</span> <span class="ow">in</span> <span class="n">model_cfg</span>
+                <span class="k">else</span> <span class="kc">None</span>
+            <span class="p">)</span>
+
+            <span class="n">scaler</span> <span class="o">=</span> <span class="p">(</span>
+                <span class="n">joblib</span><span class="o">.</span><span class="n">load</span><span class="p">(</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">_resolve_artifact_path</span><span class="p">(</span>
+                        <span class="n">yaml_dir</span><span class="p">,</span>
+                        <span class="n">model_cfg</span><span class="p">[</span><span class="s2">&quot;scaler&quot;</span><span class="p">],</span>
+                        <span class="n">field_name</span><span class="o">=</span><span class="s2">&quot;models.scaler&quot;</span><span class="p">,</span>
+                    <span class="p">)</span>
+                <span class="p">)</span>
+                <span class="k">if</span> <span class="s2">&quot;scaler&quot;</span> <span class="ow">in</span> <span class="n">model_cfg</span>
+                <span class="k">else</span> <span class="kc">None</span>
+            <span class="p">)</span>
+
+            <span class="n">imputer</span> <span class="o">=</span> <span class="p">(</span>
+                <span class="n">joblib</span><span class="o">.</span><span class="n">load</span><span class="p">(</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">_resolve_artifact_path</span><span class="p">(</span>
+                        <span class="n">yaml_dir</span><span class="p">,</span>
+                        <span class="n">model_cfg</span><span class="p">[</span><span class="s2">&quot;imputer&quot;</span><span class="p">],</span>
+                        <span class="n">field_name</span><span class="o">=</span><span class="s2">&quot;models.imputer&quot;</span><span class="p">,</span>
+                    <span class="p">)</span>
+                <span class="p">)</span>
+                <span class="k">if</span> <span class="s2">&quot;imputer&quot;</span> <span class="ow">in</span> <span class="n">model_cfg</span>
+                <span class="k">else</span> <span class="kc">None</span>
+            <span class="p">)</span>
+
+            <span class="n">pca</span> <span class="o">=</span> <span class="p">(</span>
+                <span class="n">joblib</span><span class="o">.</span><span class="n">load</span><span class="p">(</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">_resolve_artifact_path</span><span class="p">(</span>
+                        <span class="n">yaml_dir</span><span class="p">,</span>
+                        <span class="n">model_cfg</span><span class="p">[</span><span class="s2">&quot;pca&quot;</span><span class="p">],</span>
+                        <span class="n">field_name</span><span class="o">=</span><span class="s2">&quot;models.pca&quot;</span><span class="p">,</span>
+                    <span class="p">)</span>
+                <span class="p">)</span>
+                <span class="k">if</span> <span class="s2">&quot;pca&quot;</span> <span class="ow">in</span> <span class="n">model_cfg</span>
+                <span class="k">else</span> <span class="kc">None</span>
+            <span class="p">)</span>
+
+            <span class="n">model_cluster_space</span> <span class="o">=</span> <span class="n">model_cfg</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;cluster_space&quot;</span><span class="p">)</span>
+
+            <span class="k">if</span> <span class="n">model_cluster_space</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="n">model_cluster_space</span> <span class="o">=</span> <span class="s2">&quot;pca&quot;</span> <span class="k">if</span> <span class="n">pca</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="k">else</span> <span class="s2">&quot;raw&quot;</span>
+
+            <span class="n">model_n_pca</span> <span class="o">=</span> <span class="n">model_cfg</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;n_pca&quot;</span><span class="p">)</span>
+
+            <span class="k">if</span> <span class="n">model_n_pca</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="n">model_n_pca</span> <span class="o">=</span> <span class="n">n_pca</span> <span class="k">if</span> <span class="n">model_cluster_space</span> <span class="o">==</span> <span class="s2">&quot;pca&quot;</span> <span class="k">else</span> <span class="kc">None</span>
+
+            <span class="n">inst</span><span class="o">.</span><span class="n">assigner</span><span class="o">.</span><span class="n">model</span> <span class="o">=</span> <span class="n">KMeansMethylationModel</span><span class="p">(</span>
+                <span class="n">kmeans</span><span class="o">=</span><span class="n">kmeans</span><span class="p">,</span>
+                <span class="n">scaler</span><span class="o">=</span><span class="n">scaler</span><span class="p">,</span>
+                <span class="n">imputer</span><span class="o">=</span><span class="n">imputer</span><span class="p">,</span>
+                <span class="n">pca</span><span class="o">=</span><span class="n">pca</span><span class="p">,</span>
+                <span class="n">feature_cols</span><span class="o">=</span><span class="n">model_cfg</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;feature_cols&quot;</span><span class="p">,</span> <span class="p">[]),</span>
+                <span class="n">n_states</span><span class="o">=</span><span class="n">model_cfg</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;n_states&quot;</span><span class="p">,</span> <span class="n">n_states</span><span class="p">),</span>
+                <span class="n">cluster_space</span><span class="o">=</span><span class="n">model_cluster_space</span><span class="p">,</span>
+                <span class="n">n_pca</span><span class="o">=</span><span class="n">model_n_pca</span><span class="p">,</span>
+            <span class="p">)</span>
+
+            <span class="n">inst</span><span class="o">.</span><span class="n">assigner</span><span class="o">.</span><span class="n">cluster_space</span> <span class="o">=</span> <span class="n">model_cluster_space</span>
+            <span class="n">inst</span><span class="o">.</span><span class="n">assigner</span><span class="o">.</span><span class="n">n_pca</span> <span class="o">=</span> <span class="n">model_n_pca</span>
+
+            <span class="n">inst</span><span class="o">.</span><span class="n">cluster_space</span> <span class="o">=</span> <span class="n">model_cluster_space</span>
+            <span class="n">inst</span><span class="o">.</span><span class="n">n_pca</span> <span class="o">=</span> <span class="n">model_n_pca</span>
+
+        <span class="c1">#</span>
+        <span class="c1"># LOAD TRAINING ARTIFACTS</span>
+        <span class="c1">#</span>
+
+        <span class="n">training_cfg</span> <span class="o">=</span> <span class="n">cfg</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;training_artifacts&quot;</span><span class="p">,</span> <span class="p">{})</span>
+
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">training_cfg</span><span class="p">,</span> <span class="nb">dict</span><span class="p">):</span>
+
+            <span class="n">table_fields</span> <span class="o">=</span> <span class="p">(</span>
+                <span class="s2">&quot;train_meth&quot;</span><span class="p">,</span>
+                <span class="s2">&quot;train_emission_df&quot;</span><span class="p">,</span>
+                <span class="s2">&quot;training_summary_df&quot;</span><span class="p">,</span>
+                <span class="s2">&quot;train_joint&quot;</span><span class="p">,</span>
+            <span class="p">)</span>
+
+            <span class="k">for</span> <span class="n">field_name</span> <span class="ow">in</span> <span class="n">table_fields</span><span class="p">:</span>
+
+                <span class="n">raw_path</span> <span class="o">=</span> <span class="n">training_cfg</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">field_name</span><span class="p">)</span>
+
+
+                <span class="k">if</span> <span class="n">raw_path</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+                    <span class="k">continue</span>
+
+                <span class="n">resolved_path</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_resolve_artifact_path</span><span class="p">(</span>
+                    <span class="n">yaml_dir</span><span class="p">,</span>
+                    <span class="n">raw_path</span><span class="p">,</span>
+                    <span class="n">field_name</span><span class="o">=</span><span class="sa">f</span><span class="s2">&quot;training_artifacts.</span><span class="si">{</span><span class="n">field_name</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">,</span>
+                <span class="p">)</span>
+
+                <span class="n">loaded_table</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">read_feather</span><span class="p">(</span><span class="n">resolved_path</span><span class="p">)</span>
+
+                <span class="n">loaded_table</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_restore_table_after_feather</span><span class="p">(</span>
+                    <span class="n">field_name</span><span class="p">,</span>
+                    <span class="n">loaded_table</span><span class="p">,</span>
+                <span class="p">)</span>
+
+                <span class="k">if</span> <span class="n">field_name</span> <span class="o">==</span> <span class="s2">&quot;train_joint&quot;</span><span class="p">:</span>
+                    <span class="n">inst</span><span class="o">.</span><span class="n">analyzer</span><span class="o">.</span><span class="n">train_joint</span> <span class="o">=</span> <span class="n">loaded_table</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="nb">setattr</span><span class="p">(</span><span class="n">inst</span><span class="o">.</span><span class="n">assigner</span><span class="p">,</span> <span class="n">field_name</span><span class="p">,</span> <span class="n">loaded_table</span><span class="p">)</span>
+
+            <span class="n">labels_path_raw</span> <span class="o">=</span> <span class="n">training_cfg</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;train_labels&quot;</span><span class="p">)</span>
+
+            <span class="k">if</span> <span class="n">labels_path_raw</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+
+                <span class="n">labels_path</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_resolve_artifact_path</span><span class="p">(</span>
+                    <span class="n">yaml_dir</span><span class="p">,</span>
+                    <span class="n">labels_path_raw</span><span class="p">,</span>
+                    <span class="n">field_name</span><span class="o">=</span><span class="s2">&quot;training_artifacts.train_labels&quot;</span><span class="p">,</span>
+                <span class="p">)</span>
+
+                <span class="n">train_labels</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">load</span><span class="p">(</span>
+                    <span class="n">labels_path</span><span class="p">,</span>
+                    <span class="n">allow_pickle</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+                <span class="p">)</span>
+
+                <span class="n">inst</span><span class="o">.</span><span class="n">assigner</span><span class="o">.</span><span class="n">train_labels</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span>
+                    <span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">_coerce_state_value</span><span class="p">(</span><span class="n">value</span><span class="p">)</span> <span class="k">for</span> <span class="n">value</span> <span class="ow">in</span> <span class="n">train_labels</span><span class="p">],</span>
+                    <span class="n">dtype</span><span class="o">=</span><span class="nb">object</span><span class="p">,</span>
+                <span class="p">)</span>
+
+            <span class="n">train_pca_path_raw</span> <span class="o">=</span> <span class="n">training_cfg</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;train_pca_scores&quot;</span><span class="p">)</span>
+
+            <span class="k">if</span> <span class="n">train_pca_path_raw</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+
+                <span class="n">train_pca_path</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_resolve_artifact_path</span><span class="p">(</span>
+                    <span class="n">yaml_dir</span><span class="p">,</span>
+                    <span class="n">train_pca_path_raw</span><span class="p">,</span>
+                    <span class="n">field_name</span><span class="o">=</span><span class="s2">&quot;training_artifacts.train_pca_scores&quot;</span><span class="p">,</span>
+                <span class="p">)</span>
+
+                <span class="n">inst</span><span class="o">.</span><span class="n">assigner</span><span class="o">.</span><span class="n">train_pca_scores</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">load</span><span class="p">(</span>
+                    <span class="n">train_pca_path</span><span class="p">,</span>
+                    <span class="n">allow_pickle</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+                <span class="p">)</span>
+
+        <span class="c1">#</span>
+        <span class="c1"># RESTORE STATE</span>
+        <span class="c1">#</span>
+
+        <span class="n">inst</span><span class="o">.</span><span class="n">assigner</span><span class="o">.</span><span class="n">train_sample_info</span> <span class="o">=</span> <span class="n">inst</span><span class="o">.</span><span class="n">train_sample_info</span>
+        <span class="n">inst</span><span class="o">.</span><span class="n">assigner</span><span class="o">.</span><span class="n">train_sample</span> <span class="o">=</span> <span class="n">inst</span><span class="o">.</span><span class="n">train_sample_name</span>
+
+        <span class="k">if</span> <span class="s2">&quot;state_cutoffs&quot;</span> <span class="ow">in</span> <span class="n">cfg</span><span class="p">:</span>
+
+            <span class="n">inst</span><span class="o">.</span><span class="n">analyzer</span><span class="o">.</span><span class="n">state_cutoffs</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_validate_state_cutoffs</span><span class="p">(</span>
+                <span class="n">cfg</span><span class="p">[</span><span class="s2">&quot;state_cutoffs&quot;</span><span class="p">]</span>
+            <span class="p">)</span>
+
+            <span class="n">inst</span><span class="o">.</span><span class="n">analyzer</span><span class="o">.</span><span class="n">cutoffs_set_manually</span> <span class="o">=</span> <span class="nb">bool</span><span class="p">(</span>
+                <span class="n">cfg</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;state_cutoffs_set_manually&quot;</span><span class="p">,</span> <span class="kc">False</span><span class="p">)</span>
+            <span class="p">)</span>
+
+        <span class="n">inst</span><span class="o">.</span><span class="n">_loaded_config</span> <span class="o">=</span> <span class="n">cfg</span>
+
+        <span class="k">return</span> <span class="n">inst</span></div>
 </div>
 
 </pre></div>

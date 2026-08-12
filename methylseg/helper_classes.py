@@ -24,6 +24,25 @@ class MethylEnum(Enum):
 
     @classmethod
     def from_string(cls, s: str):
+        """
+        Parse a string or scalar value into an enum member.
+
+        Parameters
+        ----------
+        s
+            Candidate enum name or value. Matching is case-insensitive for
+            string-valued names and members.
+
+        Returns
+        -------
+        MethylEnum
+            Matching enum member from ``cls``.
+
+        Raises
+        ------
+        ValueError
+            If ``s`` does not match any member name or value.
+        """
         s = s.strip().lower()
         for member in cls:
             if member.name.lower() == s:
@@ -424,6 +443,22 @@ class MethylDataPrep:
         return self._load_wgbs()
 
     def prepare_dataframe(self) -> tuple[pd.DataFrame, pd.DataFrame]:
+        """
+        Load and normalize the configured methylation file.
+
+        Returns
+        -------
+        tuple of pandas.DataFrame
+            Two data frames containing the filtered canonical methylation table
+            and the rows removed during preparation. The filtered table contains
+            ``CpG_chrm``, ``CpG_beg``, ``CpG_end``, and ``beta`` columns.
+
+        Raises
+        ------
+        ValueError
+            If the requested ``resolution`` is unsupported or the input cannot
+            be normalized into the canonical schema.
+        """
         if self.resolution == "wgbs":
             filtered_df, removed_df = self._load_wgbs()
         elif self.resolution == "450k":
@@ -435,6 +470,16 @@ class MethylDataPrep:
         return filtered_df, removed_df
 
     def prepare(self) -> tuple[SampleInfo, pd.DataFrame]:
+        """
+        Prepare the methylation file and wrap it in ``SampleInfo``.
+
+        Returns
+        -------
+        tuple
+            A ``(sample_info, removed_df)`` pair where ``sample_info`` contains
+            the normalized methylation rows and ``removed_df`` contains excluded
+            input rows indexed by original row position when available.
+        """
         filtered_df, removed_df = self.prepare_dataframe()
         return (
             SampleInfo(
@@ -446,6 +491,21 @@ class MethylDataPrep:
         )
 
     def write_prepared_tsv(self, out_file, sep="\t") -> Path:
+        """
+        Write the prepared methylation table to disk.
+
+        Parameters
+        ----------
+        out_file
+            Destination path for the normalized TSV-like output.
+        sep
+            Delimiter used when writing the prepared table.
+
+        Returns
+        -------
+        pathlib.Path
+            Resolved output path that was written.
+        """
         out_file = Path(out_file)
         out_file.parent.mkdir(parents=True, exist_ok=True)
         filtered_df, _ = self.prepare_dataframe()
@@ -468,6 +528,20 @@ class MethylationStates(MethylEnum):
 
     @staticmethod
     def convert_to_numeric(arr):
+        """
+        Convert methylation-state labels into integer codes.
+
+        Parameters
+        ----------
+        arr
+            Array-like of ``MethylationStates`` values or already numeric state
+            labels.
+
+        Returns
+        -------
+        numpy.ndarray
+            Integer array suitable for model fitting, serialization, or plotting.
+        """
         arr = np.asarray(arr)
         if isinstance(arr[0], Enum):
             return np.array([a.value for a in arr], dtype=int)

@@ -22,18 +22,62 @@ class MethylSegHMM:
         raise NotImplementedError("MethylSegHMM is an abstract class")
 
     def fit(self, emissions, sample_info=None, chrom=None):
+        """
+        Fit backend-specific HMM parameters on the provided emissions.
+
+        Parameters
+        ----------
+        emissions
+            Observation sequence or feature matrix already prepared for the
+            backend.
+        sample_info
+            Optional sample metadata used by backends that require genomic
+            coordinates or other sample-level context.
+        chrom
+            Chromosome label for single-chromosome fitting when relevant.
+        """
         raise NotImplementedError("fit method not implemented")
 
     def create_model(self):
+        """Instantiate and initialize the backend-specific HMM object."""
         raise NotImplementedError("fit method not implemented")
 
     def predict(self, emissions):
+        """
+        Decode hidden states for the supplied emissions.
+
+        Parameters
+        ----------
+        emissions
+            Observation sequence or feature matrix prepared for prediction.
+
+        Returns
+        -------
+        numpy.ndarray
+            Hidden-state assignments in backend-specific numeric form.
+        """
         raise NotImplementedError("fit method not implemented")
 
     def format_fit(self, emissions):
+        """
+        Convert raw emissions into the representation expected by ``fit``.
+
+        Parameters
+        ----------
+        emissions
+            Raw observation labels or features.
+        """
         raise NotImplementedError("fit method not implemented")
 
     def format_predict(self, emissions):
+        """
+        Convert raw emissions into the representation expected by ``predict``.
+
+        Parameters
+        ----------
+        emissions
+            Raw observation labels or features.
+        """
         raise NotImplementedError("fit method not implemented")
 
 
@@ -45,18 +89,23 @@ class DAMethylSegHMM(MethylSegHMM):
         raise NotImplementedError("DAMethylSegHMM is not implemented")
 
     def fit(self, emissions, sample_info=None, chrom=None):
+        """Placeholder method for the not-yet-implemented DA backend."""
         raise NotImplementedError("fit method not implemented")
 
     def create_model(self):
+        """Placeholder method for the not-yet-implemented DA backend."""
         raise NotImplementedError("fit method not implemented")
 
     def predict(self, emissions):
+        """Placeholder method for the not-yet-implemented DA backend."""
         raise NotImplementedError("fit method not implemented")
 
     def format_fit(self, emissions):
+        """Placeholder method for the not-yet-implemented DA backend."""
         raise NotImplementedError("fit method not implemented")
 
     def format_predict(self, emissions):
+        """Placeholder method for the not-yet-implemented DA backend."""
         raise NotImplementedError("fit method not implemented")
 
 
@@ -77,6 +126,7 @@ class MultinomialSegHMM(MethylSegHMM):
         self.lengths = None
 
     def create_model(self):
+        """Create the underlying ``hmmlearn.MultinomialHMM`` instance."""
         self.hmm_model = hmm.MultinomialHMM(
             n_components=self.n_states,
             n_iter=self.n_iter,  # EM iterations for transitions
@@ -84,12 +134,38 @@ class MultinomialSegHMM(MethylSegHMM):
         )
 
     def format_fit(self, emissions):
+        """
+        One-hot encode discrete state labels for multinomial fitting.
+
+        Parameters
+        ----------
+        emissions
+            Integer state labels in ``[0, n_states)``.
+
+        Returns
+        -------
+        numpy.ndarray
+            One-hot encoded matrix with shape ``(n_observations, n_states)``.
+        """
         return np.eye(self.n_states, dtype=int)[emissions]
 
     def format_predict(self, emissions):
+        """Format discrete labels for prediction using the fit representation."""
         return self.format_fit(emissions)
 
     def fit(self, emissions, sample_info=None, chrom=None):
+        """
+        Fit the multinomial HMM on discrete state observations.
+
+        Parameters
+        ----------
+        emissions
+            Integer state labels to smooth with the HMM.
+        sample_info
+            Unused placeholder for API compatibility.
+        chrom
+            Unused placeholder for API compatibility.
+        """
         fit_emissions = self.format_fit(emissions)
         if self.lengths is None:
             self.hmm_model.fit(fit_emissions)
@@ -97,6 +173,19 @@ class MultinomialSegHMM(MethylSegHMM):
             self.hmm_model.fit(fit_emissions, lengths=self.lengths)
 
     def predict(self, emissions):
+        """
+        Predict hidden states for discrete observations.
+
+        Parameters
+        ----------
+        emissions
+            Integer state labels to decode.
+
+        Returns
+        -------
+        numpy.ndarray
+            Predicted HMM state sequence.
+        """
         predict_emissions = self.format_predict(emissions)
         if self.lengths is None:
             return self.hmm_model.predict(predict_emissions)
@@ -149,10 +238,24 @@ class StickyCategoricalMethylSegHMM(MethylSegHMM):
         self.lengths = None
 
     def format_fit(self, emissions):
+        """
+        Reshape integer categorical observations for ``CategoricalHMM``.
+
+        Parameters
+        ----------
+        emissions
+            Integer observation labels in ``[0, n_states)``.
+
+        Returns
+        -------
+        numpy.ndarray
+            Column vector with one categorical code per observation.
+        """
         emissions = np.asarray(emissions, dtype=int)
         return emissions.reshape(-1, 1)
 
     def format_predict(self, emissions):
+        """Format categorical observations for prediction."""
         return self.format_fit(emissions)
 
     def make_sticky_transmat(
@@ -181,6 +284,15 @@ class StickyCategoricalMethylSegHMM(MethylSegHMM):
         return trans
 
     def make_emissionprob(self) -> np.ndarray:
+        """
+        Build the near-identity emission matrix used by the sticky HMM.
+
+        Returns
+        -------
+        numpy.ndarray
+            Square emission-probability matrix whose diagonal retains most of
+            the probability mass.
+        """
         if self.n_states == 1:
             return np.ones((1, 1), dtype=float)
 
@@ -194,6 +306,7 @@ class StickyCategoricalMethylSegHMM(MethylSegHMM):
         return emission
 
     def create_model(self):
+        """Create and initialize the sticky categorical HMM backend."""
         self.prior_trans = self.make_sticky_transmat()
         self.hmm_model = hmm.CategoricalHMM(
             n_components=self.n_states,
@@ -211,6 +324,18 @@ class StickyCategoricalMethylSegHMM(MethylSegHMM):
         self.hmm_model.transmat_ = self.prior_trans.copy()
 
     def fit(self, emissions, sample_info=None, chrom=None):
+        """
+        Fit transition probabilities when ``fit_transitions`` is enabled.
+
+        Parameters
+        ----------
+        emissions
+            Integer categorical observations.
+        sample_info
+            Unused placeholder for API compatibility.
+        chrom
+            Unused placeholder for API compatibility.
+        """
         if self.fit_transitions:
             fit_emissions = self.format_fit(emissions)
             if self.lengths is None:
@@ -219,6 +344,19 @@ class StickyCategoricalMethylSegHMM(MethylSegHMM):
                 self.hmm_model.fit(fit_emissions, lengths=self.lengths)
 
     def predict(self, emissions):
+        """
+        Predict smoothed hidden states from categorical observations.
+
+        Parameters
+        ----------
+        emissions
+            Integer categorical observations.
+
+        Returns
+        -------
+        numpy.ndarray
+            Decoded HMM state sequence.
+        """
         predict_emissions = self.format_predict(emissions)
         if self.lengths is None:
             return self.hmm_model.predict(predict_emissions)
@@ -255,6 +393,7 @@ class GaussianMethylSegHMM(MethylSegHMM):
         self.lengths = None
 
     def create_model(self):
+        """Create the underlying ``hmmlearn.GaussianHMM`` instance."""
         self.hmm_model = hmm.GaussianHMM(
             n_components=self.n_states,
             covariance_type=self.covariance_type,
@@ -266,6 +405,20 @@ class GaussianMethylSegHMM(MethylSegHMM):
         )
 
     def format_fit(self, emissions):
+        """
+        Validate and coerce continuous emissions into a 2-D float matrix.
+
+        Parameters
+        ----------
+        emissions
+            Continuous emission features with shape
+            ``(n_observations, n_features)``.
+
+        Returns
+        -------
+        numpy.ndarray
+            Float64 feature matrix ready for Gaussian HMM fitting.
+        """
         emissions = np.asarray(emissions, dtype=np.float64)
         if emissions.ndim != 2:
             raise ValueError(
@@ -275,6 +428,7 @@ class GaussianMethylSegHMM(MethylSegHMM):
         return emissions
 
     def format_predict(self, emissions):
+        """Format continuous emission features for prediction."""
         return self.format_fit(emissions)
 
     def _get_sequence_start_indices(
@@ -322,6 +476,19 @@ class GaussianMethylSegHMM(MethylSegHMM):
         km_labels: np.ndarray,
         lengths: Optional[List[int]] = None,
     ):
+        """
+        Seed Gaussian HMM parameters from clustered feature vectors.
+
+        Parameters
+        ----------
+        X_scaled
+            Scaled continuous emission matrix.
+        km_labels
+            Integer cluster assignments used to initialize means, variances, and
+            transition structure.
+        lengths
+            Optional per-sequence lengths for multi-chromosome fitting.
+        """
         X_scaled = self.format_fit(X_scaled)
         km_labels = np.asarray(km_labels, dtype=int)
         if len(X_scaled) != len(km_labels):
@@ -386,6 +553,18 @@ class GaussianMethylSegHMM(MethylSegHMM):
         self.hmm_model.covars_ = covars
 
     def fit(self, emissions, sample_info=None, chrom=None):
+        """
+        Fit the Gaussian HMM on continuous emission features.
+
+        Parameters
+        ----------
+        emissions
+            Continuous emission matrix.
+        sample_info
+            Unused placeholder for API compatibility.
+        chrom
+            Unused placeholder for API compatibility.
+        """
         emissions = self.format_fit(emissions)
         if self.lengths is None:
             self.hmm_model.fit(emissions)
@@ -393,6 +572,19 @@ class GaussianMethylSegHMM(MethylSegHMM):
             self.hmm_model.fit(emissions, lengths=self.lengths)
 
     def predict(self, emissions):
+        """
+        Predict hidden states from continuous emission features.
+
+        Parameters
+        ----------
+        emissions
+            Continuous emission matrix.
+
+        Returns
+        -------
+        numpy.ndarray
+            Predicted HMM state sequence.
+        """
         emissions = self.format_predict(emissions)
         if self.lengths is None:
             return self.hmm_model.predict(emissions)
@@ -424,6 +616,7 @@ class CTMethylSegHMM(MethylSegHMM):
         self.time_scale = time_scale
 
     def create_model(self):
+        """Create the continuous-time HMM with a default near-identity emission model."""
         eps = 0.02  # mislabel rate
 
         emission_probs = np.full(
@@ -439,17 +632,61 @@ class CTMethylSegHMM(MethylSegHMM):
         )
 
     def format_fit(self, emissions):
+        """
+        Pair observed states with genomic coordinates for CT-HMM fitting.
+
+        Parameters
+        ----------
+        emissions
+            Integer observed state sequence.
+
+        Returns
+        -------
+        list
+            Single-sequence list containing ``(observed_states, times)``.
+        """
         obs_states = emissions
         times = self.times
         # print(len(obs_states), len(times))
         return [(obs_states, times)]
 
     def format_predict(self, emissions):
+        """
+        Pair observed states with genomic coordinates for CT-HMM decoding.
+
+        Parameters
+        ----------
+        emissions
+            Integer observed state sequence.
+
+        Returns
+        -------
+        tuple
+            ``(observed_states, times)`` for the decoder.
+        """
         obs_states = emissions
         times = self.times
         return (obs_states, times)
 
     def fit(self, emissions, sample_info, chrom):
+        """
+        Fit the continuous-time HMM using CpG coordinates as observation times.
+
+        Parameters
+        ----------
+        emissions
+            Integer observed state sequence for one chromosome.
+        sample_info
+            Sample metadata whose methylation table supplies CpG genomic
+            positions.
+        chrom
+            Chromosome whose CpGs should be used to derive observation times.
+
+        Returns
+        -------
+        object
+            Fitted CT-HMM object returned by ``cthmm``.
+        """
         self.times = (
             sample_info.meth_data[sample_info.meth_data["CpG_chrm"] == chrom][
                 "CpG_beg"
@@ -464,6 +701,19 @@ class CTMethylSegHMM(MethylSegHMM):
         )
 
     def predict(self, emissions):
+        """
+        Decode hidden states with the configured continuous-time algorithm.
+
+        Parameters
+        ----------
+        emissions
+            Integer observed state sequence.
+
+        Returns
+        -------
+        numpy.ndarray
+            Decoded hidden-state assignments.
+        """
         return self.hmm_model.predict(
             *self.format_predict(emissions), algorithm=self.algorithm
         )

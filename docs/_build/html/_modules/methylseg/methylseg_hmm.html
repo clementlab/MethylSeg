@@ -104,77 +104,105 @@
 <div class="viewcode-block" id="MethylSegHMM.fit">
 <a class="viewcode-back" href="../../generated/methylseg.MethylSegHMM.html#methylseg.MethylSegHMM.fit">[docs]</a>
     <span class="k">def</span> <span class="nf">fit</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">emissions</span><span class="p">,</span> <span class="n">sample_info</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">chrom</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Fit backend-specific HMM parameters on the provided emissions.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        emissions</span>
+<span class="sd">            Observation sequence or feature matrix already prepared for the</span>
+<span class="sd">            backend.</span>
+<span class="sd">        sample_info</span>
+<span class="sd">            Optional sample metadata used by backends that require genomic</span>
+<span class="sd">            coordinates or other sample-level context.</span>
+<span class="sd">        chrom</span>
+<span class="sd">            Chromosome label for single-chromosome fitting when relevant.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">(</span><span class="s2">&quot;fit method not implemented&quot;</span><span class="p">)</span></div>
 
 
 <div class="viewcode-block" id="MethylSegHMM.create_model">
 <a class="viewcode-back" href="../../generated/methylseg.MethylSegHMM.html#methylseg.MethylSegHMM.create_model">[docs]</a>
     <span class="k">def</span> <span class="nf">create_model</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Instantiate and initialize the backend-specific HMM object.&quot;&quot;&quot;</span>
         <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">(</span><span class="s2">&quot;fit method not implemented&quot;</span><span class="p">)</span></div>
 
 
 <div class="viewcode-block" id="MethylSegHMM.predict">
 <a class="viewcode-back" href="../../generated/methylseg.MethylSegHMM.html#methylseg.MethylSegHMM.predict">[docs]</a>
     <span class="k">def</span> <span class="nf">predict</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">emissions</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Decode hidden states for the supplied emissions.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        emissions</span>
+<span class="sd">            Observation sequence or feature matrix prepared for prediction.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        numpy.ndarray</span>
+<span class="sd">            Hidden-state assignments in backend-specific numeric form.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">(</span><span class="s2">&quot;fit method not implemented&quot;</span><span class="p">)</span></div>
 
 
 <div class="viewcode-block" id="MethylSegHMM.format_fit">
 <a class="viewcode-back" href="../../generated/methylseg.MethylSegHMM.html#methylseg.MethylSegHMM.format_fit">[docs]</a>
     <span class="k">def</span> <span class="nf">format_fit</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">emissions</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Convert raw emissions into the representation expected by ``fit``.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        emissions</span>
+<span class="sd">            Raw observation labels or features.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">(</span><span class="s2">&quot;fit method not implemented&quot;</span><span class="p">)</span></div>
 
 
 <div class="viewcode-block" id="MethylSegHMM.format_predict">
 <a class="viewcode-back" href="../../generated/methylseg.MethylSegHMM.html#methylseg.MethylSegHMM.format_predict">[docs]</a>
     <span class="k">def</span> <span class="nf">format_predict</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">emissions</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Convert raw emissions into the representation expected by ``predict``.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        emissions</span>
+<span class="sd">            Raw observation labels or features.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">(</span><span class="s2">&quot;fit method not implemented&quot;</span><span class="p">)</span></div>
 </div>
 
 
 
 <span class="c1"># TODO implement and test custom DAHMM to test speed and performance against CTHMM</span>
-<div class="viewcode-block" id="DAMethylSegHMM">
-<a class="viewcode-back" href="../../generated/methylseg.DAMethylSegHMM.html#methylseg.DAMethylSegHMM">[docs]</a>
 <span class="k">class</span> <span class="nc">DAMethylSegHMM</span><span class="p">(</span><span class="n">MethylSegHMM</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;Placeholder for an alternative HMM implementation that is not yet built.&quot;&quot;&quot;</span>
 
-<div class="viewcode-block" id="DAMethylSegHMM.__init__">
-<a class="viewcode-back" href="../../generated/methylseg.DAMethylSegHMM.html#methylseg.DAMethylSegHMM.__init__">[docs]</a>
     <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">n_states</span><span class="p">:</span> <span class="nb">int</span><span class="p">):</span>
-        <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">(</span><span class="s2">&quot;DAMethylSegHMM is not implemented&quot;</span><span class="p">)</span></div>
+        <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">(</span><span class="s2">&quot;DAMethylSegHMM is not implemented&quot;</span><span class="p">)</span>
 
-
-<div class="viewcode-block" id="DAMethylSegHMM.fit">
-<a class="viewcode-back" href="../../generated/methylseg.DAMethylSegHMM.html#methylseg.DAMethylSegHMM.fit">[docs]</a>
     <span class="k">def</span> <span class="nf">fit</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">emissions</span><span class="p">,</span> <span class="n">sample_info</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">chrom</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
-        <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">(</span><span class="s2">&quot;fit method not implemented&quot;</span><span class="p">)</span></div>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Placeholder method for the not-yet-implemented DA backend.&quot;&quot;&quot;</span>
+        <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">(</span><span class="s2">&quot;fit method not implemented&quot;</span><span class="p">)</span>
 
-
-<div class="viewcode-block" id="DAMethylSegHMM.create_model">
-<a class="viewcode-back" href="../../generated/methylseg.DAMethylSegHMM.html#methylseg.DAMethylSegHMM.create_model">[docs]</a>
     <span class="k">def</span> <span class="nf">create_model</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-        <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">(</span><span class="s2">&quot;fit method not implemented&quot;</span><span class="p">)</span></div>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Placeholder method for the not-yet-implemented DA backend.&quot;&quot;&quot;</span>
+        <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">(</span><span class="s2">&quot;fit method not implemented&quot;</span><span class="p">)</span>
 
-
-<div class="viewcode-block" id="DAMethylSegHMM.predict">
-<a class="viewcode-back" href="../../generated/methylseg.DAMethylSegHMM.html#methylseg.DAMethylSegHMM.predict">[docs]</a>
     <span class="k">def</span> <span class="nf">predict</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">emissions</span><span class="p">):</span>
-        <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">(</span><span class="s2">&quot;fit method not implemented&quot;</span><span class="p">)</span></div>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Placeholder method for the not-yet-implemented DA backend.&quot;&quot;&quot;</span>
+        <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">(</span><span class="s2">&quot;fit method not implemented&quot;</span><span class="p">)</span>
 
-
-<div class="viewcode-block" id="DAMethylSegHMM.format_fit">
-<a class="viewcode-back" href="../../generated/methylseg.DAMethylSegHMM.html#methylseg.DAMethylSegHMM.format_fit">[docs]</a>
     <span class="k">def</span> <span class="nf">format_fit</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">emissions</span><span class="p">):</span>
-        <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">(</span><span class="s2">&quot;fit method not implemented&quot;</span><span class="p">)</span></div>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Placeholder method for the not-yet-implemented DA backend.&quot;&quot;&quot;</span>
+        <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">(</span><span class="s2">&quot;fit method not implemented&quot;</span><span class="p">)</span>
 
-
-<div class="viewcode-block" id="DAMethylSegHMM.format_predict">
-<a class="viewcode-back" href="../../generated/methylseg.DAMethylSegHMM.html#methylseg.DAMethylSegHMM.format_predict">[docs]</a>
     <span class="k">def</span> <span class="nf">format_predict</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">emissions</span><span class="p">):</span>
-        <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">(</span><span class="s2">&quot;fit method not implemented&quot;</span><span class="p">)</span></div>
-</div>
-
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Placeholder method for the not-yet-implemented DA backend.&quot;&quot;&quot;</span>
+        <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">(</span><span class="s2">&quot;fit method not implemented&quot;</span><span class="p">)</span>
 
 
 <div class="viewcode-block" id="MultinomialSegHMM">
@@ -201,6 +229,7 @@
 <div class="viewcode-block" id="MultinomialSegHMM.create_model">
 <a class="viewcode-back" href="../../generated/methylseg.MultinomialSegHMM.html#methylseg.MultinomialSegHMM.create_model">[docs]</a>
     <span class="k">def</span> <span class="nf">create_model</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Create the underlying ``hmmlearn.MultinomialHMM`` instance.&quot;&quot;&quot;</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">hmm_model</span> <span class="o">=</span> <span class="n">hmm</span><span class="o">.</span><span class="n">MultinomialHMM</span><span class="p">(</span>
             <span class="n">n_components</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">n_states</span><span class="p">,</span>
             <span class="n">n_iter</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">n_iter</span><span class="p">,</span>  <span class="c1"># EM iterations for transitions</span>
@@ -211,18 +240,44 @@
 <div class="viewcode-block" id="MultinomialSegHMM.format_fit">
 <a class="viewcode-back" href="../../generated/methylseg.MultinomialSegHMM.html#methylseg.MultinomialSegHMM.format_fit">[docs]</a>
     <span class="k">def</span> <span class="nf">format_fit</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">emissions</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        One-hot encode discrete state labels for multinomial fitting.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        emissions</span>
+<span class="sd">            Integer state labels in ``[0, n_states)``.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        numpy.ndarray</span>
+<span class="sd">            One-hot encoded matrix with shape ``(n_observations, n_states)``.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">eye</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">n_states</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">int</span><span class="p">)[</span><span class="n">emissions</span><span class="p">]</span></div>
 
 
 <div class="viewcode-block" id="MultinomialSegHMM.format_predict">
 <a class="viewcode-back" href="../../generated/methylseg.MultinomialSegHMM.html#methylseg.MultinomialSegHMM.format_predict">[docs]</a>
     <span class="k">def</span> <span class="nf">format_predict</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">emissions</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Format discrete labels for prediction using the fit representation.&quot;&quot;&quot;</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">format_fit</span><span class="p">(</span><span class="n">emissions</span><span class="p">)</span></div>
 
 
 <div class="viewcode-block" id="MultinomialSegHMM.fit">
 <a class="viewcode-back" href="../../generated/methylseg.MultinomialSegHMM.html#methylseg.MultinomialSegHMM.fit">[docs]</a>
     <span class="k">def</span> <span class="nf">fit</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">emissions</span><span class="p">,</span> <span class="n">sample_info</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">chrom</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Fit the multinomial HMM on discrete state observations.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        emissions</span>
+<span class="sd">            Integer state labels to smooth with the HMM.</span>
+<span class="sd">        sample_info</span>
+<span class="sd">            Unused placeholder for API compatibility.</span>
+<span class="sd">        chrom</span>
+<span class="sd">            Unused placeholder for API compatibility.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
         <span class="n">fit_emissions</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">format_fit</span><span class="p">(</span><span class="n">emissions</span><span class="p">)</span>
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">lengths</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">hmm_model</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span><span class="n">fit_emissions</span><span class="p">)</span>
@@ -233,6 +288,19 @@
 <div class="viewcode-block" id="MultinomialSegHMM.predict">
 <a class="viewcode-back" href="../../generated/methylseg.MultinomialSegHMM.html#methylseg.MultinomialSegHMM.predict">[docs]</a>
     <span class="k">def</span> <span class="nf">predict</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">emissions</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Predict hidden states for discrete observations.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        emissions</span>
+<span class="sd">            Integer state labels to decode.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        numpy.ndarray</span>
+<span class="sd">            Predicted HMM state sequence.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
         <span class="n">predict_emissions</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">format_predict</span><span class="p">(</span><span class="n">emissions</span><span class="p">)</span>
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">lengths</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
             <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">hmm_model</span><span class="o">.</span><span class="n">predict</span><span class="p">(</span><span class="n">predict_emissions</span><span class="p">)</span>
@@ -294,6 +362,19 @@
 <div class="viewcode-block" id="StickyCategoricalMethylSegHMM.format_fit">
 <a class="viewcode-back" href="../../generated/methylseg.StickyCategoricalMethylSegHMM.html#methylseg.StickyCategoricalMethylSegHMM.format_fit">[docs]</a>
     <span class="k">def</span> <span class="nf">format_fit</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">emissions</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Reshape integer categorical observations for ``CategoricalHMM``.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        emissions</span>
+<span class="sd">            Integer observation labels in ``[0, n_states)``.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        numpy.ndarray</span>
+<span class="sd">            Column vector with one categorical code per observation.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
         <span class="n">emissions</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">emissions</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">int</span><span class="p">)</span>
         <span class="k">return</span> <span class="n">emissions</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span></div>
 
@@ -301,6 +382,7 @@
 <div class="viewcode-block" id="StickyCategoricalMethylSegHMM.format_predict">
 <a class="viewcode-back" href="../../generated/methylseg.StickyCategoricalMethylSegHMM.html#methylseg.StickyCategoricalMethylSegHMM.format_predict">[docs]</a>
     <span class="k">def</span> <span class="nf">format_predict</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">emissions</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Format categorical observations for prediction.&quot;&quot;&quot;</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">format_fit</span><span class="p">(</span><span class="n">emissions</span><span class="p">)</span></div>
 
 
@@ -335,6 +417,15 @@
 <div class="viewcode-block" id="StickyCategoricalMethylSegHMM.make_emissionprob">
 <a class="viewcode-back" href="../../generated/methylseg.StickyCategoricalMethylSegHMM.html#methylseg.StickyCategoricalMethylSegHMM.make_emissionprob">[docs]</a>
     <span class="k">def</span> <span class="nf">make_emissionprob</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Build the near-identity emission matrix used by the sticky HMM.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        numpy.ndarray</span>
+<span class="sd">            Square emission-probability matrix whose diagonal retains most of</span>
+<span class="sd">            the probability mass.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">n_states</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
             <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">((</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">),</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">)</span>
 
@@ -351,6 +442,7 @@
 <div class="viewcode-block" id="StickyCategoricalMethylSegHMM.create_model">
 <a class="viewcode-back" href="../../generated/methylseg.StickyCategoricalMethylSegHMM.html#methylseg.StickyCategoricalMethylSegHMM.create_model">[docs]</a>
     <span class="k">def</span> <span class="nf">create_model</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Create and initialize the sticky categorical HMM backend.&quot;&quot;&quot;</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">prior_trans</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">make_sticky_transmat</span><span class="p">()</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">hmm_model</span> <span class="o">=</span> <span class="n">hmm</span><span class="o">.</span><span class="n">CategoricalHMM</span><span class="p">(</span>
             <span class="n">n_components</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">n_states</span><span class="p">,</span>
@@ -371,6 +463,18 @@
 <div class="viewcode-block" id="StickyCategoricalMethylSegHMM.fit">
 <a class="viewcode-back" href="../../generated/methylseg.StickyCategoricalMethylSegHMM.html#methylseg.StickyCategoricalMethylSegHMM.fit">[docs]</a>
     <span class="k">def</span> <span class="nf">fit</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">emissions</span><span class="p">,</span> <span class="n">sample_info</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">chrom</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Fit transition probabilities when ``fit_transitions`` is enabled.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        emissions</span>
+<span class="sd">            Integer categorical observations.</span>
+<span class="sd">        sample_info</span>
+<span class="sd">            Unused placeholder for API compatibility.</span>
+<span class="sd">        chrom</span>
+<span class="sd">            Unused placeholder for API compatibility.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">fit_transitions</span><span class="p">:</span>
             <span class="n">fit_emissions</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">format_fit</span><span class="p">(</span><span class="n">emissions</span><span class="p">)</span>
             <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">lengths</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
@@ -382,6 +486,19 @@
 <div class="viewcode-block" id="StickyCategoricalMethylSegHMM.predict">
 <a class="viewcode-back" href="../../generated/methylseg.StickyCategoricalMethylSegHMM.html#methylseg.StickyCategoricalMethylSegHMM.predict">[docs]</a>
     <span class="k">def</span> <span class="nf">predict</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">emissions</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Predict smoothed hidden states from categorical observations.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        emissions</span>
+<span class="sd">            Integer categorical observations.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        numpy.ndarray</span>
+<span class="sd">            Decoded HMM state sequence.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
         <span class="n">predict_emissions</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">format_predict</span><span class="p">(</span><span class="n">emissions</span><span class="p">)</span>
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">lengths</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
             <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">hmm_model</span><span class="o">.</span><span class="n">predict</span><span class="p">(</span><span class="n">predict_emissions</span><span class="p">)</span>
@@ -427,6 +544,7 @@
 <div class="viewcode-block" id="GaussianMethylSegHMM.create_model">
 <a class="viewcode-back" href="../../generated/methylseg.GaussianMethylSegHMM.html#methylseg.GaussianMethylSegHMM.create_model">[docs]</a>
     <span class="k">def</span> <span class="nf">create_model</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Create the underlying ``hmmlearn.GaussianHMM`` instance.&quot;&quot;&quot;</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">hmm_model</span> <span class="o">=</span> <span class="n">hmm</span><span class="o">.</span><span class="n">GaussianHMM</span><span class="p">(</span>
             <span class="n">n_components</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">n_states</span><span class="p">,</span>
             <span class="n">covariance_type</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">covariance_type</span><span class="p">,</span>
@@ -441,6 +559,20 @@
 <div class="viewcode-block" id="GaussianMethylSegHMM.format_fit">
 <a class="viewcode-back" href="../../generated/methylseg.GaussianMethylSegHMM.html#methylseg.GaussianMethylSegHMM.format_fit">[docs]</a>
     <span class="k">def</span> <span class="nf">format_fit</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">emissions</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Validate and coerce continuous emissions into a 2-D float matrix.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        emissions</span>
+<span class="sd">            Continuous emission features with shape</span>
+<span class="sd">            ``(n_observations, n_features)``.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        numpy.ndarray</span>
+<span class="sd">            Float64 feature matrix ready for Gaussian HMM fitting.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
         <span class="n">emissions</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">emissions</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">float64</span><span class="p">)</span>
         <span class="k">if</span> <span class="n">emissions</span><span class="o">.</span><span class="n">ndim</span> <span class="o">!=</span> <span class="mi">2</span><span class="p">:</span>
             <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
@@ -453,6 +585,7 @@
 <div class="viewcode-block" id="GaussianMethylSegHMM.format_predict">
 <a class="viewcode-back" href="../../generated/methylseg.GaussianMethylSegHMM.html#methylseg.GaussianMethylSegHMM.format_predict">[docs]</a>
     <span class="k">def</span> <span class="nf">format_predict</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">emissions</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Format continuous emission features for prediction.&quot;&quot;&quot;</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">format_fit</span><span class="p">(</span><span class="n">emissions</span><span class="p">)</span></div>
 
 
@@ -503,6 +636,19 @@
         <span class="n">km_labels</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span>
         <span class="n">lengths</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">List</span><span class="p">[</span><span class="nb">int</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
     <span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Seed Gaussian HMM parameters from clustered feature vectors.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        X_scaled</span>
+<span class="sd">            Scaled continuous emission matrix.</span>
+<span class="sd">        km_labels</span>
+<span class="sd">            Integer cluster assignments used to initialize means, variances, and</span>
+<span class="sd">            transition structure.</span>
+<span class="sd">        lengths</span>
+<span class="sd">            Optional per-sequence lengths for multi-chromosome fitting.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
         <span class="n">X_scaled</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">format_fit</span><span class="p">(</span><span class="n">X_scaled</span><span class="p">)</span>
         <span class="n">km_labels</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">km_labels</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">int</span><span class="p">)</span>
         <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">X_scaled</span><span class="p">)</span> <span class="o">!=</span> <span class="nb">len</span><span class="p">(</span><span class="n">km_labels</span><span class="p">):</span>
@@ -570,6 +716,18 @@
 <div class="viewcode-block" id="GaussianMethylSegHMM.fit">
 <a class="viewcode-back" href="../../generated/methylseg.GaussianMethylSegHMM.html#methylseg.GaussianMethylSegHMM.fit">[docs]</a>
     <span class="k">def</span> <span class="nf">fit</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">emissions</span><span class="p">,</span> <span class="n">sample_info</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">chrom</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Fit the Gaussian HMM on continuous emission features.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        emissions</span>
+<span class="sd">            Continuous emission matrix.</span>
+<span class="sd">        sample_info</span>
+<span class="sd">            Unused placeholder for API compatibility.</span>
+<span class="sd">        chrom</span>
+<span class="sd">            Unused placeholder for API compatibility.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
         <span class="n">emissions</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">format_fit</span><span class="p">(</span><span class="n">emissions</span><span class="p">)</span>
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">lengths</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">hmm_model</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span><span class="n">emissions</span><span class="p">)</span>
@@ -580,6 +738,19 @@
 <div class="viewcode-block" id="GaussianMethylSegHMM.predict">
 <a class="viewcode-back" href="../../generated/methylseg.GaussianMethylSegHMM.html#methylseg.GaussianMethylSegHMM.predict">[docs]</a>
     <span class="k">def</span> <span class="nf">predict</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">emissions</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Predict hidden states from continuous emission features.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        emissions</span>
+<span class="sd">            Continuous emission matrix.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        numpy.ndarray</span>
+<span class="sd">            Predicted HMM state sequence.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
         <span class="n">emissions</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">format_predict</span><span class="p">(</span><span class="n">emissions</span><span class="p">)</span>
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">lengths</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
             <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">hmm_model</span><span class="o">.</span><span class="n">predict</span><span class="p">(</span><span class="n">emissions</span><span class="p">)</span>
@@ -620,6 +791,7 @@
 <div class="viewcode-block" id="CTMethylSegHMM.create_model">
 <a class="viewcode-back" href="../../generated/methylseg.CTMethylSegHMM.html#methylseg.CTMethylSegHMM.create_model">[docs]</a>
     <span class="k">def</span> <span class="nf">create_model</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Create the continuous-time HMM with a default near-identity emission model.&quot;&quot;&quot;</span>
         <span class="n">eps</span> <span class="o">=</span> <span class="mf">0.02</span>  <span class="c1"># mislabel rate</span>
 
         <span class="n">emission_probs</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">full</span><span class="p">(</span>
@@ -638,6 +810,19 @@
 <div class="viewcode-block" id="CTMethylSegHMM.format_fit">
 <a class="viewcode-back" href="../../generated/methylseg.CTMethylSegHMM.html#methylseg.CTMethylSegHMM.format_fit">[docs]</a>
     <span class="k">def</span> <span class="nf">format_fit</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">emissions</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Pair observed states with genomic coordinates for CT-HMM fitting.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        emissions</span>
+<span class="sd">            Integer observed state sequence.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        list</span>
+<span class="sd">            Single-sequence list containing ``(observed_states, times)``.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
         <span class="n">obs_states</span> <span class="o">=</span> <span class="n">emissions</span>
         <span class="n">times</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">times</span>
         <span class="c1"># print(len(obs_states), len(times))</span>
@@ -647,6 +832,19 @@
 <div class="viewcode-block" id="CTMethylSegHMM.format_predict">
 <a class="viewcode-back" href="../../generated/methylseg.CTMethylSegHMM.html#methylseg.CTMethylSegHMM.format_predict">[docs]</a>
     <span class="k">def</span> <span class="nf">format_predict</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">emissions</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Pair observed states with genomic coordinates for CT-HMM decoding.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        emissions</span>
+<span class="sd">            Integer observed state sequence.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        tuple</span>
+<span class="sd">            ``(observed_states, times)`` for the decoder.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
         <span class="n">obs_states</span> <span class="o">=</span> <span class="n">emissions</span>
         <span class="n">times</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">times</span>
         <span class="k">return</span> <span class="p">(</span><span class="n">obs_states</span><span class="p">,</span> <span class="n">times</span><span class="p">)</span></div>
@@ -655,6 +853,24 @@
 <div class="viewcode-block" id="CTMethylSegHMM.fit">
 <a class="viewcode-back" href="../../generated/methylseg.CTMethylSegHMM.html#methylseg.CTMethylSegHMM.fit">[docs]</a>
     <span class="k">def</span> <span class="nf">fit</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">emissions</span><span class="p">,</span> <span class="n">sample_info</span><span class="p">,</span> <span class="n">chrom</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Fit the continuous-time HMM using CpG coordinates as observation times.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        emissions</span>
+<span class="sd">            Integer observed state sequence for one chromosome.</span>
+<span class="sd">        sample_info</span>
+<span class="sd">            Sample metadata whose methylation table supplies CpG genomic</span>
+<span class="sd">            positions.</span>
+<span class="sd">        chrom</span>
+<span class="sd">            Chromosome whose CpGs should be used to derive observation times.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        object</span>
+<span class="sd">            Fitted CT-HMM object returned by ``cthmm``.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">times</span> <span class="o">=</span> <span class="p">(</span>
             <span class="n">sample_info</span><span class="o">.</span><span class="n">meth_data</span><span class="p">[</span><span class="n">sample_info</span><span class="o">.</span><span class="n">meth_data</span><span class="p">[</span><span class="s2">&quot;CpG_chrm&quot;</span><span class="p">]</span> <span class="o">==</span> <span class="n">chrom</span><span class="p">][</span>
                 <span class="s2">&quot;CpG_beg&quot;</span>
@@ -672,6 +888,19 @@
 <div class="viewcode-block" id="CTMethylSegHMM.predict">
 <a class="viewcode-back" href="../../generated/methylseg.CTMethylSegHMM.html#methylseg.CTMethylSegHMM.predict">[docs]</a>
     <span class="k">def</span> <span class="nf">predict</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">emissions</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Decode hidden states with the configured continuous-time algorithm.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        emissions</span>
+<span class="sd">            Integer observed state sequence.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        numpy.ndarray</span>
+<span class="sd">            Decoded hidden-state assignments.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">hmm_model</span><span class="o">.</span><span class="n">predict</span><span class="p">(</span>
             <span class="o">*</span><span class="bp">self</span><span class="o">.</span><span class="n">format_predict</span><span class="p">(</span><span class="n">emissions</span><span class="p">),</span> <span class="n">algorithm</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">algorithm</span>
         <span class="p">)</span></div>
