@@ -8,12 +8,14 @@ pandas>=2.2
 panel>=1.4
 plotly>=5.24
 pybedtools>=0.12.0
+pyarrow>=17.0
 PyYAML>=6.0
 scikit-learn>=1.5
 seaborn>=0.13
 tqdm>=4.66
 umap-learn>=0.5
 gdown>=6.0
+nbformat>=4.2.0
 
 [docs]
 ipykernel
@@ -21,3 +23,6 @@ nbsphinx>=0.9.6
 Sphinx>=7.4.7
 sphinx-autobuild>=2024.4.16
 sphinx-rtd-theme>=2.0.0
+
+[test]
+pytest>=8.0

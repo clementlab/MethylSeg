@@ -1,1 +1,0 @@
-find . -type d -exec chmod 555 {} + && find . -type f -exec chmod 444 {} +
