@@ -253,6 +253,10 @@ class MethylSegPathway:
                     (40_000, "40kb"),
                     (450_000, "450kb"),
                 ]
+            elif self.train_sample_info.resolution in {"27k", "850k"}:
+                raise ValueError(f"Defaults for {self.train_sample_info.resolution} are not implemented.")
+            else:
+                raise ValueError(f"Unsupported methylation resolution: {self.train_sample_info.resolution}")
         if hmm_type is None:
             hmm_type = (
                 HMMType.STICKY

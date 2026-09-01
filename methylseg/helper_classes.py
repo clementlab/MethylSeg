@@ -453,7 +453,7 @@ class MethylDataPrep:
 
         if column_count == 4:
             # Four-column inputs already contain beta values.
-            return self._load_450k()
+            return self._load_microarray()
 
         if column_count < 5:
             raise ValueError(
@@ -591,7 +591,7 @@ class MethylDataPrep:
 
         return filtered_df, self._format_removed_dataframe(removed_df)
 
-    def _load_450k(self) -> tuple[pd.DataFrame, pd.DataFrame]:
+    def _load_microarray(self) -> tuple[pd.DataFrame, pd.DataFrame]:
         compression = "gzip" if self.meth_file.suffix in {".gz", ".gzip"} else "infer"
 
         try:
@@ -711,7 +711,7 @@ class MethylDataPrep:
     def _load_auto(self) -> tuple[pd.DataFrame, pd.DataFrame]:
 
         try:
-            return self._load_450k()
+            return self._load_microarray()
         except Exception:
             pass
 
@@ -736,8 +736,8 @@ class MethylDataPrep:
         """
         if self.resolution == "wgbs":
             filtered_df, removed_df = self._load_wgbs()
-        elif self.resolution == "450k":
-            filtered_df, removed_df = self._load_450k()
+        elif self._is_microarray_format():
+            filtered_df, removed_df = self._load_microarray()
         elif self.resolution == "auto":
             filtered_df, removed_df = self._load_auto()
         else:
