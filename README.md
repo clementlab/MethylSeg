@@ -77,7 +77,7 @@ analysis:
 | Model filename | Training data |
 | --- | --- |
 | `wgbs_colon_model` | `WGBS_colon-primary-tumor_1_wgbs.tsv` |
-| `tcga_hm450k_model` | `TCGA-BD-A3EP-01A` |
+| `tcga_hm450k_model` | `TCGA-BD-A3EP-01A_450k.tsv` |
 
 Load a pretrained model with `get_pretrained_model`:
 
