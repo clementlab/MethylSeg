@@ -36,6 +36,11 @@ jobs:
           python -m pip install -r docs/requirements.txt
           python -m pip install -e .
 
+      - name: Install Pandoc
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y pandoc
+
       - name: Build documentation
         run: sphinx-build -b html docs docs/_build/html
 
