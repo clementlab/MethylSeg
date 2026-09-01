@@ -95,33 +95,6 @@ hm450k_saved = MethylSegPathway.get_pretrained_model(
 )
 ```
 
-## Input formats
-
-MethylSeg accepts tab-delimited `.tsv` and `.tsv.gz` files. Genomic coordinates
-must use 0-based, half-open
-coordinates, and chromosome names must be consistent throughout the input.
-
-WGBS input supplies methylated-read counts and total coverage; beta values are
-calculated internally.
-
-| CpG_chrm | CpG_beg | CpG_end | meth | coverage |
-| --- | --- | --- | --- | --- |
-| chr1 | 10468 | 10470 | 14 | 15 |
-| chr1 | 10470 | 10472 | 10 | 10 |
-| chr1 | 10483 | 10485 | 23 | 28 |
-
-TCGA/HM450K input supplies beta values directly. The optional `probe` column is
-kept as metadata.
-
-| CpG_chrm | CpG_beg | CpG_end | beta | probe |
-| --- | --- | --- | --- | --- |
-| chr1 | 15864 | 15866 | 0.0 | cg13869341 |
-| chr1 | 29406 | 29408 | 0.0 | cg12045430 |
-| chr1 | 29424 | 29426 | 0.0 | cg20826792 |
-
-The full inputs used below are installed at `data/reference_files/` by
-`methylseg download_data_files`.
-
 ## Quick start
 
 The default workflow trains a model on your input, segments one chromosome,
@@ -180,6 +153,33 @@ segmentation, cleaning, and summary-file writing in one call.
 
 See
 [run_full_pipeline.ipynb](examples/run_full_pipeline.ipynb) for the full end-to-end workflow.
+
+## Input formats
+
+MethylSeg accepts tab-delimited `.tsv` and `.tsv.gz` files. Genomic coordinates
+must use 0-based, half-open
+coordinates, and chromosome names must be consistent throughout the input.
+
+WGBS input supplies methylated-read counts and total coverage; beta values are
+calculated internally.
+
+| CpG_chrm | CpG_beg | CpG_end | meth | coverage |
+| --- | --- | --- | --- | --- |
+| chr1 | 10468 | 10470 | 14 | 15 |
+| chr1 | 10470 | 10472 | 10 | 10 |
+| chr1 | 10483 | 10485 | 23 | 28 |
+
+TCGA/HM450K input supplies beta values directly. The optional `probe` column is
+kept as metadata.
+
+| CpG_chrm | CpG_beg | CpG_end | beta | probe |
+| --- | --- | --- | --- | --- |
+| chr1 | 15864 | 15866 | 0.0 | cg13869341 |
+| chr1 | 29406 | 29408 | 0.0 | cg12045430 |
+| chr1 | 29424 | 29426 | 0.0 | cg20826792 |
+
+The full inputs used below are installed at `data/reference_files/` by
+`methylseg download_data_files`.
 
 ## Outputs
 
