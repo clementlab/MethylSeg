@@ -89,7 +89,18 @@ class DAMethylSegHMM(MethylSegHMM):
         raise NotImplementedError("DAMethylSegHMM is not implemented")
 
     def fit(self, emissions, sample_info=None, chrom=None):
-        """Placeholder method for the not-yet-implemented DA backend."""
+        """
+        Placeholder method for the not-yet-implemented DA backend.
+
+        Parameters
+        ----------
+        emissions
+            Observation sequence or feature matrix prepared for the DA backend.
+        sample_info
+            Optional sample metadata for API compatibility.
+        chrom
+            Optional chromosome label for API compatibility.
+        """
         raise NotImplementedError("fit method not implemented")
 
     def create_model(self):
@@ -97,15 +108,42 @@ class DAMethylSegHMM(MethylSegHMM):
         raise NotImplementedError("fit method not implemented")
 
     def predict(self, emissions):
-        """Placeholder method for the not-yet-implemented DA backend."""
+        """
+        Placeholder method for the not-yet-implemented DA backend.
+
+        Parameters
+        ----------
+        emissions
+            Observation sequence or feature matrix prepared for prediction.
+
+        Returns
+        -------
+        numpy.ndarray
+            Placeholder hidden-state assignments once this backend is
+            implemented.
+        """
         raise NotImplementedError("fit method not implemented")
 
     def format_fit(self, emissions):
-        """Placeholder method for the not-yet-implemented DA backend."""
+        """
+        Placeholder method for the not-yet-implemented DA backend.
+
+        Parameters
+        ----------
+        emissions
+            Raw observation labels or features.
+        """
         raise NotImplementedError("fit method not implemented")
 
     def format_predict(self, emissions):
-        """Placeholder method for the not-yet-implemented DA backend."""
+        """
+        Placeholder method for the not-yet-implemented DA backend.
+
+        Parameters
+        ----------
+        emissions
+            Raw observation labels or features.
+        """
         raise NotImplementedError("fit method not implemented")
 
 
@@ -150,7 +188,19 @@ class MultinomialSegHMM(MethylSegHMM):
         return np.eye(self.n_states, dtype=int)[emissions]
 
     def format_predict(self, emissions):
-        """Format discrete labels for prediction using the fit representation."""
+        """
+        Format discrete labels for prediction using the fit representation.
+
+        Parameters
+        ----------
+        emissions
+            Integer state labels in ``[0, n_states)``.
+
+        Returns
+        -------
+        numpy.ndarray
+            One-hot encoded matrix with shape ``(n_observations, n_states)``.
+        """
         return self.format_fit(emissions)
 
     def fit(self, emissions, sample_info=None, chrom=None):
@@ -255,7 +305,19 @@ class StickyCategoricalMethylSegHMM(MethylSegHMM):
         return emissions.reshape(-1, 1)
 
     def format_predict(self, emissions):
-        """Format categorical observations for prediction."""
+        """
+        Format categorical observations for prediction.
+
+        Parameters
+        ----------
+        emissions
+            Integer observation labels in ``[0, n_states)``.
+
+        Returns
+        -------
+        numpy.ndarray
+            Column vector with one categorical code per observation.
+        """
         return self.format_fit(emissions)
 
     def make_sticky_transmat(
@@ -265,6 +327,20 @@ class StickyCategoricalMethylSegHMM(MethylSegHMM):
     ) -> np.ndarray:
         """
         Build a 'sticky' transition matrix.
+
+        Parameters
+        ----------
+        n_states
+            Optional number of hidden states. When omitted, uses
+            ``self.n_states``.
+        stay_prob
+            Optional diagonal self-transition probability. When omitted, uses
+            ``self.stay_prob``.
+
+        Returns
+        -------
+        numpy.ndarray
+            Square transition matrix whose rows sum to one.
 
         stay_prob controls the diagonal self-transition probability for every
         state. Remaining mass is shared uniformly across off-diagonal entries.
@@ -428,7 +504,20 @@ class GaussianMethylSegHMM(MethylSegHMM):
         return emissions
 
     def format_predict(self, emissions):
-        """Format continuous emission features for prediction."""
+        """
+        Format continuous emission features for prediction.
+
+        Parameters
+        ----------
+        emissions
+            Continuous emission features with shape
+            ``(n_observations, n_features)``.
+
+        Returns
+        -------
+        numpy.ndarray
+            Float64 feature matrix ready for Gaussian HMM decoding.
+        """
         return self.format_fit(emissions)
 
     def _get_sequence_start_indices(

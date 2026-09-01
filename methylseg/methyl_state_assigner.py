@@ -311,7 +311,20 @@ class MethylStateAssigner:
     ) -> Tuple[KMeansMethylationModel, Optional[np.ndarray], np.ndarray]:
         """
         Fit KMeans on emission features using the assigner's configured cluster space.
-        Also returns PCA scores for PCA-backed clustering and relabeled assignments.
+
+        Parameters
+        ----------
+        emission_df
+            Emission-feature table used for clustering.
+        feature_cols
+            Optional explicit feature-column list. When omitted, uses
+            ``resolve_feature_cols``.
+
+        Returns
+        -------
+        tuple
+            ``(model, pca_scores, relabeled_labels)`` where ``pca_scores`` is
+            ``None`` when clustering in raw feature space.
         """
         feature_cols = self.resolve_feature_cols(
             emission_df=emission_df,
@@ -372,7 +385,16 @@ class MethylStateAssigner:
         """
         Apply a previously trained KMeansMethylationModel to a new emission_df.
 
-        Returns (pca_scores, raw_distances, raw_labels, relabeled_labels).
+        Parameters
+        ----------
+        emission_df
+            Emission-feature table to score with the trained model.
+
+        Returns
+        -------
+        tuple
+            ``(pca_scores, raw_distances, raw_labels, relabeled_labels)`` for
+            the supplied emission rows.
         """
         if not hasattr(self, "model"):
             raise ValueError("No trained model found. Please train a model first.")
@@ -427,6 +449,19 @@ class MethylStateAssigner:
     ) -> Dict[str, Optional[float]]:
         """
         Calculate clustering-quality metrics in the same feature space used for KMeans.
+
+        Parameters
+        ----------
+        emission_df
+            Emission-feature table aligned to ``labels``.
+        labels
+            Cluster labels to evaluate in the trained feature space.
+
+        Returns
+        -------
+        dict of str to float or None
+            Clustering metric values keyed by metric name. Metrics that cannot
+            be computed are returned as ``None``.
         """
         metrics = {
             "silhouette_score": None,
@@ -593,6 +628,8 @@ class MethylStateAssigner:
             Whether to allow UMAP's parallel execution mode.
         show_plot
             If ``True``, display the figure immediately.
+        state_colors
+            Optional biological-state color overrides.
 
         Returns
         -------
@@ -746,6 +783,8 @@ class MethylStateAssigner:
             Whether to allow UMAP's parallel execution mode.
         show_plot
             If ``True``, display the figure immediately.
+        state_colors
+            Optional biological-state color overrides.
 
         Returns
         -------
@@ -1070,6 +1109,50 @@ class MethylStateAssigner:
     ):
         """
         PCA embedding + loadings, using consistent colors per state.
+
+        Parameters
+        ----------
+        emission_df
+            Emission-feature table to embed with PCA.
+        labels
+            Cluster or biological state labels aligned to ``emission_df``.
+        n_pca_plot
+            Number of PCA dimensions to render, usually ``2`` or ``3``.
+        top_n_loadings
+            Number of loading features to show in the summary table.
+        pca_hexbin
+            If ``True``, render 2-D PCA with hexbins instead of points.
+        hexbin_gridsize
+            Hexbin grid resolution for 2-D PCA hexbin plots.
+        hexbin_bins
+            Hexbin binning strategy for 2-D PCA hexbin plots.
+        hexbin_mincnt
+            Minimum points required to draw a hexbin in 2-D PCA hexbin plots.
+        hexbin_alpha
+            Optional transparency multiplier for 2-D PCA hexbin plots.
+        hexbin_linewidths
+            Optional border width for 2-D PCA hexbin plots.
+        interactive
+            If ``True``, use interactive rendering when supported.
+        include_kmeans_metrics
+            Include clustering-quality metrics in the plotted annotation.
+        include_biplot
+            Overlay top PCA loading vectors on 2-D PCA plots.
+        label_title
+            Legend or colorbar title.
+        sample_name
+            Optional sample identifier used in the plot title.
+        chrom
+            Optional chromosome label used in the plot title.
+        show_plot
+            If ``True``, display the figure immediately.
+        state_colors
+            Optional biological-state color overrides.
+
+        Returns
+        -------
+        object
+            Matplotlib or Plotly figure object from the PCA plotting backend.
 
         Set ``include_kmeans_metrics=False`` to skip the expensive clustering
         quality metric calculation and annotation.
@@ -1784,6 +1867,8 @@ class MethylStateAssigner:
             Optional chromosome label used in the plot title.
         show_plot
             If ``True``, display the figure immediately.
+        state_colors
+            Optional biological-state color overrides.
 
         Returns
         -------
@@ -1910,6 +1995,44 @@ class MethylStateAssigner:
     ):
         """
         Convenience wrapper to plot the PCA embedding saved from k-means training.
+
+        Parameters
+        ----------
+        n_pca_plot
+            Number of PCA dimensions to render, usually ``2`` or ``3``.
+        top_n_loadings
+            Number of loading features to show in the summary table.
+        pca_hexbin
+            If ``True``, render 2-D PCA with hexbins instead of points.
+        hexbin_gridsize
+            Hexbin grid resolution for 2-D PCA hexbin plots.
+        hexbin_bins
+            Hexbin binning strategy for 2-D PCA hexbin plots.
+        hexbin_mincnt
+            Minimum points required to draw a hexbin in 2-D PCA hexbin plots.
+        hexbin_alpha
+            Optional transparency multiplier for 2-D PCA hexbin plots.
+        hexbin_linewidths
+            Optional border width for 2-D PCA hexbin plots.
+        interactive
+            If ``True``, use interactive rendering when supported.
+        include_kmeans_metrics
+            Include clustering-quality metrics in the plotted annotation.
+        include_biplot
+            Overlay top PCA loading vectors on 2-D PCA plots.
+        region_start
+            Optional genomic start coordinate for region highlighting.
+        region_end
+            Optional genomic end coordinate for region highlighting.
+        region_chrom
+            Optional chromosome for region highlighting.
+        show_plot
+            If ``True``, display the figure immediately.
+
+        Returns
+        -------
+        object
+            Matplotlib or Plotly figure object from the PCA plotting backend.
         """
         region_requested = any(
             value is not None for value in (region_start, region_end, region_chrom)
@@ -2041,14 +2164,23 @@ class MethylStateAssigner:
         windows_to_use: Optional[List[str]] = None,
     ) -> Tuple[pd.DataFrame, pd.DataFrame]:
         """
-        Convenience wrapper to:
-        1. Filter methylation DataFrame (optionally by chromosome).
-        2. Build emission matrix using NumPy sliding windows.
-        3. Optionally subset windows.
+        Prepare probe-level and emission-feature tables for clustering.
 
-        Returns:
-            meth_data (filtered DataFrame),
-            emission_df (pandas DataFrame)
+        Parameters
+        ----------
+        sample_info
+            Prepared sample whose methylation rows should be summarized.
+        chrom
+            Optional chromosome restriction for per-chromosome preparation.
+        windows_to_use
+            Optional subset of configured window labels to retain in the
+            emission matrix.
+
+        Returns
+        -------
+        tuple
+            ``(meth_data, emission_df)`` aligned for downstream clustering or
+            plotting.
         """
 
         meth_data = sample_info.meth_data.copy()
@@ -2212,13 +2344,30 @@ class MethylStateAssigner:
         sampling_random_state: Optional[int] = None,
     ):
         """
-        High-level: given a sample ID and training chromosomes,
-        train a KMeans model and return:
-        - model (reusable)
-        - meth_data
-        - emission_df
-        - pca_scores (or None when clustering in raw feature space)
-        - labels
+        Train a KMeans model on one prepared sample.
+
+        Parameters
+        ----------
+        sample_info
+            Prepared sample used to build the training emission matrix.
+        train_chroms
+            Optional chromosome list to use for training. When omitted, uses
+            the canonical autosomes present in the sample.
+        windows_to_use
+            Optional subset of configured window labels to retain in the
+            emission matrix.
+        feature_cols
+            Optional explicit feature-column list passed to clustering.
+        max_cpg_per_chrom
+            Optional maximum CpGs to sample per chromosome before fitting.
+        sampling_random_state
+            Optional random seed controlling per-chromosome subsampling.
+
+        Returns
+        -------
+        tuple
+            ``(model, meth_data, emission_df, pca_scores, labels)`` for the
+            fitted training sample.
         """
         self.train_sample = sample_info.sample_id
         self.train_sample_info = sample_info
@@ -2258,15 +2407,25 @@ class MethylStateAssigner:
         sample_meth_data: Optional[pd.DataFrame] = None,
     ):
         """
-        High-level: apply an already-trained model to a new sample (same features).
+        Apply an already-trained KMeans model to a prepared sample.
 
-        Returns:
-        - meth_data
-        - emission_df
-        - pca_scores
-        - raw_distances
-        - raw_labels
-        - relabeled_labels
+        Parameters
+        ----------
+        sample_info
+            Prepared sample to score with the trained model.
+        chrom
+            Optional chromosome restriction for per-chromosome scoring.
+        windows_to_use
+            Optional subset of configured window labels to retain in the
+            emission matrix.
+        sample_meth_data
+            Reserved compatibility argument for prefiltered methylation rows.
+
+        Returns
+        -------
+        tuple
+            ``(meth_data, emission_df, pca_scores, raw_distances, raw_labels,
+            relabeled_labels)`` for the supplied sample.
         """
         if not hasattr(self, "model"):
             raise ValueError("No trained model found. Please train a model first.")

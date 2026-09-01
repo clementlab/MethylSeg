@@ -3,6 +3,15 @@ import argparse
 
 #TODO - add subcommands for pathway running, segmentation and plotting
 def main():
+    """
+    Run the ``methylseg`` command-line interface.
+
+    Returns
+    -------
+    None
+        Parses CLI arguments, executes the requested subcommand, and prints
+        help text when no subcommand is provided.
+    """
     parser = argparse.ArgumentParser(prog="methylseg")
 
     subparsers = parser.add_subparsers(dest="command")

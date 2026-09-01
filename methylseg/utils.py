@@ -22,11 +22,22 @@ def get_biological_state_colors(
     state_colors: dict | None = None,
 ):
     """
-    Return a fixed biological-state palette keyed by the canonical enum values
-    (LOW=0, PMD=1, INTERMEDIATE=2, HIGH=3).
+    Return a fixed biological-state palette keyed by the canonical enum values.
 
-    The ``cmap_name`` argument is kept for backward compatibility, but the
-    palette is explicit so state colors stay stable across plots.
+    Parameters
+    ----------
+    cmap_name
+        Backward-compatible placeholder colormap name. The returned biological
+        palette is fixed regardless of this value.
+    state_colors
+        Optional mapping of biological state names or values to override
+        colors.
+
+    Returns
+    -------
+    tuple
+        ``(cmap, norm, state_colors_rgba, state_colors_hex)`` for consistent
+        matplotlib and Plotly coloring of the canonical states.
     """
     del cmap_name
     state_values = [state.value for state in MethylationStates]
@@ -48,6 +59,19 @@ def get_biological_state_colors(
 
 
 def get_present_biological_states(labels) -> list[int]:
+    """
+    Return the canonical biological states present in a label array.
+
+    Parameters
+    ----------
+    labels
+        Array-like of methylation state labels or numeric state codes.
+
+    Returns
+    -------
+    list of int
+        Sorted canonical state values present in ``labels``.
+    """
     labels_numeric = MethylationStates.convert_to_numeric(labels)
     valid_state_values = {state.value for state in MethylationStates}
     return [
@@ -58,6 +82,21 @@ def get_present_biological_states(labels) -> list[int]:
 
 
 def normalize_state_label(value) -> str | None:
+    """
+    Normalize a methylation state label into a display-friendly string.
+
+    Parameters
+    ----------
+    value
+        Raw state label, enum member, numeric code, or string-like value to
+        normalize.
+
+    Returns
+    -------
+    str or None
+        Canonical state name when recognized, a stripped fallback string for
+        unknown values, or ``None`` for empty and null-like inputs.
+    """
     if pd.isna(value):
         return None
     if isinstance(value, MethylationStates):
@@ -90,6 +129,20 @@ DEFAULT_BIOLOGICAL_STATE_COLORS = {
 
 
 def resolve_state_color_lookup(*, state_colors: dict | None = None) -> dict[str, str]:
+    """
+    Merge biological-state color overrides with the package defaults.
+
+    Parameters
+    ----------
+    state_colors
+        Optional mapping of state labels to colors. Keys are normalized with
+        ``normalize_state_label`` and values are converted to hex.
+
+    Returns
+    -------
+    dict of str to str
+        Hex color lookup keyed by canonical biological state name.
+    """
     color_lookup = DEFAULT_BIOLOGICAL_STATE_COLORS.copy()
     if not state_colors:
         return color_lookup
@@ -109,6 +162,26 @@ def build_region_overlay_df(
     region_chrom: str,
     label: str = "Selected region",
 ) -> pd.DataFrame:
+    """
+    Build a one-row overlay table describing a highlighted genomic interval.
+
+    Parameters
+    ----------
+    region_start
+        Start coordinate of the highlighted region.
+    region_end
+        End coordinate of the highlighted region.
+    region_chrom
+        Chromosome label for the highlighted region.
+    label
+        Region label written into the returned ``state`` column.
+
+    Returns
+    -------
+    pandas.DataFrame
+        Single-row overlay table with ``CpG_chrm``, ``start``, ``end``, and
+        ``state`` columns.
+    """
     resolved_region_start = int(region_start)
     resolved_region_end = int(region_end)
     if resolved_region_end < resolved_region_start:
@@ -130,6 +203,20 @@ def resolve_region_overlay_df(
     *,
     overlay_regions_df: pd.DataFrame | None = None,
 ) -> tuple[pd.DataFrame | None, str]:
+    """
+    Normalize explicit region overlays for plotting helpers.
+
+    Parameters
+    ----------
+    overlay_regions_df
+        Optional region table to copy and pass through to plotting helpers.
+
+    Returns
+    -------
+    tuple
+        ``(overlay_df, overlay_label_col)`` where ``overlay_label_col`` is the
+        region label column name used by downstream plotting code.
+    """
     if overlay_regions_df is not None:
         return overlay_regions_df.copy(), "state"
     return None, "state"
@@ -140,10 +227,22 @@ def resolve_overlay_plot_args(
     color_pmd_only: bool = False,
     color_regions_df: pd.DataFrame | None = None,
 ) -> tuple[pd.DataFrame | None, str]:
-    """Normalize convenience plotting options into overlay args.
+    """
+    Normalize convenience plotting options into overlay arguments.
 
-    This keeps the public API friendly while allowing plotting callers
-    to consistently pass ``overlay_regions_df`` and ``overlay_style``.
+    Parameters
+    ----------
+    color_pmd_only
+        If ``True``, request highlight-style coloring for the supplied overlay
+        regions.
+    color_regions_df
+        Optional region table used for plot overlays.
+
+    Returns
+    -------
+    tuple
+        ``(overlay_regions_df, overlay_style)`` for downstream plotting
+        helpers.
     """
     overlay_style = "highlight" if bool(color_pmd_only) else "state"
     return color_regions_df, overlay_style
@@ -159,6 +258,34 @@ def annotate_plot_df_with_regions(
     region_label_col: str = "state",
     state_colors: dict | None = None,
 ) -> tuple[pd.DataFrame, str, dict[str, str], dict[str, list[str]], str, str]:
+    """
+    Annotate a plotting table with colors derived from overlapping regions.
+
+    Parameters
+    ----------
+    df_plot
+        Probe-level table that will be plotted.
+    regions_df
+        Region table containing chromosome, interval, and label columns.
+    chrom_col
+        Column in ``df_plot`` containing chromosome labels.
+    pos_col
+        Column in ``df_plot`` containing genomic positions to test against the
+        overlay intervals.
+    overlay_style
+        Overlay mode, either ``"state"`` for region-state coloring or
+        ``"highlight"`` for selected-versus-outside coloring.
+    region_label_col
+        Column in ``regions_df`` whose values should control region colors.
+    state_colors
+        Optional biological-state color overrides.
+
+    Returns
+    -------
+    tuple
+        ``(plot_df, color_col, color_map, category_orders, color_label,
+        legend_title)`` ready for Plotly scatter construction.
+    """
     plot_df = df_plot.copy()
     outside_region_color = "#7E7E7E"
     highlight_color = "#d62728"
@@ -296,11 +423,52 @@ def plot_interactive_beta_scatter(
     region_start: int | None = None,
     region_end: int | None = None,
 ) -> object | None:
-    """Create an interactive beta scatter plot.
+    """
+    Create an interactive beta scatter plot.
 
-    ``chrom`` selects both the plotted chromosome and, with ``region_start``
-    and ``region_end``, the zoomed viewport. Region arguments do not change
-    point coloring unless an explicit overlay is provided.
+    Parameters
+    ----------
+    df_plot
+        Probe-level table containing the plotted methylation values and labels.
+    sample_info
+        Optional sample metadata used in the plot title.
+    sample_info_removed
+        Optional table of removed CpGs to draw as a separate background layer.
+    chrom
+        Optional chromosome restriction for both retained and removed probes.
+    out_dir
+        Optional directory where the HTML plot should be written.
+    label_col
+        Column in ``df_plot`` containing the main point labels when no overlay
+        table is provided.
+    x_col
+        Column used for the x-axis.
+    y_col
+        Column used for the y-axis.
+    label_title
+        Optional legend and plot-title label override.
+    show_plot
+        If ``True``, display the figure immediately.
+    max_points
+        Maximum total retained plus removed points to render before
+        downsampling.
+    overlay_regions_df
+        Optional region table used to recolor points by overlapping regions.
+    overlay_style
+        Overlay mode, either ``"state"`` or ``"highlight"``.
+    overlay_label_col
+        Column in ``overlay_regions_df`` that supplies overlay labels.
+    state_colors
+        Optional biological-state color overrides.
+    region_start
+        Optional region start coordinate for x-axis zooming.
+    region_end
+        Optional region end coordinate for x-axis zooming.
+
+    Returns
+    -------
+    object or None
+        Plotly figure object, or ``None`` when no data remain after filtering.
     """
     df_plot = df_plot.copy()
     df_plot = df_plot.loc[:, ~df_plot.columns.duplicated()]
@@ -516,6 +684,29 @@ def build_emission_matrix_numba(
     int_high_cutoff,
     high_cutoff,
 ):
+    """
+    Build per-CpG emission features for one ordered probe sequence.
+
+    Parameters
+    ----------
+    positions
+        Sorted genomic positions for the CpGs being summarized.
+    betas
+        Beta values aligned to ``positions``.
+    window_sizes
+        Window sizes, in base pairs, used for local neighborhood summaries.
+    int_low_cutoff
+        Lower beta threshold for the intermediate-state proportion.
+    int_high_cutoff
+        Upper beta threshold for the intermediate-state proportion.
+    high_cutoff
+        Lower beta threshold for the high-state proportion.
+
+    Returns
+    -------
+    numpy.ndarray
+        Emission matrix with raw beta values plus per-window summary features.
+    """
     n = len(betas)
     n_windows = len(window_sizes)
 
@@ -607,10 +798,20 @@ def build_emission_matrix_numba(
 
 def get_cluster_colors(n_states: int, cmap_name: str = "viridis"):
     """
-    Return a discrete colormap, norm, and per-state hex colors
-    such that state k always uses the k-th color.
+    Return a discrete colormap and color lookup for integer cluster labels.
 
-    States are assumed to be integers 0..n_states-1.
+    Parameters
+    ----------
+    n_states
+        Number of integer cluster labels to color.
+    cmap_name
+        Matplotlib colormap name used to draw the discrete palette.
+
+    Returns
+    -------
+    tuple
+        ``(cmap, norm, state_colors_rgba, state_colors_hex)`` indexed in
+        cluster-label order.
     """
     # Discrete colormap with n_states entries
     cmap = plt.get_cmap(cmap_name, n_states)
@@ -631,8 +832,22 @@ def absorb_small_clusters(
     min_frac: float = 0.001,
 ) -> np.ndarray:
     """
-    Absorb clusters smaller than min_frac of total CpGs
-    into nearest larger cluster (by mean beta).
+    Absorb very small clusters into the nearest larger cluster by mean beta.
+
+    Parameters
+    ----------
+    raw_labels
+        Cluster labels to normalize.
+    emission_df
+        Emission-feature table containing the ``beta`` column used to compare
+        clusters.
+    min_frac
+        Minimum cluster fraction required to keep a cluster distinct.
+
+    Returns
+    -------
+    numpy.ndarray
+        Relabeled cluster assignments after small-cluster absorption.
     """
 
     labels = np.asarray(raw_labels).copy()
@@ -671,6 +886,19 @@ def absorb_small_clusters(
     return labels
 
 def get_regional_window_labels(window_specs) -> List[str]:
+    """
+    Return window labels ordered from smallest to largest genomic span.
+
+    Parameters
+    ----------
+    window_specs
+        Iterable of ``(window_size_bp, label)`` pairs.
+
+    Returns
+    -------
+    list of str
+        Window labels sorted by genomic window size.
+    """
     sorted_window_specs = sorted(window_specs, key=lambda item: item[0])
     sorted_window_specs = sorted(window_specs, key=lambda item: item[0])
     return [label for _, label in sorted_window_specs]
@@ -684,6 +912,31 @@ def relabel_by_mean_emission(
     int_high_cutoff: float = 0.7,
     window_specs: List[Tuple[int, str]] = [(40_000, "40kb"), (450_000, "450kb")],
 ) -> np.ndarray:
+    """
+    Map raw cluster IDs onto biological methylation states.
+
+    Parameters
+    ----------
+    raw_labels
+        Raw cluster or hidden-state labels to relabel.
+    emission_df
+        Emission-feature table aligned to ``raw_labels``.
+    state_cutoffs
+        Optional rule-cutoff mapping used to refine the low/intermediate/high
+        beta thresholds.
+    int_low_cutoff
+        Default lower beta threshold for intermediate methylation.
+    int_high_cutoff
+        Default upper beta threshold for intermediate methylation.
+    window_specs
+        Window specifications used to locate the regional emission summary
+        columns.
+
+    Returns
+    -------
+    numpy.ndarray
+        Biological state labels as ``MethylationStates`` values.
+    """
     labels = np.asarray(absorb_small_clusters(raw_labels, emission_df))
     clusters = np.unique(labels)
 

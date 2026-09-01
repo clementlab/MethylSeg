@@ -415,6 +415,22 @@ class MethylSegmentor:
         """
         Segment a sample and refresh probe-level results plus raw regions.
 
+        Parameters
+        ----------
+        sample_info
+            Prepared sample to segment. When omitted, uses
+            ``default_sample_info``.
+        chrom
+            Optional chromosome restriction for per-chromosome segmentation.
+        force_resegment
+            If ``True``, ignore cached segmentation results and rerun the HMM.
+
+        Returns
+        -------
+        tuple
+            ``(meth_data, hmm_model)`` where ``meth_data`` is the segmented
+            probe-level table and ``hmm_model`` is the fitted backend model.
+
         Returns the segmented probe-level methylation table and fitted HMM
         object. Raw contiguous regions are stored on ``self.regions_df``.
         """
@@ -587,10 +603,17 @@ class MethylSegmentor:
 
         Parameters
         ----------
-        regions_df : DataFrame
-            Must contain 'CpG_chrm', 'start', 'end', and 'state'.
-        bed_path : str
-            Output path for the BED file.
+        bed_path
+            Output path for the BED file. A ``.bed`` suffix is added when it is
+            missing.
+        separate_beds_by_state
+            If ``True``, write one BED per biological state instead of one
+            combined BED file.
+
+        Returns
+        -------
+        None
+            Writes BED file(s) derived from ``self.regions_df``.
         """
         if not bed_path.lower().endswith(".bed"):
             bed_path += ".bed"
@@ -690,6 +713,43 @@ class MethylSegmentor:
     ):
         """
         Plot genomic-position vs beta for HMM labels.
+
+        Parameters
+        ----------
+        sample_info
+            Sample to segment and plot. When omitted, uses
+            ``default_sample_info``.
+        chrom
+            Chromosome to segment and display.
+        sample_info_removed
+            Optional table of CpGs removed during preprocessing to show as a
+            background layer.
+        overlay_regions_df
+            Optional region table used to recolor points by overlapping
+            intervals.
+        overlay_style
+            Overlay mode, either ``"state"`` or ``"highlight"``.
+        region_start
+            Optional genomic start coordinate for x-axis zooming.
+        region_end
+            Optional genomic end coordinate for x-axis zooming.
+        x_col
+            Probe-level column used for the x-axis.
+        y_col
+            Probe-level column used for the y-axis.
+        label_title
+            Optional legend title override.
+        show_plot
+            If ``True``, display the Plotly figure immediately.
+        max_points
+            Maximum number of plotted points before downsampling.
+        state_colors
+            Optional biological-state color overrides.
+
+        Returns
+        -------
+        plotly.graph_objects.Figure
+            Interactive beta scatter plot for the resolved HMM labels.
 
         Region args only zoom the x-axis viewport; they do not create a
         highlight overlay unless one is passed explicitly.

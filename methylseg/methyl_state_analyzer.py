@@ -99,6 +99,8 @@ class MethylStateAnalyzer:
         show_plots
             If ``True``, display each figure immediately. Otherwise, save plots
             to ``out_dir`` when configured.
+        state_colors
+            Optional biological-state color overrides for the histogram fills.
         """
         self._build_train_joint()
         train_loadings = self.assigner.get_pca_loadings()
@@ -257,12 +259,23 @@ class MethylStateAnalyzer:
     ):
         """
         Apply rule-based states and compare to KMeans labels.
-        Returns (metrics_dict, rule_labels_array).
 
-        rule_params must contain:
-          - beta_low_max
-          - beta_high_min
-          - pmd_cutoffs (dict[label -> {'int_min','std_max','high_max','low_max'}])
+        Parameters
+        ----------
+        meth_emissions
+            Emission table to label with the supplied rule parameters.
+        kmeans_labels
+            Reference KMeans labels aligned to ``meth_emissions``.
+        rule_params
+            Keyword arguments forwarded to ``define_states_by_rules_param``.
+            Expected keys are ``beta_low_max``, ``beta_high_min``, and
+            ``pmd_cutoffs``.
+
+        Returns
+        -------
+        tuple
+            ``(metrics_dict, rule_labels_array)`` comparing the supplied
+            KMeans labels against the derived rule-based labels.
         """
         y_true = np.asarray(kmeans_labels)
         y_pred = self.define_states_by_rules_param(meth_emissions, **rule_params)
@@ -478,6 +491,17 @@ class MethylStateAnalyzer:
     def set_state_cutoffs_from_yaml(self, yaml_file: str):
         """
         Load rule cutoffs from a YAML file written by ``MethylSegConfig``.
+
+        Parameters
+        ----------
+        yaml_file
+            Path to a serialized methylseg YAML config file.
+
+        Returns
+        -------
+        None
+            Updates ``state_cutoffs`` and the manual-cutoff flag from the YAML
+            contents.
         """
         config = MethylSegConfig.from_yaml(yaml_file)
         self.__set_from_config(config.get_state_cutoffs())
@@ -494,12 +518,22 @@ class MethylStateAnalyzer:
         """
         Simple manual state cutoff setter with clean pythonic defaults.
 
-        - If user does not provide pmd_cutoffs, defaults are used:
-            int_min = 0.56
-            std_max = 0.264
-            high_max = 0.246
-            low_max = 0.246
-        - Defaults apply to every window given in assigner.window_specs
+        Parameters
+        ----------
+        beta_low_max
+            Upper beta threshold for the low-methylation state. Uses the
+            package default when omitted.
+        beta_high_min
+            Lower beta threshold for the high-methylation state. Uses the
+            package default when omitted.
+        pmd_cutoffs
+            Optional per-window PMD cutoff mapping. Missing values fall back to
+            the package defaults for every configured window.
+
+        Returns
+        -------
+        None
+            Stores the resolved cutoff dictionary on the analyzer.
         """
         int_min_default = 0.56
         std_max_default = 0.264
@@ -581,6 +615,21 @@ class MethylStateAnalyzer:
     ):
         """
         Evaluate rule-based labels against KMeans cluster labels as ground truth.
+
+        Parameters
+        ----------
+        use_train_data
+            If ``True``, compare cached training labels. Otherwise, generate
+            labels for ``sample_info``.
+        sample_info
+            Sample to evaluate when ``use_train_data`` is ``False``.
+        chrom
+            Optional chromosome restriction for non-training evaluation.
+
+        Returns
+        -------
+        pandas.DataFrame
+            Confusion matrix comparing KMeans labels to rule-based labels.
         """
         if not hasattr(self, "state_cutoffs"):
             raise ValueError(
@@ -719,6 +768,44 @@ class MethylStateAnalyzer:
     ):
         """
         Plot genomic-position vs beta for analyzer-owned labels.
+
+        Parameters
+        ----------
+        sample_info
+            Sample to analyze. When omitted, uses the cached training data.
+        chrom
+            Optional chromosome restriction for sample-level plotting.
+        sample_info_removed
+            Optional table of CpGs removed during preprocessing to show as a
+            background layer.
+        label_source
+            Label family to plot, either ``"kmeans"`` or ``"rule_based"``.
+        overlay_regions_df
+            Optional region table used to recolor points by overlapping
+            intervals.
+        overlay_style
+            Overlay mode, either ``"state"`` or ``"highlight"``.
+        region_start
+            Optional genomic start coordinate for x-axis zooming.
+        region_end
+            Optional genomic end coordinate for x-axis zooming.
+        x_col
+            Probe-level column used for the x-axis.
+        y_col
+            Probe-level column used for the y-axis.
+        label_title
+            Optional legend title override.
+        show_plot
+            If ``True``, display the Plotly figure immediately.
+        max_points
+            Maximum number of plotted points before downsampling.
+        state_colors
+            Optional biological-state color overrides.
+
+        Returns
+        -------
+        plotly.graph_objects.Figure
+            Interactive beta scatter plot for the requested labels.
 
         Region args only zoom the x-axis viewport; they do not create a
         highlight overlay unless one is passed explicitly.

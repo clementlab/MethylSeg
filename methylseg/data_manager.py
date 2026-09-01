@@ -6,6 +6,20 @@ from pathlib import Path
 from .helper_classes import DATA_DIR
 
 def is_lfs_pointer(path):
+    """
+    Check whether a file is still a Git LFS pointer stub.
+
+    Parameters
+    ----------
+    path
+        File to inspect.
+
+    Returns
+    -------
+    bool
+        ``True``` when the file begins with the standard Git LFS pointer
+        header, otherwise ``False``.
+    """
     try:
         with open(path, "r") as f:
             first_line = f.readline()
@@ -17,7 +31,18 @@ def is_lfs_pointer(path):
 def download_data_files(cleanup_existing=False):
     """
     Download and extract data files into DATA_DIR directory.
-    Existing contents will be removed.
+
+    Parameters
+    ----------
+    cleanup_existing
+        If ``True``, remove existing extracted contents in ``DATA_DIR`` before
+        downloading. If ``False``, skip the download when the directory is
+        already populated.
+
+    Returns
+    -------
+    None
+        Downloads, extracts, and cleans up the packaged reference archive.
     """
     FILE_ID = "1pylU2nyidkmrhp8Gwgz5-VjjvgAMf4Gv"
 

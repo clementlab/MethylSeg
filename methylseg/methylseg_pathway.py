@@ -1570,6 +1570,51 @@ class MethylSegPathway:
         """
         Plot genomic labels for one chromosome with optional region overlays.
 
+        Parameters
+        ----------
+        label_source
+            Label family to plot: ``"hmm"``, ``"kmeans"``, or
+            ``"rule_based"``.
+        sample_info
+            Prepared sample to plot. When omitted, uses the pathway default
+            sample.
+        chrom
+            Chromosome to display for HMM plots, and optional restriction for
+            analyzer-owned labels.
+        sample_info_removed
+            Optional table of CpGs removed during preprocessing to show as a
+            background layer.
+        overlay_regions_df
+            Optional region table used to recolor points by overlapping
+            intervals.
+        overlay_state
+            Optional biological state whose cleaned regions should be loaded
+            when ``use_cleaned_regions`` is enabled.
+        use_cleaned_regions
+            If ``True``, load chromosome-local cleaned-region metadata from
+            disk for overlay plotting.
+        region_start
+            Optional genomic start coordinate for x-axis zooming.
+        region_end
+            Optional genomic end coordinate for x-axis zooming.
+        x_col
+            Probe-level column used for the x-axis.
+        y_col
+            Probe-level column used for the y-axis.
+        label_title
+            Optional legend title override.
+        show_plot
+            If ``True``, display the figure immediately.
+        max_points
+            Maximum number of plotted points before downsampling.
+        state_colors
+            Optional biological-state color overrides.
+
+        Returns
+        -------
+        plotly.graph_objects.Figure
+            Interactive beta scatter plot for the requested label source.
+
         ``use_cleaned_regions=True`` is a read-only plotting mode. It loads the
         prebuilt chromosome-local cleaned metadata TSV for ``overlay_state`` from
         ``clean_regions/metadata_cleaned_{chrom}_{sample_id}_{STATE}.tsv``.
@@ -1710,6 +1755,8 @@ class MethylSegPathway:
         force_resegment
             If ``True`` and ``label_source="hmm"``, rerun segmentation before
             plotting.
+        state_colors
+            Optional biological-state color overrides.
 
         Returns
         -------
@@ -1865,6 +1912,19 @@ class MethylSegPathway:
     def from_yaml(cls, yaml_path: str, load_learned: bool = True):
         """
         Reconstruct MethylSegPathway from YAML file.
+
+        Parameters
+        ----------
+        yaml_path
+            Path to a serialized methylseg YAML configuration file.
+        load_learned
+            If ``True``, restore persisted learned models and cached artifacts
+            referenced by the YAML.
+
+        Returns
+        -------
+        MethylSegPathway
+            Reconstructed pathway configured from the YAML bundle.
         """
         return MethylSegConfig.from_yaml(yaml_path).build_pathway(
             load_learned=load_learned,
