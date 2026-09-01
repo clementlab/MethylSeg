@@ -21,7 +21,7 @@ or from TestPyPi
 python -m pip install \
   --index-url https://test.pypi.org/simple/ \
   --extra-index-url https://pypi.org/simple/ \
-  methylseg==0.1.1
+  methylseg
 ```
 
 PyPI installation will be added here once the package is published there. 
