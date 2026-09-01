@@ -7,6 +7,10 @@
 - segmenting samples with several HMM backends
 - exporting raw and cleaned genomic regions for downstream analysis
 
+## Full Documentation
+
+[https://clementlab.github.io/MethylSeg/](https://clementlab.github.io/MethylSeg/)
+
 ## Install
 
 Install the current public version directly from GitHub:
@@ -36,10 +40,11 @@ for local environment management.
 from pathlib import Path
 
 from methylseg import MethylDataPrep, MethylSegPathway, MethylationStates
+from methylseg.helper_classes import DATA_DIR
 
-reference_dir = Path("data/reference_files")
+REFERENCE_DIR = DATA_DIR / Path("reference_files")
 sample_name = "TCGA-BD-A3EP-01A"
-sample_file = reference_dir / "TCGA-BD-A3EP-01A_450k.tsv.gz"
+sample_file = REFERENCE_DIR / "TCGA-BD-A3EP-01A_450k.tsv.gz"
 
 sample_info, removed_df = MethylDataPrep(
     meth_file=sample_file,
