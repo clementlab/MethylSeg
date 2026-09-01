@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "methylseg"
-version = "0.1.0"
+version = "0.1.1"
 description = "Methylation segmentation utilities used in the TCGA methylation analysis repo."
 readme = "README.md"
 requires-python = ">=3.10"
@@ -28,7 +28,7 @@ dependencies = [
 ]
 
 [project.urls]
-"Documentation" = "https://readthedocs.io"
+"Documentation" = "https://clementlab.github.io/MethylSeg/"
 "Repository" = "https://github.com/clementlab/MethylSeg"
 
 [project.optional-dependencies]
