@@ -113,6 +113,8 @@ fig = pathway.plot_labels(
 
 ## TODO
 
+[ ] Clean up codebase, remove legacy code and parameters, update docstrings
+
 [ ] Update full documentation with info about each main step, input and output file examples, etc.
 
 [ ] Finish all TODOs in repo
