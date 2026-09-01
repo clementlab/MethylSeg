@@ -221,6 +221,102 @@ class MethylSegConfig:
         normalized_table.reset_index(drop=True).to_feather(table_path)
 
     @classmethod
+    def _relocate_artifact_reference(
+        cls,
+        raw_path: str | Path | None,
+        source_dir: Path,
+        target_dir: Path,
+    ) -> str | None:
+        if raw_path is None:
+            return None
+
+        path = Path(raw_path)
+        if not path.is_absolute():
+            path = (source_dir / path).resolve()
+        else:
+            path = path.resolve()
+
+        return cls._relativize_artifact_path(target_dir, path)
+
+    def rewrite_artifact_paths(
+        self,
+        source_dir: str | Path,
+        target_dir: str | Path,
+    ) -> "MethylSegConfig":
+        """
+        Rewrite serialized artifact references from one base directory to another.
+
+        Parameters
+        ----------
+        source_dir
+            Directory that relative artifact paths in ``self.config`` currently
+            resolve against.
+        target_dir
+            Directory the rewritten paths should resolve against, typically the
+            parent directory of the YAML file being written.
+
+        Returns
+        -------
+        MethylSegConfig
+            The same config wrapper with rewritten artifact references.
+        """
+
+        source_dir = Path(source_dir).resolve()
+        target_dir = Path(target_dir).resolve()
+        cfg = self.config
+
+        for field_name, raw_path in list(cfg.get("saved_tables", {}).items()):
+            cfg["saved_tables"][field_name] = self._relocate_artifact_reference(
+                raw_path,
+                source_dir,
+                target_dir,
+            )
+
+        train_sample_info = cfg.get("train_sample_info")
+        if isinstance(train_sample_info, dict) and "meth_data_path" in train_sample_info:
+            train_sample_info["meth_data_path"] = self._relocate_artifact_reference(
+                train_sample_info.get("meth_data_path"),
+                source_dir,
+                target_dir,
+            )
+
+        models_cfg = cfg.get("models", {})
+        for field_name in ("kmeans", "scaler", "imputer", "pca"):
+            if field_name not in models_cfg:
+                continue
+            models_cfg[field_name] = self._relocate_artifact_reference(
+                models_cfg.get(field_name),
+                source_dir,
+                target_dir,
+            )
+
+        training_cfg = cfg.get("training_artifacts", {})
+        if isinstance(training_cfg, dict):
+            for field_name, raw_path in list(training_cfg.items()):
+                training_cfg[field_name] = self._relocate_artifact_reference(
+                    raw_path,
+                    source_dir,
+                    target_dir,
+                )
+
+        hmm_cfg = cfg.get("hmm", {})
+        hmm_params = hmm_cfg.get("params", {})
+        if isinstance(hmm_params, dict):
+            for param_name, param_value in hmm_params.items():
+                if not isinstance(param_value, dict):
+                    continue
+                npy_path = param_value.get("__npy_path__")
+                if npy_path is None:
+                    continue
+                param_value["__npy_path__"] = self._relocate_artifact_reference(
+                    npy_path,
+                    source_dir,
+                    target_dir,
+                )
+
+        return self
+
+    @classmethod
     def from_instance(
         cls,
         inst: "MethylSegPathway",

@@ -86,7 +86,11 @@ class MethylStateAnalyzer:
         train_joint = train_joint.loc[:, ~train_joint.columns.duplicated()]
         self.train_joint = self._populate_kmeans_state_display(train_joint)
 
-    def plot_feature_distributions_by_kmeans_state(self, show_plots=True):
+    def plot_feature_distributions_by_kmeans_state(
+        self,
+        show_plots=True,
+        state_colors: dict | None = None,
+    ):
         """
         Plot per-feature histograms stratified by learned KMeans state.
 
@@ -105,7 +109,9 @@ class MethylStateAnalyzer:
             ranked_features = ["beta"] + [
                 feature for feature in ranked_features if feature != "beta"
             ]
-        _, _, _, state_colors_hex = get_biological_state_colors()
+        _, _, _, state_colors_hex = get_biological_state_colors(
+            state_colors=state_colors
+        )
         ordered_states = [state.name for state in MethylationStates]
         for emission in ranked_features:
             fig, ax = plt.subplots()
@@ -710,6 +716,7 @@ class MethylStateAnalyzer:
         label_title: str | None = None,
         show_plot: bool = True,
         max_points: int = 120_000,
+        state_colors: dict | None = None,
     ):
         """
         Plot genomic-position vs beta for analyzer-owned labels.
@@ -776,6 +783,7 @@ class MethylStateAnalyzer:
             show_plot=show_plot,
             max_points=max_points,
             overlay_regions_df=overlay_regions_df,
+            state_colors=state_colors,
             overlay_style=(
                 resolved_overlay_style
                 if overlay_regions_df is not None

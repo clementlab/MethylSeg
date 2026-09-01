@@ -1566,6 +1566,7 @@ class MethylSegPathway:
         label_title: str | None = None,
         show_plot: bool = True,
         max_points: int = 120_000,
+        state_colors: dict | None = None,
     ):
         """
         Plot genomic labels for one chromosome with optional region overlays.
@@ -1614,6 +1615,7 @@ class MethylSegPathway:
                 label_title=label_title if label_title is not None else "HMM state",
                 show_plot=show_plot,
                 max_points=max_points,
+                state_colors=state_colors,
             )
         if label_source in {"kmeans", "rule_based"}:
             return self.analyzer.plot_labels(
@@ -1642,6 +1644,7 @@ class MethylSegPathway:
                 label_title=label_title,
                 show_plot=show_plot,
                 max_points=max_points,
+                state_colors=state_colors,
             )
 
         raise ValueError(
@@ -1675,6 +1678,7 @@ class MethylSegPathway:
         use_parallel: bool = True,
         show_plot: bool = True,
         force_resegment: bool = False,
+        state_colors: dict | None = None,
     ):
         """
         Plot PCA or UMAP embeddings for training or sample-level labels.
@@ -1758,6 +1762,7 @@ class MethylSegPathway:
                 use_pca_features=use_pca_features,
                 use_parallel=use_parallel,
                 show_plot=show_plot,
+                state_colors=state_colors,
             )
 
         resolved_sample_info = self._resolve_sample_info(sample_info=sample_info)
@@ -1794,6 +1799,7 @@ class MethylSegPathway:
                 use_pca_features=use_pca_features,
                 use_parallel=use_parallel,
                 show_plot=show_plot,
+                state_colors=state_colors,
             )
 
         if label_source == "hmm":
@@ -1827,6 +1833,7 @@ class MethylSegPathway:
                 use_pca_features=use_pca_features,
                 use_parallel=use_parallel,
                 show_plot=show_plot,
+                state_colors=state_colors,
             )
 
         raise ValueError(
@@ -1834,15 +1841,49 @@ class MethylSegPathway:
             f"Received: {label_source!r}"
         )
 
-    def to_yaml(self, yaml_path: str, include_learned: bool = True):
+    def to_yaml(
+        self,
+        yaml_path: str,
+        include_learned: bool = True,
+        artifact_dir: str | Path | None = None,
+    ):
         """
         Serialize pathway configuration and optionally learned artifacts.
+
+        Parameters
+        ----------
+        yaml_path
+            Destination YAML path.
+        include_learned
+            If ``True``, persist learned clustering artifacts and cached tables.
+        artifact_dir
+            Optional directory where learned artifacts should be written. When
+            provided, the YAML stores paths that resolve from ``yaml_path`` to
+            that dedicated artifact directory.
         """
-        MethylSegConfig.from_instance(
+
+        yaml_path = Path(yaml_path)
+        yaml_dir = yaml_path.parent.resolve()
+
+        resolved_artifact_dir = yaml_dir
+        if artifact_dir is not None:
+            resolved_artifact_dir = Path(artifact_dir)
+            if not resolved_artifact_dir.is_absolute():
+                resolved_artifact_dir = (yaml_dir / resolved_artifact_dir).resolve()
+            else:
+                resolved_artifact_dir = resolved_artifact_dir.resolve()
+
+        config = MethylSegConfig.from_instance(
             self,
-            out_dir=str(Path(yaml_path).parent),
+            out_dir=str(resolved_artifact_dir),
             include_learned=include_learned,
-        ).to_yaml(yaml_path)
+        )
+        if resolved_artifact_dir != yaml_dir:
+            config.rewrite_artifact_paths(
+                source_dir=resolved_artifact_dir,
+                target_dir=yaml_dir,
+            )
+        config.to_yaml(yaml_path)
 
     @classmethod
     def from_yaml(cls, yaml_path: str, load_learned: bool = True):

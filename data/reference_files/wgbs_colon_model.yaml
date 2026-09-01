@@ -10,7 +10,7 @@ pathway:
   random_state: 42
   cluster_space: pca
   n_pca: 5
-  min_region_length: 0
+  min_region_length: 5000
   min_region_cpgs: 6
   merge_gap_bp: 100000
 state_assigner:
@@ -47,27 +47,30 @@ state_cutoffs:
 state_cutoffs_set_manually: false
 hmm:
   type: sticky
-  params: {}
+  params:
+    stay_prob: 0.99995
+    emission_mismatch_prob: 0.45
+    fit_transitions: false
   observation_mode: discrete_states
 segmenter:
   state_assignment_method: kmeans
   hmm_observation_mode: discrete_states
   out_dir: .
 saved_tables:
-  train_meth: train_meth.feather
-  training_summary_df: training_summary_df.feather
-  train_emission_df: train_emission_df.feather
-  train_joint: train_joint.feather
+  train_meth: wgbs_colon_model_artifacts/train_meth.feather
+  training_summary_df: wgbs_colon_model_artifacts/training_summary_df.feather
+  train_emission_df: wgbs_colon_model_artifacts/train_emission_df.feather
+  train_joint: wgbs_colon_model_artifacts/train_joint.feather
 train_sample_info:
   sample_id: colon-primary-tumor_1
-  meth_data_path: train_sample_meth.feather
+  meth_data_path: wgbs_colon_model_artifacts/train_sample_meth.feather
 train_sample:
   name: colon-primary-tumor_1
   file: null
 models:
-  kmeans: models/kmeans.joblib
-  pca: models/pca.joblib
-  scaler: models/scaler.joblib
+  kmeans: wgbs_colon_model_artifacts/models/kmeans.joblib
+  pca: wgbs_colon_model_artifacts/models/pca.joblib
+  scaler: wgbs_colon_model_artifacts/models/scaler.joblib
   feature_cols:
   - beta
   - 500bp_avg_meth
@@ -89,9 +92,9 @@ models:
   cluster_space: pca
   n_pca: 5
 training_artifacts:
-  train_meth: training_artifacts/train_meth.feather
-  train_emission_df: training_artifacts/train_emission_df.feather
-  training_summary_df: training_artifacts/training_summary_df.feather
-  train_joint: training_artifacts/train_joint.feather
-  train_labels: training_artifacts/train_labels.npy
-  train_pca_scores: training_artifacts/train_pca_scores.npy
+  train_meth: wgbs_colon_model_artifacts/training_artifacts/train_meth.feather
+  train_emission_df: wgbs_colon_model_artifacts/training_artifacts/train_emission_df.feather
+  training_summary_df: wgbs_colon_model_artifacts/training_artifacts/training_summary_df.feather
+  train_joint: wgbs_colon_model_artifacts/training_artifacts/train_joint.feather
+  train_labels: wgbs_colon_model_artifacts/training_artifacts/train_labels.npy
+  train_pca_scores: wgbs_colon_model_artifacts/training_artifacts/train_pca_scores.npy

@@ -27,6 +27,10 @@ dependencies = [
   "gdown>=6.0",
 ]
 
+[project.urls]
+"Documentation" = "https://readthedocs.io"
+"Repository" = "https://github.com/clementlab/MethylSeg"
+
 [project.optional-dependencies]
 docs = [
   "ipykernel",

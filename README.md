@@ -15,7 +15,15 @@ Install the current public version directly from GitHub:
 python -m pip install git+https://github.com/clementlab/MethylSeg.git
 ```
 
-PyPI installation can be added here once the package is published there. The
+or from TestPyPi
+
+```bash
+pip install -i https://test.pypi.org/simple/ methylseg==0.1.0
+```
+
+PyPI installation will be added here once the package is published there. 
+
+The
 repository also includes a conda environment file at [environment.yml](./environment.yml)
 for local environment management.
 
@@ -77,16 +85,7 @@ fig = pathway.plot_labels(
 
 [ ] Think about what should be saved and what should be returned
 
-[ x ] Remove legacy code that is not used anymore
-split into multiple files to clean up codebase
-
-[ x ] Rename PMR to PMD throughout codebase for clarity and consistency with literature
-
 [ ] Add usage text and docstrings to all public functions and classes
 clean up plotting functions to make them easier for public use
 
 [ ] Add a function that runs full pipeline from raw input to figures and saves the outputs including running the cleaning step
-
-[ ] Add a function to run on all chromosomes and generate all summary files like methyltool compatator
-
-[ ] Move plotting into a visualization module

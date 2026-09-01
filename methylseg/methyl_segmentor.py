@@ -620,6 +620,7 @@ class MethylSegmentor:
         max_points: int = 120_000,
         color_pmd_only: bool = False,
         color_regions_df: pd.DataFrame | None = None,
+        state_colors: dict | None = None,
     ):
         """
         Backward-compatible wrapper for interactive HMM label plots.
@@ -645,6 +646,8 @@ class MethylSegmentor:
             Maximum number of probe rows to render in the interactive scatter.
         color_pmd_only, color_regions_df
             Legacy overlay controls translated into ``overlay_regions_df``.
+        state_colors
+            Optional biological-state color overrides passed to ``plot_labels``.
 
         Returns
         -------
@@ -666,6 +669,7 @@ class MethylSegmentor:
             label_title=label_title,
             show_plot=show_plot,
             max_points=max_points,
+            state_colors=state_colors,
         )
 
     def plot_labels(
@@ -683,6 +687,7 @@ class MethylSegmentor:
         label_title: str | None = None,
         show_plot: bool = True,
         max_points: int = 120_000,
+        state_colors: dict | None = None,
     ):
         """
         Plot genomic-position vs beta for HMM labels.
@@ -715,6 +720,7 @@ class MethylSegmentor:
                 if overlay_regions_df is not None
                 else overlay_style
             ),
+            state_colors=state_colors,
             region_start=region_start,
             region_end=region_end,
             region_chrom=region_chrom,

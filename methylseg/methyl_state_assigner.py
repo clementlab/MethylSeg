@@ -522,7 +522,7 @@ class MethylStateAssigner:
         hexbin: bool = False,
         hexbin_gridsize: int = 60,
         hexbin_bins: str | int | list[float] | np.ndarray | None = "log",
-        hexbin_mincnt: int | None = 2000,
+        hexbin_mincnt: int | None = 1,
         hexbin_alpha: float | None = None,
         hexbin_linewidths: float | None = None,
         interactive: bool = False,
@@ -535,6 +535,7 @@ class MethylStateAssigner:
         use_pca_features: bool = False,
         use_parallel: bool = True,
         show_plot: bool = True,
+        state_colors: dict | None = None,
     ):
         """
         Plot PCA or UMAP embeddings for an emission table and state labels.
@@ -638,6 +639,7 @@ class MethylStateAssigner:
                     sample_name=sample_name,
                     chrom=chrom,
                     show_plot=show_plot,
+                    state_colors=state_colors,
                 )
             return self.plot_pca_clusters(
                 emission_df=emission_df,
@@ -657,6 +659,7 @@ class MethylStateAssigner:
                 sample_name=sample_name,
                 chrom=chrom,
                 show_plot=show_plot,
+                state_colors=state_colors,
             )
 
         if method == "umap":
@@ -685,7 +688,7 @@ class MethylStateAssigner:
         hexbin: bool = False,
         hexbin_gridsize: int = 60,
         hexbin_bins: str | int | list[float] | np.ndarray | None = "log",
-        hexbin_mincnt: int | None = 2000,
+        hexbin_mincnt: int | None = 1,
         hexbin_alpha: float | None = None,
         hexbin_linewidths: float | None = None,
         interactive: bool = False,
@@ -698,6 +701,7 @@ class MethylStateAssigner:
         use_pca_features: bool = False,
         use_parallel: bool = True,
         show_plot: bool = True,
+        state_colors: dict | None = None,
     ):
         """
         Plot embeddings for the cached training sample and labels.
@@ -784,6 +788,7 @@ class MethylStateAssigner:
             use_pca_features=use_pca_features,
             use_parallel=use_parallel,
             show_plot=show_plot,
+            state_colors=state_colors,
         )
 
     def plot_umap_clusters(
@@ -1051,7 +1056,7 @@ class MethylStateAssigner:
         pca_hexbin: bool = False,  # True -> old hexbin behavior
         hexbin_gridsize: int = 60,
         hexbin_bins: str | int | list[float] | np.ndarray | None = "log",
-        hexbin_mincnt: int | None = 2000,
+        hexbin_mincnt: int | None = 1,
         hexbin_alpha: float | None = None,
         hexbin_linewidths: float | None = None,
         interactive: bool = False,  # 3D Plotly option
@@ -1061,12 +1066,17 @@ class MethylStateAssigner:
         sample_name: str | None = None,
         chrom: str | None = None,
         show_plot: bool = True,
+        state_colors: dict | None = None,
     ):
         """
         PCA embedding + loadings, using consistent colors per state.
 
         Set ``include_kmeans_metrics=False`` to skip the expensive clustering
         quality metric calculation and annotation.
+
+        In hexbin mode, ``hexbin_mincnt`` is evaluated separately for each
+        state and hexagon. The default of one keeps sparse chromosome-level
+        plots visible; use a larger value to show only dense bins.
         """
         return self._plot_pca_clusters_impl(
             emission_df=emission_df,
@@ -1087,6 +1097,7 @@ class MethylStateAssigner:
             chrom=chrom,
             highlight_mask=None,
             show_plot=show_plot,
+            state_colors=state_colors,
         )
 
     def _wrap_pca_loading_feature_name(
@@ -1423,6 +1434,7 @@ class MethylStateAssigner:
         chrom: str | None = None,
         highlight_mask: Optional[np.ndarray] = None,
         show_plot: bool = True,
+        state_colors: dict | None = None,
     ):
         if not hasattr(self, "model"):
             raise ValueError("No trained model found. Please train a model first.")
@@ -1431,7 +1443,9 @@ class MethylStateAssigner:
             emission_df=emission_df,
             n_pca_plot=n_pca_plot,
         )
-        cmap, norm, state_colors_rgba, state_colors_hex = get_biological_state_colors()
+        cmap, norm, state_colors_rgba, state_colors_hex = get_biological_state_colors(
+            state_colors=state_colors
+        )
 
         labels_numeric = self._normalize_plot_labels(
             labels=labels,
@@ -1710,7 +1724,7 @@ class MethylStateAssigner:
         pca_hexbin: bool = False,
         hexbin_gridsize: int = 60,
         hexbin_bins: str | int | list[float] | np.ndarray | None = "log",
-        hexbin_mincnt: int | None = 2000,
+        hexbin_mincnt: int | None = 1,
         hexbin_alpha: float | None = None,
         hexbin_linewidths: float | None = None,
         interactive: bool = False,
@@ -1720,6 +1734,7 @@ class MethylStateAssigner:
         sample_name: str | None = None,
         chrom: str | None = None,
         show_plot: bool = True,
+        state_colors: dict | None = None,
     ):
         """
         Plot PCA clusters while highlighting CpGs overlapping a genomic region.
@@ -1846,6 +1861,7 @@ class MethylStateAssigner:
             chrom=chrom,
             highlight_mask=highlight_mask,
             show_plot=show_plot,
+            state_colors=state_colors,
         )
 
     def _format_train_chrom_label(
@@ -1881,7 +1897,7 @@ class MethylStateAssigner:
         pca_hexbin: bool = False,
         hexbin_gridsize: int = 60,
         hexbin_bins: str | int | list[float] | np.ndarray | None = "log",
-        hexbin_mincnt: int | None = 2000,
+        hexbin_mincnt: int | None = 1,
         hexbin_alpha: float | None = None,
         hexbin_linewidths: float | None = None,
         interactive: bool = False,

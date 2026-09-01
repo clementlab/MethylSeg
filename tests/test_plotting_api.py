@@ -4,8 +4,10 @@ import tempfile
 import unittest
 from unittest.mock import patch
 
+from matplotlib import pyplot as plt
 import numpy as np
 import pandas as pd
+from sklearn.preprocessing import StandardScaler
 
 from methylseg.helper_classes import HMMObservationMode, MethylationStates, SampleInfo
 from methylseg.methyl_segmentor import MethylSegmentor
@@ -212,6 +214,66 @@ class PathwayPlottingTests(unittest.TestCase):
 
 
 class LowLevelPlottingTests(unittest.TestCase):
+    def test_pca_hexbin_defaults_to_visible_sparse_bins_and_honors_mincnt(self):
+        emission_df = pd.DataFrame(
+            {
+                "feature_1": [0.0, 0.1, 0.2, 3.0, 3.1, 3.2],
+                "feature_2": [0.0, 0.2, 0.1, 3.0, 3.2, 3.1],
+            }
+        )
+        assigner = MethylStateAssigner.__new__(MethylStateAssigner)
+        assigner.random_state = 0
+        assigner.model = SimpleNamespace(
+            feature_cols=list(emission_df.columns),
+            scaler=StandardScaler().fit(emission_df.to_numpy()),
+            imputer=None,
+            pca=None,
+        )
+        labels = np.array(
+            [MethylationStates.PMD] * 3 + [MethylationStates.HIGH] * 3,
+            dtype=object,
+        )
+
+        fig = assigner.plot_pca_clusters(
+            emission_df=emission_df,
+            labels=labels,
+            pca_hexbin=True,
+            include_kmeans_metrics=False,
+            show_plot=False,
+        )
+        self.assertTrue(
+            all(len(collection.get_offsets()) > 0 for collection in fig.axes[0].collections)
+        )
+        plt.close(fig)
+
+        dense_only_fig = assigner.plot_pca_clusters(
+            emission_df=emission_df,
+            labels=labels,
+            pca_hexbin=True,
+            hexbin_mincnt=4,
+            include_kmeans_metrics=False,
+            show_plot=False,
+        )
+        self.assertTrue(
+            all(len(collection.get_offsets()) == 0 for collection in dense_only_fig.axes[0].collections)
+        )
+        plt.close(dense_only_fig)
+
+    def test_segmentor_interactive_label_wrapper_defaults_state_colors_to_none(self):
+        segmentor = MethylSegmentor.__new__(MethylSegmentor)
+        captured = {}
+
+        def fake_plot_labels(self, **kwargs):
+            captured.update(kwargs)
+            return "segmentor-figure"
+
+        segmentor.plot_labels = MethodType(fake_plot_labels, segmentor)
+
+        result = segmentor.plot_interactive_beta_by_label(show_plot=False)
+
+        self.assertEqual(result, "segmentor-figure")
+        self.assertIsNone(captured["state_colors"])
+
     def test_segmentor_plot_labels_uses_default_sample_and_region_zoom(self):
         segmentor = MethylSegmentor.__new__(MethylSegmentor)
         default_sample = _sample_info("default")
@@ -235,12 +297,14 @@ class LowLevelPlottingTests(unittest.TestCase):
             "analysis.shared_utils.methylseg.methylseg.methyl_segmentor.plot_interactive_beta_scatter"
         ) as mock_plot:
             mock_plot.return_value = "segmentor-figure"
+            custom_state_colors = {"PMD": "#112233", "HIGH": "#445566"}
             result = segmentor.plot_labels(
                 chrom="chr1",
                 region_start=10,
                 region_end=25,
                 region_chrom="chr1",
                 show_plot=False,
+                state_colors=custom_state_colors,
             )
 
         self.assertEqual(result, "segmentor-figure")
@@ -252,6 +316,10 @@ class LowLevelPlottingTests(unittest.TestCase):
         self.assertEqual(mock_plot.call_args.kwargs["region_start"], 10)
         self.assertEqual(mock_plot.call_args.kwargs["region_end"], 25)
         self.assertEqual(mock_plot.call_args.kwargs["region_chrom"], "chr1")
+        self.assertEqual(
+            mock_plot.call_args.kwargs["state_colors"],
+            custom_state_colors,
+        )
 
     def test_analyzer_plot_labels_supports_rule_based_labels(self):
         analyzer = MethylStateAnalyzer.__new__(MethylStateAnalyzer)
@@ -314,7 +382,9 @@ class LowLevelPlottingTests(unittest.TestCase):
         )
 
         hist_labels = []
+        hist_colors = {}
         title_values = []
+        custom_state_colors = {"PMD": "#112233", "HIGH": "#445566"}
 
         with patch(
             "analysis.shared_utils.methylseg.methylseg.methyl_state_analyzer.relabel_by_mean_emission"
@@ -326,13 +396,19 @@ class LowLevelPlottingTests(unittest.TestCase):
             mock_relabel.return_value = np.array(
                 [MethylationStates.PMD, MethylationStates.HIGH], dtype=object
             )
-            mock_hist.side_effect = lambda *args, **kwargs: hist_labels.append(
-                kwargs["label"]
+            mock_hist.side_effect = lambda *args, **kwargs: (
+                hist_labels.append(kwargs["label"]),
+                hist_colors.setdefault(kwargs["label"], kwargs["color"]),
             )
             mock_title.side_effect = lambda value: title_values.append(value)
-            analyzer.plot_feature_distributions_by_kmeans_state(show_plots=False)
+            analyzer.plot_feature_distributions_by_kmeans_state(
+                show_plots=False,
+                state_colors=custom_state_colors,
+            )
 
         self.assertCountEqual(hist_labels, ["PMD", "HIGH"])
+        self.assertEqual(hist_colors["PMD"], custom_state_colors["PMD"])
+        self.assertEqual(hist_colors["HIGH"], custom_state_colors["HIGH"])
         self.assertTrue(any("KMeans State" in value for value in title_values))
         self.assertTrue(mock_relabel.called)
 

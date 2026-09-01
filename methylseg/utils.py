@@ -17,7 +17,10 @@ from numba import njit
 from .helper_classes import MethylationStates, SampleInfo
 
 
-def get_biological_state_colors(cmap_name: str = "viridis"):
+def get_biological_state_colors(
+    cmap_name: str = "viridis",
+    state_colors: dict | None = None,
+):
     """
     Return a fixed biological-state palette keyed by the canonical enum values
     (LOW=0, PMD=1, INTERMEDIATE=2, HIGH=3).
@@ -27,15 +30,14 @@ def get_biological_state_colors(cmap_name: str = "viridis"):
     """
     del cmap_name
     state_values = [state.value for state in MethylationStates]
+    state_color_lookup = resolve_state_color_lookup(state_colors=state_colors)
     state_colors_rgba = {
-        MethylationStates.LOW.value: mcolors.to_rgba("#440154"),
-        MethylationStates.PMD.value: mcolors.to_rgba("#31688e"),
-        MethylationStates.INTERMEDIATE.value: mcolors.to_rgba("#35b779"),
-        MethylationStates.HIGH.value: mcolors.to_rgba("#fde725"),
+        state.value: mcolors.to_rgba(state_color_lookup[state.name])
+        for state in MethylationStates
     }
     state_colors_hex = {
-        state_value: mcolors.to_hex(color)
-        for state_value, color in state_colors_rgba.items()
+        state.value: state_color_lookup[state.name]
+        for state in MethylationStates
     }
     cmap = mcolors.ListedColormap(
         [state_colors_rgba[state_value] for state_value in state_values]
@@ -78,6 +80,26 @@ def normalize_state_label(value) -> str | None:
         except ValueError:
             return str(int(value))
     return str(value)
+
+DEFAULT_BIOLOGICAL_STATE_COLORS = {
+    MethylationStates.LOW.name: "#440154",
+    MethylationStates.PMD.name: "#31688E",
+    MethylationStates.INTERMEDIATE.name: "#35B779",
+    MethylationStates.HIGH.name: "#FDE725",
+}
+
+
+def resolve_state_color_lookup(*, state_colors: dict | None = None) -> dict[str, str]:
+    color_lookup = DEFAULT_BIOLOGICAL_STATE_COLORS.copy()
+    if not state_colors:
+        return color_lookup
+
+    for key, color in state_colors.items():
+        label = normalize_state_label(key)
+        if label is None:
+            continue
+        color_lookup[str(label)] = mcolors.to_hex(color)
+    return color_lookup
 
 
 def build_region_overlay_df(
@@ -135,6 +157,7 @@ def annotate_plot_df_with_regions(
     pos_col: str,
     overlay_style: str = "state",
     region_label_col: str = "state",
+    state_colors: dict | None = None,
 ) -> tuple[pd.DataFrame, str, dict[str, str], dict[str, list[str]], str, str]:
     plot_df = df_plot.copy()
     outside_region_color = "#7E7E7E"
@@ -180,7 +203,7 @@ def annotate_plot_df_with_regions(
             f"{sorted(missing_cols)}"
         )
 
-    _, _, _, state_colors_hex = get_biological_state_colors()
+    _, _, _, state_colors_hex = get_biological_state_colors(state_colors=state_colors)
     state_color_map = {
         state.name: state_colors_hex[state.value] for state in MethylationStates
     }
@@ -269,6 +292,7 @@ def plot_interactive_beta_scatter(
     overlay_regions_df: pd.DataFrame | None = None,
     overlay_style: str = "state",
     overlay_label_col: str = "state",
+    state_colors: dict | None = None,
     region_start: int | None = None,
     region_end: int | None = None,
     region_chrom: str | None = None,
@@ -362,6 +386,7 @@ def plot_interactive_beta_scatter(
             pos_col=x_col,
             overlay_style=overlay_style,
             region_label_col=overlay_label_col,
+            state_colors=state_colors,
         )
     else:
         if label_col not in df_plot.columns:
@@ -375,7 +400,7 @@ def plot_interactive_beta_scatter(
                 f"Label column '{label_col}' contains empty values that cannot be plotted."
             )
 
-        _, _, _, state_colors_hex = get_biological_state_colors()
+        _, _, _, state_colors_hex = get_biological_state_colors(state_colors=state_colors)
         ordered_state_names = [
             state.name
             for state in MethylationStates

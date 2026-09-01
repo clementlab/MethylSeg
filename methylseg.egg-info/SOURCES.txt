@@ -20,3 +20,4 @@ methylseg.egg-info/requires.txt
 methylseg.egg-info/top_level.txt
 tests/test_pathway_summary_defaults.py
 tests/test_plotting_api.py
+tests/test_serialization_artifact_dir.py

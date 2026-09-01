@@ -10,7 +10,7 @@ pathway:
   random_state: 42
   cluster_space: pca
   n_pca: 5
-  min_region_length: 0
+  min_region_length: 5000
   min_region_cpgs: 6
   merge_gap_bp: 100000
 state_assigner:
@@ -40,27 +40,32 @@ state_cutoffs:
 state_cutoffs_set_manually: false
 hmm:
   type: continuous-time
-  params: {}
+  params:
+    n_emissions: 4
+    holding_time_guess: 1500000
+    algorithm: forward-backward
+    max_iter: 25
+    tol: 0.01
   observation_mode: discrete_states
 segmenter:
   state_assignment_method: kmeans
   hmm_observation_mode: discrete_states
   out_dir: .
 saved_tables:
-  train_meth: train_meth.feather
-  training_summary_df: training_summary_df.feather
-  train_emission_df: train_emission_df.feather
-  train_joint: train_joint.feather
+  train_meth: tcga_hm450k_model_artifacts/train_meth.feather
+  training_summary_df: tcga_hm450k_model_artifacts/training_summary_df.feather
+  train_emission_df: tcga_hm450k_model_artifacts/train_emission_df.feather
+  train_joint: tcga_hm450k_model_artifacts/train_joint.feather
 train_sample_info:
   sample_id: TCGA-BD-A3EP-01A
-  meth_data_path: train_sample_meth.feather
+  meth_data_path: tcga_hm450k_model_artifacts/train_sample_meth.feather
 train_sample:
   name: TCGA-BD-A3EP-01A
   file: null
 models:
-  kmeans: models/kmeans.joblib
-  pca: models/pca.joblib
-  scaler: models/scaler.joblib
+  kmeans: tcga_hm450k_model_artifacts/models/kmeans.joblib
+  pca: tcga_hm450k_model_artifacts/models/pca.joblib
+  scaler: tcga_hm450k_model_artifacts/models/scaler.joblib
   feature_cols:
   - beta
   - 40kb_avg_meth
@@ -77,9 +82,9 @@ models:
   cluster_space: pca
   n_pca: 5
 training_artifacts:
-  train_meth: training_artifacts/train_meth.feather
-  train_emission_df: training_artifacts/train_emission_df.feather
-  training_summary_df: training_artifacts/training_summary_df.feather
-  train_joint: training_artifacts/train_joint.feather
-  train_labels: training_artifacts/train_labels.npy
-  train_pca_scores: training_artifacts/train_pca_scores.npy
+  train_meth: tcga_hm450k_model_artifacts/training_artifacts/train_meth.feather
+  train_emission_df: tcga_hm450k_model_artifacts/training_artifacts/train_emission_df.feather
+  training_summary_df: tcga_hm450k_model_artifacts/training_artifacts/training_summary_df.feather
+  train_joint: tcga_hm450k_model_artifacts/training_artifacts/train_joint.feather
+  train_labels: tcga_hm450k_model_artifacts/training_artifacts/train_labels.npy
+  train_pca_scores: tcga_hm450k_model_artifacts/training_artifacts/train_pca_scores.npy
