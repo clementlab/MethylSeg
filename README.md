@@ -18,7 +18,10 @@ python -m pip install git+https://github.com/clementlab/MethylSeg.git
 or from TestPyPi
 
 ```bash
-pip install -i https://test.pypi.org/simple/ methylseg==0.1.0
+python -m pip install \
+  --index-url https://test.pypi.org/simple/ \
+  --extra-index-url https://pypi.org/simple/ \
+  methylseg==0.1.1
 ```
 
 PyPI installation will be added here once the package is published there. 
