@@ -63,7 +63,6 @@ For ease of tutorials and testing, 2 sample models have been provided:
 To use them
 
 ```python
-
 #WGBS
 wgbs_saved = MethylSegPathway.get_pretrained_model(
     out_dir=OUTPUT_DIR, resolution="wgbs"
@@ -72,7 +71,6 @@ wgbs_saved = MethylSegPathway.get_pretrained_model(
 hm450k_saved = MethylSegPathway.get_pretrained_model(
     out_dir=OUTPUT_DIR, resolution="450k"
 )
-
 ```
 
 ## Valid Input
@@ -178,5 +176,6 @@ the cleaning step before requesting a cleaned overlay.
 - [x] Document the full workflow, inputs, outputs, and cleaned-region behavior.
 - [x] Include all maintained example notebooks in the documentation website.
 - [x] Add user-facing docstrings and CLI help for currently supported commands.
+- [ ] Move Git-LFS/data-asset delivery to its dedicated follow-up project.
 - [ ] Continue legacy cleanup as separately scoped maintenance work.
 - [ ] Upgrade scikitlearn from 1.8.0 to 1.9.0 and then repackage sample data
