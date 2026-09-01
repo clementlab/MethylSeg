@@ -119,6 +119,8 @@ fig = pathway.plot_labels(
 
 [ ] Fix additional example notebooks and include them on the documentation website
 
+[ ] Add a documentation page detailing the full run pathway process
+
 [ ] Finish all TODOs in repo
 
 [ ] Move away from glfs so it doesn't break for users
