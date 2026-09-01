@@ -295,13 +295,12 @@ def plot_interactive_beta_scatter(
     state_colors: dict | None = None,
     region_start: int | None = None,
     region_end: int | None = None,
-    region_chrom: str | None = None,
 ) -> object | None:
     """Create an interactive beta scatter plot.
 
-    ``region_start``/``region_end``/``region_chrom`` only control the viewport
-    for the requested region. They do not change point coloring unless an
-    explicit region overlay is provided through ``overlay_regions_df``.
+    ``chrom`` selects both the plotted chromosome and, with ``region_start``
+    and ``region_end``, the zoomed viewport. Region arguments do not change
+    point coloring unless an explicit overlay is provided.
     """
     df_plot = df_plot.copy()
     df_plot = df_plot.loc[:, ~df_plot.columns.duplicated()]
@@ -472,40 +471,30 @@ def plot_interactive_beta_scatter(
         paper_bgcolor="white",
     )
 
-    region_requested = any(
-        value is not None for value in (region_start, region_end, region_chrom)
-    )
+    region_requested = any(value is not None for value in (region_start, region_end))
     if region_requested:
         if region_start is None or region_end is None:
             raise ValueError(
                 "region_start and region_end must both be provided when "
                 "requesting region zoom."
             )
-        if region_chrom is None:
+        if chrom is None:
             raise ValueError(
-                "region_chrom must be provided when requesting region zoom."
+                "chrom must be provided when requesting region zoom."
             )
 
-        resolved_region_chrom = str(region_chrom)
-        plotted_chrom = str(chrom) if chrom is not None else None
-        if plotted_chrom is None and "CpG_chrm" in df_plot.columns:
-            plotted_chrom_values = df_plot["CpG_chrm"].dropna().astype(str).unique()
-            if len(plotted_chrom_values) == 1:
-                plotted_chrom = plotted_chrom_values[0]
-
-        if plotted_chrom == resolved_region_chrom:
-            resolved_region_start = int(region_start)
-            resolved_region_end = int(region_end)
-            flank_bp = max(
-                1000,
-                int(np.ceil(max(resolved_region_end - resolved_region_start, 1) * 0.1)),
-            )
-            fig.update_xaxes(
-                range=[
-                    resolved_region_start - flank_bp,
-                    resolved_region_end + flank_bp,
-                ]
-            )
+        resolved_region_start = int(region_start)
+        resolved_region_end = int(region_end)
+        flank_bp = max(
+            1000,
+            int(np.ceil(max(resolved_region_end - resolved_region_start, 1) * 0.1)),
+        )
+        fig.update_xaxes(
+            range=[
+                resolved_region_start - flank_bp,
+                resolved_region_end + flank_bp,
+            ]
+        )
 
     if show_plot:
         fig.show(renderer="notebook")

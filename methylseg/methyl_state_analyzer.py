@@ -710,7 +710,6 @@ class MethylStateAnalyzer:
         overlay_style: str = "state",
         region_start: int | None = None,
         region_end: int | None = None,
-        region_chrom: str | None = None,
         x_col: str = "CpG_beg",
         y_col: str = "beta",
         label_title: str | None = None,
@@ -791,5 +790,4 @@ class MethylStateAnalyzer:
             ),
             region_start=region_start,
             region_end=region_end,
-            region_chrom=region_chrom,
         )

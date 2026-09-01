@@ -681,7 +681,6 @@ class MethylSegmentor:
         overlay_style: str = "state",
         region_start: int | None = None,
         region_end: int | None = None,
-        region_chrom: str | None = None,
         x_col: str = "CpG_beg",
         y_col: str = "beta",
         label_title: str | None = None,
@@ -695,6 +694,8 @@ class MethylSegmentor:
         Region args only zoom the x-axis viewport; they do not create a
         highlight overlay unless one is passed explicitly.
         """
+        if chrom is None:
+            raise ValueError("chrom is required when plotting HMM labels.")
         meth_data, _ = self.segment_sample(sample_info=sample_info, chrom=chrom)
         resolved_sample_info = (
             self.default_sample_info if sample_info is None else sample_info
@@ -723,5 +724,4 @@ class MethylSegmentor:
             state_colors=state_colors,
             region_start=region_start,
             region_end=region_end,
-            region_chrom=region_chrom,
         )

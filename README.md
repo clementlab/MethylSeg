@@ -97,8 +97,10 @@ hm450k_saved = MethylSegPathway.get_pretrained_model(
 
 ## Quick start
 
-The default workflow trains a model on your input, segments one chromosome,
-cleans the calls, and draws a cleaned PMD overlay. Use `resolution="wgbs"` for WGBS count tables or `resolution="450k"` for HM450K
+The default workflow trains a model on your input, segments the sample,
+cleans the calls, and draws a cleaned methylation state overlay.
+
+Use `resolution="wgbs"` for WGBS count tables or `resolution="450k"` for HM450K
 beta-value tables. Other microarray platforms may require manually configured
 parameters until array-specific defaults are added.
 
@@ -110,21 +112,24 @@ from methylseg.helper_classes import DATA_DIR
 
 reference_dir = DATA_DIR / "reference_files"
 
-# WGBS: replace these with your own sample name and count table.
-# sample_name = "WGBS_colon-primary-tumor_1"
-# sample_file = reference_dir / "WGBS_colon-primary-tumor_1_wgbs.tsv.gz"
-# resolution = "wgbs"
 
-TCGA/HM450K alternative:
+
+#TCGA/HM450K: replace these with your own sample name and count table
 sample_name = "TCGA-BD-A3EP-01A"
 sample_file = reference_dir / "TCGA-BD-A3EP-01A_450k.tsv.gz"
 resolution = "450k"
+
+# WGBS alternative:
+# sample_name = "WGBS_colon-primary-tumor_1"
+# sample_file = reference_dir / "WGBS_colon-primary-tumor_1_wgbs.tsv.gz"
+# resolution = "wgbs"
 
 sample_info, removed_df = MethylSegPathway.prepare_sample_info(
     sample_name=sample_name,
     sample_file=sample_file,
     resolution=resolution,
-    min_coverage=10,
+    remove_low_coverage_like_cpgs=True,
+    # min_coverage=10,
 )
 
 pathway = MethylSegPathway(
@@ -134,13 +139,12 @@ pathway = MethylSegPathway(
 
 pathway.fit_pathway()
 
-regions = pathway.generate_regions(sample_info=sample_info, chrom="chr1")
+regions = pathway.generate_regions(sample_info=sample_info)
 
 fig = pathway.plot_labels(
     sample_info=sample_info,
     sample_info_removed=removed_df,
     chrom="chr1",
-    region_chrom="chr1",
     region_start=2_200_000,
     region_end=3_700_000
 )

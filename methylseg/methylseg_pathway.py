@@ -84,7 +84,7 @@ class MethylSegPathway:
         sample_name: str,
         sample_file: str | Path,
         resolution: str = "auto",
-        min_coverage: int = 5,
+        min_coverage: int = 10,
         remove_low_coverage_like_cpgs: bool = False,
     ) -> tuple[SampleInfo, pd.DataFrame]:
         """
@@ -387,17 +387,14 @@ class MethylSegPathway:
     def _resolve_region_chrom(
         sample_info: SampleInfo,
         chrom: str | None = None,
-        region_chrom: str | None = None,
     ) -> str:
-        if region_chrom is not None:
-            return str(region_chrom)
         if chrom is not None:
             return str(chrom)
 
         chrom_values = sample_info.meth_data["CpG_chrm"].dropna().astype(str).unique()
         if len(chrom_values) != 1:
             raise ValueError(
-                "region_chrom must be provided when plotting multiple chromosomes."
+                "chrom must be provided when plotting multiple chromosomes."
             )
         return str(chrom_values[0])
 
@@ -424,7 +421,6 @@ class MethylSegPathway:
         resolved_chrom = self._resolve_region_chrom(
             sample_info=sample_info,
             chrom=chrom,
-            region_chrom=None,
         )
         metadata_path = self._clean_region_metadata_path(
             chrom=resolved_chrom,
@@ -1564,7 +1560,6 @@ class MethylSegPathway:
         use_cleaned_regions: bool = False,
         region_start: int | None = None,
         region_end: int | None = None,
-        region_chrom: str | None = None,
         x_col: str = "CpG_beg",
         y_col: str = "beta",
         label_title: str | None = None,
@@ -1580,8 +1575,7 @@ class MethylSegPathway:
         ``clean_regions/metadata_cleaned_{chrom}_{sample_id}_{STATE}.tsv``.
         It does not generate cleaned regions on demand; call
         ``get_clean_regions(..., chrom=...)`` first when you want cleaned
-        overlays. Region args only zoom the x-axis viewport for scatter plots;
-        they do not create an implicit highlight overlay.
+        overlays. Region args only zoom the x-axis viewport for scatter plots.
         """
         resolved_sample_info = self._resolve_sample_info(sample_info=sample_info)
         overlay_df, overlay_style = self._resolve_overlay_regions(
@@ -1594,6 +1588,8 @@ class MethylSegPathway:
 
         label_source = str(label_source).lower()
         if label_source == "hmm":
+            if chrom is None:
+                raise ValueError("chrom is required when plotting HMM labels.")
             return self.segmentor.plot_labels(
                 sample_info=resolved_sample_info,
                 chrom=chrom,
@@ -1602,18 +1598,6 @@ class MethylSegPathway:
                 overlay_style=overlay_style,
                 region_start=region_start,
                 region_end=region_end,
-                region_chrom=(
-                    self._resolve_region_chrom(
-                        sample_info=resolved_sample_info,
-                        chrom=chrom,
-                        region_chrom=region_chrom,
-                    )
-                    if any(
-                        value is not None
-                        for value in (region_start, region_end, region_chrom)
-                    )
-                    else None
-                ),
                 x_col=x_col,
                 y_col=y_col,
                 label_title=label_title if label_title is not None else "HMM state",
@@ -1631,18 +1615,6 @@ class MethylSegPathway:
                 overlay_style=overlay_style,
                 region_start=region_start,
                 region_end=region_end,
-                region_chrom=(
-                    self._resolve_region_chrom(
-                        sample_info=resolved_sample_info,
-                        chrom=chrom,
-                        region_chrom=region_chrom,
-                    )
-                    if any(
-                        value is not None
-                        for value in (region_start, region_end, region_chrom)
-                    )
-                    else None
-                ),
                 x_col=x_col,
                 y_col=y_col,
                 label_title=label_title,
