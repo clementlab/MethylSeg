@@ -50,6 +50,16 @@ from methylseg.helper_classes import DATA_DIR
 REFERENCE_DIR = DATA_DIR / Path("reference_files")
 ```
 
+## Package overview
+
+### Input data format
+
+MethylSeg accepts tab-delimited BED-like input files containing DNA methylation measurements. Three input formats are supported. The simplest format consists of four columns: chromosome, CpG start position, CpG end position, and the methylation beta value. For microarray datasets, an optional fifth column containing the probe identifier may be included. For WGBS datasets, five-column files may be provided containing chromosome, CpG start position, CpG end position, methylated read count, and total coverage. In this case, methylation beta values are calculated internally as the ratio of methylated reads to total coverage.
+
+### Output data format
+
+The final output of MethylSeg consists of a set of BED files. For each chromosome, the software generates a summary BED file for each state, for the raw regions (segments_{chrom}_{sample_id}_{resolution}_{state}.bed) as well as the cleaned regions (segments_cleaned_{chrom}_{sample_id}_{resolution}_{state}.bed) In addition, MethylSeg generates genome-wide summary files for each state (segments_raw_{state}.bed and segments_cleaned_{state}.bed).
+
 ## Quickstart
 
 ```python
@@ -102,6 +112,8 @@ fig = pathway.plot_labels(
 - API docs are generated from package docstrings with Sphinx `autodoc` and `autosummary`, so docstring updates appear after each rebuild.
 
 ## TODO
+
+[ ] Update full documentation with info about each main step, input and output file examples, etc.
 
 [ ] Finish all TODOs in repo
 
