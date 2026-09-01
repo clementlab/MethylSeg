@@ -52,7 +52,7 @@ sample_info, removed_df = MethylDataPrep(
     resolution="450k",
 ).prepare()
 
-pathway = MethylSegPathway.get_pretrained_model(out_dir="out", hmm_type="ct")
+pathway = MethylSegPathway.get_pretrained_model(out_dir="out", resolution="450k")
 regions = pathway.generate_regions(
     sample_info=sample_info,
     chrom="chr1",
