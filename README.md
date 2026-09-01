@@ -23,7 +23,7 @@ values were observed during testing:
 
 > [!NOTE]
 > Numba has known compatibility issues on ARM-based systems. See the
-> [Troubleshooting guide](Troubleshooting.md) for installation guidance.
+> [Troubleshooting guide](TROUBLESHOOTING.md) for installation guidance.
 
 ## Installation
 
