@@ -44,7 +44,7 @@ methylseg download_data_files
 
 To access the data 
 
-``python
+```python
 from methylseg.helper_classes import DATA_DIR
 
 REFERENCE_DIR = DATA_DIR / Path("reference_files")
