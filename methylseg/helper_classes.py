@@ -184,6 +184,8 @@ class MethylDataPrep:
         resolution="auto",
         min_coverage=10,
         remove_low_coverage_like_cpgs=False,
+        chunk_size=1_000_000,
+        retain_removed_rows=True,
     ):
         """
         Parameters
@@ -205,12 +207,20 @@ class MethylDataPrep:
             If True, remove CpGs with beta values commonly produced by very
             low coverage counts, such as 0.0, 0.25, 0.33, 0.5, 0.66/0.67,
             0.75, and 1.0.
+        chunk_size: int, default=1_000_000
+            Number of rows to read at a time when processing large files.
+        retain_removed_rows: bool, default=True
+            If True, retain removed rows in a separate DataFrame for downstream
+            analysis. If False, removed rows will be discarded.
         """
+
         self.meth_file = Path(meth_file)
         self.sample_id = sample_id
         self.resolution = resolution
         self.min_coverage = min_coverage
         self.remove_low_coverage_like_cpgs = remove_low_coverage_like_cpgs
+        self.chunk_size = chunk_size
+        self.retain_removed_rows = retain_removed_rows
 
     def _looks_like_header_row(self, row_values) -> bool:
         normalized = [str(v).strip().lower() for v in row_values]
@@ -240,14 +250,16 @@ class MethylDataPrep:
                 return True
 
         return False
-    
+
     def _is_microarray_format(self) -> bool:
         if self.resolution in {"450k", "27k", "850k"}:
             return True
         if self.resolution == "wgbs":
             return False
         else:
-            raise ValueError(f"Unsupported resolution for format inference: {self.resolution}")
+            raise ValueError(
+                f"Unsupported resolution for format inference: {self.resolution}"
+            )
 
     def _promote_header_row(self, df: pd.DataFrame) -> pd.DataFrame:
         if df.empty or not all(isinstance(col, int) for col in df.columns):
@@ -364,73 +376,336 @@ class MethylDataPrep:
         )
         return filtered_df, removed_df
 
+    def _check_concat_memory(
+        self,
+        retained_bytes: int,
+        processed_rows: int,
+        chunk_number: int,
+    ) -> None:
+        """Raise before concatenation is likely to exhaust available memory."""
+        try:
+            import psutil
+        except ImportError:
+            return
+
+        available = psutil.virtual_memory().available
+
+        # Concatenation can temporarily require another copy of retained data.
+        required_headroom = retained_bytes + 512 * 1024**2
+
+        if available < required_headroom:
+            raise MemoryError(
+                "Insufficient memory to finish preparing this methylation file. "
+                f"Stopped after chunk {chunk_number:,} and "
+                f"{processed_rows:,} input rows. Retained data currently uses "
+                f"approximately {retained_bytes / 1024**3:.2f} GiB, with "
+                f"{available / 1024**3:.2f} GiB available. Consider reducing "
+                "chunk_size or setting retain_removed_rows=False."
+            )
+
     def _load_wgbs(self) -> tuple[pd.DataFrame, pd.DataFrame]:
-        df = pd.read_csv(
+        """
+        Load and filter WGBS methylation data in chunks.
+
+        The expected input columns are:
+
+        1. CpG chromosome
+        2. CpG start
+        3. CpG end
+        4. Methylated read count
+        5. Total coverage
+
+        Files containing only four columns are treated as precomputed beta-value
+        files and passed to ``_load_450k()``.
+
+        Returns
+        -------
+        tuple[pandas.DataFrame, pandas.DataFrame]
+            The filtered canonical methylation table and the rows removed during
+            coverage or beta-value filtering.
+        """
+        compression = "gzip" if self.meth_file.suffix in {".gz", ".gzip"} else "infer"
+
+        try:
+            preview = pd.read_csv(
+                self.meth_file,
+                sep="\t",
+                header=None,
+                nrows=1,
+                compression=compression,
+            )
+        except pd.errors.EmptyDataError:
+            filtered_df = pd.DataFrame(columns=self.REQUIRED_COLUMNS)
+            removed_df = pd.DataFrame(
+                columns=[
+                    "CpG_chrm",
+                    "CpG_beg",
+                    "CpG_end",
+                    "meth",
+                    "coverage",
+                    "beta",
+                    self.INPUT_ROW_INDEX_COL,
+                ]
+            )
+            return filtered_df, self._format_removed_dataframe(removed_df)
+
+        column_count = preview.shape[1]
+
+        if column_count == 4:
+            # Four-column inputs already contain beta values.
+            return self._load_450k()
+
+        if column_count < 5:
+            raise ValueError(
+                "Expected at least 5 columns for WGBS input, "
+                f"but found {column_count}: {self.meth_file}"
+            )
+
+        has_header = self._looks_like_header_row(preview.iloc[0].tolist())
+
+        columns = [
+            "CpG_chrm",
+            "CpG_beg",
+            "CpG_end",
+            "meth",
+            "coverage",
+        ]
+
+        reader = pd.read_csv(
             self.meth_file,
             sep="\t",
             header=None,
-            low_memory=False,
-            compression="gzip" if self.meth_file.suffix in {".gz", ".gzip"} else None,
+            names=columns,
+            usecols=range(5),
+            skiprows=1 if has_header else None,
+            compression=compression,
+            chunksize=self.chunk_size,
+            dtype={
+                "CpG_chrm": "string",
+                "CpG_beg": np.int64,
+                "CpG_end": np.int64,
+                "meth": np.float64,
+                "coverage": np.float64,
+            },
         )
-        df = self._promote_header_row(df)
-        if df.shape[1] == 4:
-            #default to 450k-like format if only 4 columns are present
-            return self._load_450k()
-        if df.shape[1] < 5:
-            raise ValueError(
-                f"Expected at least 5 columns for WGBS input: {self.meth_file}"
+
+        filtered_chunks: list[pd.DataFrame] = []
+        removed_chunks: list[pd.DataFrame] = []
+
+        input_row_offset = 0
+        retained_bytes = 0
+
+        for chunk_number, chunk in enumerate(reader, start=1):
+            chunk_length = len(chunk)
+
+            # Preserve each row's original position in the input file.
+            chunk[self.INPUT_ROW_INDEX_COL] = np.arange(
+                input_row_offset,
+                input_row_offset + chunk_length,
+                dtype=np.int64,
             )
-        if all(isinstance(col, int) for col in df.columns):
-            df.columns = ["CpG_chrm", "CpG_beg", "CpG_end", "meth", "coverage"]
+            input_row_offset += chunk_length
+
+            # Calculate beta values from methylated and total read counts.
+            # Coverage-zero rows will subsequently be removed by the coverage mask.
+            with np.errstate(divide="ignore", invalid="ignore"):
+                chunk["beta"] = chunk["meth"] / chunk["coverage"]
+
+            coverage_mask = chunk["coverage"] >= self.min_coverage
+
+            if self.retain_removed_rows and (~coverage_mask).any():
+                coverage_removed = chunk.loc[~coverage_mask].copy()
+                removed_chunks.append(coverage_removed)
+
+                retained_bytes += coverage_removed.memory_usage(
+                    index=True,
+                    deep=True,
+                ).sum()
+
+            retained_chunk = chunk.loc[coverage_mask].copy()
+
+            if self.remove_low_coverage_like_cpgs:
+                low_coverage_like_mask = retained_chunk["beta"].isin(
+                    self.LOW_COVERAGE_LIKE_BETA_VALUES
+                )
+
+                if self.retain_removed_rows and low_coverage_like_mask.any():
+                    beta_removed = retained_chunk.loc[low_coverage_like_mask].copy()
+
+                    removed_chunks.append(beta_removed)
+
+                    retained_bytes += beta_removed.memory_usage(
+                        index=True,
+                        deep=True,
+                    ).sum()
+
+                retained_chunk = retained_chunk.loc[~low_coverage_like_mask]
+
+            filtered_chunk = retained_chunk.loc[
+                :,
+                self.REQUIRED_COLUMNS,
+            ].copy()
+
+            filtered_chunks.append(filtered_chunk)
+
+            retained_bytes += filtered_chunk.memory_usage(
+                index=True,
+                deep=True,
+            ).sum()
+
+            self._check_concat_memory(
+                retained_bytes=retained_bytes,
+                processed_rows=input_row_offset,
+                chunk_number=chunk_number,
+            )
+
+        if filtered_chunks:
+            filtered_df = pd.concat(
+                filtered_chunks,
+                axis=0,
+                ignore_index=True,
+                copy=False,
+            )
         else:
-            df = self._normalize_column_names(df)
-        df = self._attach_input_row_index(df)
-        df["meth"] = pd.to_numeric(df["meth"], errors="raise")
-        df["coverage"] = pd.to_numeric(df["coverage"], errors="raise")
-        df["beta"] = df["meth"] / df["coverage"]
-        coverage_mask = df["coverage"] >= self.min_coverage
-        coverage_removed_df = df.loc[~coverage_mask].copy()
-        filtered_df, low_coverage_removed_df = self._finalize_dataframe(
-            df.loc[coverage_mask].copy()
-        )
-        removed_frames = [
-            removed_df
-            for removed_df in (coverage_removed_df, low_coverage_removed_df)
-            if not removed_df.empty
+            filtered_df = pd.DataFrame(columns=self.REQUIRED_COLUMNS)
+
+        removed_columns = [
+            "CpG_chrm",
+            "CpG_beg",
+            "CpG_end",
+            "meth",
+            "coverage",
+            "beta",
+            self.INPUT_ROW_INDEX_COL,
         ]
-        removed_df = (
-            pd.concat(removed_frames, axis=0, sort=False)
-            if removed_frames
-            else df.iloc[0:0].copy()
-        )
+
+        if self.retain_removed_rows and removed_chunks:
+            removed_df = pd.concat(
+                removed_chunks,
+                axis=0,
+                ignore_index=True,
+                copy=False,
+            )
+        else:
+            removed_df = pd.DataFrame(columns=removed_columns)
+
         return filtered_df, self._format_removed_dataframe(removed_df)
 
     def _load_450k(self) -> tuple[pd.DataFrame, pd.DataFrame]:
-        df = pd.read_csv(
+        compression = "gzip" if self.meth_file.suffix in {".gz", ".gzip"} else "infer"
+
+        try:
+            preview = pd.read_csv(
+                self.meth_file,
+                sep="\t",
+                header=None,
+                nrows=1,
+                compression=compression,
+            )
+        except pd.errors.EmptyDataError:
+            filtered_df = pd.DataFrame(columns=self.REQUIRED_COLUMNS)
+            removed_df = pd.DataFrame(
+                columns=self.REQUIRED_COLUMNS + [self.INPUT_ROW_INDEX_COL]
+            )
+            return filtered_df, self._format_removed_dataframe(removed_df)
+
+        column_count = preview.shape[1]
+
+        if column_count not in {4, 5}:
+            raise ValueError(
+                "Expected 4 or 5 columns for microarray input, "
+                f"but found {column_count}: {self.meth_file}"
+            )
+
+        has_header = self._looks_like_header_row(preview.iloc[0].tolist())
+
+        columns = ["CpG_chrm", "CpG_beg", "CpG_end", "beta"]
+        if column_count == 5:
+            columns.append("probe")
+
+        dtypes = {
+            "CpG_chrm": "string",
+            "CpG_beg": np.int64,
+            "CpG_end": np.int64,
+            "beta": np.float64,
+        }
+        if column_count == 5:
+            dtypes["probe"] = "string"
+
+        reader = pd.read_csv(
             self.meth_file,
             sep="\t",
             header=None,
-            low_memory=False,
-            compression=(
-                "gzip" if self.meth_file.suffix in {".gz", ".gzip"} else "infer"
-            ),
+            names=columns,
+            usecols=range(column_count),
+            skiprows=1 if has_header else None,
+            compression=compression,
+            chunksize=self.chunk_size,
+            dtype=dtypes,
         )
-        if df.empty:
-            return pd.DataFrame(
-                columns=self.REQUIRED_COLUMNS
-            ), self._format_removed_dataframe(
-                pd.DataFrame(columns=self.REQUIRED_COLUMNS + [self.INPUT_ROW_INDEX_COL])
+
+        filtered_chunks = []
+        removed_chunks = []
+        input_row_offset = 0
+        retained_bytes = 0
+
+        for chunk_number, chunk in enumerate(reader, start=1):
+            chunk_length = len(chunk)
+
+            chunk[self.INPUT_ROW_INDEX_COL] = np.arange(
+                input_row_offset,
+                input_row_offset + chunk_length,
+                dtype=np.int64,
+            )
+            input_row_offset += chunk_length
+
+            if self.remove_low_coverage_like_cpgs:
+                removal_mask = chunk["beta"].isin(self.LOW_COVERAGE_LIKE_BETA_VALUES)
+
+                if self.retain_removed_rows and removal_mask.any():
+                    removed_chunk = chunk.loc[removal_mask].copy()
+                    removed_chunks.append(removed_chunk)
+                    retained_bytes += removed_chunk.memory_usage(
+                        index=True,
+                        deep=True,
+                    ).sum()
+
+                chunk = chunk.loc[~removal_mask]
+
+            filtered_chunk = chunk.loc[:, self.REQUIRED_COLUMNS].copy()
+            filtered_chunks.append(filtered_chunk)
+
+            retained_bytes += filtered_chunk.memory_usage(
+                index=True,
+                deep=True,
+            ).sum()
+
+            self._check_concat_memory(
+                retained_bytes=retained_bytes,
+                processed_rows=input_row_offset,
+                chunk_number=chunk_number,
             )
 
-        df = self._promote_header_row(df)
-
-        if df.shape[1] < 4:
-            raise ValueError(
-                f"Expected at least 4 columns for 450k input: {self.meth_file}"
+        if filtered_chunks:
+            filtered_df = pd.concat(
+                filtered_chunks,
+                axis=0,
+                ignore_index=True,
+                copy=False,
             )
+        else:
+            filtered_df = pd.DataFrame(columns=self.REQUIRED_COLUMNS)
 
-        df = self._normalize_column_names(df)
-        filtered_df, removed_df = self._finalize_dataframe(df)
+        if self.retain_removed_rows and removed_chunks:
+            removed_df = pd.concat(
+                removed_chunks,
+                axis=0,
+                ignore_index=True,
+                copy=False,
+            )
+        else:
+            removed_df = pd.DataFrame(columns=columns + [self.INPUT_ROW_INDEX_COL])
+
         return filtered_df, self._format_removed_dataframe(removed_df)
 
     def _load_auto(self) -> tuple[pd.DataFrame, pd.DataFrame]:
