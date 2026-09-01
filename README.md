@@ -1,97 +1,101 @@
 # MethylSeg
 
-`methylseg` is a methylation segmentation toolkit in this repository for:
+`methylseg` is a methylation segmentation toolkit for preparing WGBS and
+HM450K-style methylation tables, training methylation-state models, and
+exporting raw and cleaned genomic regions.
 
-- preparing WGBS and HM450K-style methylation tables
-- learning methylation state assignments from local window summaries
-- segmenting samples with several HMM backends
-- exporting raw and cleaned genomic regions for downstream analysis
-
-## Full Documentation
-
-[https://clementlab.github.io/MethylSeg/](https://clementlab.github.io/MethylSeg/)
+The README covers the standard workflow. The [Sphinx documentation](https://clementlab.github.io/MethylSeg/)
+contains API reference material and all example notebooks.
 
 ## Install
 
-Install the current public version directly from GitHub:
+Install the current package from GitHub:
 
 ```bash
 python -m pip install git+https://github.com/clementlab/MethylSeg.git
 ```
 
-or from TestPyPi
-
-```bash
-python -m pip install \
-  --index-url https://test.pypi.org/simple/ \
-  --extra-index-url https://pypi.org/simple/ \
-  methylseg
-```
-
-PyPI installation will be added here once the package is published there. 
-
-The
-repository also includes a conda environment file at [environment.yml](./environment.yml)
-for local environment management.
-
-## Sample Data
-
-Sample data can be downloaded via:
+The repository also includes `environment.yml` for conda-based local setup.
+Download the example reference data after installation:
 
 ```bash
 methylseg download_data_files
 ```
 
-To access the data 
+## Valid Input
 
-```python
-from methylseg.helper_classes import DATA_DIR
+MethylSeg reads tab-delimited `.tsv` or `.tsv.gz` files. Use canonical column
+names where possible.
 
-REFERENCE_DIR = DATA_DIR / Path("reference_files")
+WGBS input supplies methylated-read counts and total coverage; beta values are
+calculated internally.
+
+```text
+CpG_chrm	CpG_beg	CpG_end	meth	coverage
+chr1	    10468	10469	7       12
+chr1	    10470	10471	3	    10
+chr1	    10483	10484	15	    18
 ```
 
-## Package overview
+TCGA/HM450K input supplies beta values directly. The optional `probe` column is
+kept as metadata.
 
-### Input data format
+```text
+CpG_chrm	CpG_beg	CpG_end	beta	probe
+chr1	    10468	10469	0.583	cg00000029
+chr1	    10470	10471	0.271	cg00000108
+chr1	    10483	10484	0.842	cg00000109
+```
 
-MethylSeg accepts tab-delimited BED-like input files containing DNA methylation measurements. Three input formats are supported. The simplest format consists of four columns: chromosome, CpG start position, CpG end position, and the methylation beta value. For microarray datasets, an optional fifth column containing the probe identifier may be included. For WGBS datasets, five-column files may be provided containing chromosome, CpG start position, CpG end position, methylated read count, and total coverage. In this case, methylation beta values are calculated internally as the ratio of methylated reads to total coverage.
-
-### Output data format
-
-The final output of MethylSeg consists of a set of BED files. For each chromosome, the software generates a summary BED file for each state, for the raw regions (segments_{chrom}_{sample_id}_{resolution}_{state}.bed) as well as the cleaned regions (segments_cleaned_{chrom}_{sample_id}_{resolution}_{state}.bed) In addition, MethylSeg generates genome-wide summary files for each state (segments_raw_{state}.bed and segments_cleaned_{state}.bed).
+The full inputs used below are installed at `data/reference_files/` by
+`methylseg download_data_files`.
 
 ## Quickstart
+
+The default workflow trains a model on your input, segments one chromosome,
+cleans the calls, and draws a cleaned PMD overlay. Use `resolution="wgbs"` for
+WGBS count tables or `resolution="450k"` for TCGA/HM450K beta tables.
 
 ```python
 from pathlib import Path
 
-from methylseg import MethylDataPrep, MethylSegPathway, MethylationStates
+from methylseg import MethylSegPathway, MethylationStates
 from methylseg.helper_classes import DATA_DIR
 
-REFERENCE_DIR = DATA_DIR / Path("reference_files")
-sample_name = "TCGA-BD-A3EP-01A"
-sample_file = REFERENCE_DIR / "TCGA-BD-A3EP-01A_450k.tsv.gz"
+reference_dir = DATA_DIR / "reference_files"
 
-sample_info, removed_df = MethylDataPrep(
-    meth_file=sample_file,
-    sample_id=sample_name,
-    resolution="450k",
-).prepare()
+# WGBS: replace these with your own sample name and count table.
+sample_name = "WGBS_colon-primary-tumor_1"
+sample_file = reference_dir / "WGBS_colon-primary-tumor_1_wgbs.tsv.gz"
+resolution = "wgbs"
 
-pathway = MethylSegPathway.get_pretrained_model(out_dir="out", resolution="450k")
-regions = pathway.generate_regions(
-    sample_info=sample_info,
-    chrom="chr1",
-    force_resegment=True,
+# TCGA/HM450K alternative:
+# sample_name = "TCGA-BD-A3EP-01A"
+# sample_file = reference_dir / "TCGA-BD-A3EP-01A_450k.tsv.gz"
+# resolution = "450k"
+
+sample_info, removed_df = MethylSegPathway.prepare_sample_info(
+    sample_name=sample_name,
+    sample_file=sample_file,
+    resolution=resolution,
+    min_coverage=10,
 )
+
+pathway = MethylSegPathway(
+    train_sample_info=sample_info,
+    out_dir=Path("methylseg_output") / sample_name,
+)
+pathway.fit_pathway()
+
+regions = pathway.generate_regions(sample_info=sample_info, chrom="chr1")
 _, clean_dir = pathway.get_clean_regions(
     regions_df=regions,
     sample_id=sample_info.sample_id,
     chrom="chr1",
 )
-
 fig = pathway.plot_labels(
     sample_info=sample_info,
+    sample_info_removed=removed_df,
     chrom="chr1",
     overlay_state=MethylationStates.PMD,
     use_cleaned_regions=True,
@@ -99,35 +103,27 @@ fig = pathway.plot_labels(
 )
 ```
 
-## Package Layout
+`run_pathway(sample_info=sample_info, chroms=["chr1"])` performs fitting,
+segmentation, cleaning, and summary-file writing in one call. See
+`examples/run_full_pipeline.ipynb` for the full end-to-end workflow.
 
-- `methylseg/`: installable Python package
-- `data/`: small config and reference assets used by examples and pretrained configs
-- `examples/`: notebook examples
-- `docs/`: Sphinx documentation source
+For fast reruns with a previously saved model, use
+`MethylSegPathway.get_pretrained_model(out_dir, resolution=...)`; the detailed
+workflow is in `examples/use_preloaded_model.ipynb`.
 
-## Notes
+## Outputs
 
-- The example notebook in `examples/example.ipynb` is included in the docs as a rendered tutorial.
-- API docs are generated from package docstrings with Sphinx `autodoc` and `autosummary`, so docstring updates appear after each rebuild.
+`generate_regions` returns one chromosome's raw region table and writes
+state-specific BED files. `get_clean_regions` merges and filters calls, writes
+cleaned metadata under `clean_regions/`, and returns the cleaned summary paths.
+`plot_labels(use_cleaned_regions=True)` reads those cleaned artifacts, so run
+the cleaning step before requesting a cleaned overlay.
 
-## TODO
+## Development Checklist
 
-[ ] Clean up codebase, remove legacy code and parameters, update docstrings
-
-[ ] Update full documentation with info about each main step, input and output file examples, etc.
-
-[ ] Fix additional example notebooks and include them on the documentation website
-
-[ ] Add a documentation page detailing the full run pathway process
-
-[ ] Finish all TODOs in repo
-
-[ ] Move away from glfs so it doesn't break for users
-
-[ ] Think about what should be saved and what should be returned
-
-[ ] Add usage text and docstrings to all public functions and classes
-clean up plotting functions to make them easier for public use
-
-[ ] Add a function that runs full pipeline from raw input to figures and saves the outputs including running the cleaning step
+- [ ] Add documentation and regression tests for public documentation discovery.
+- [x] Document the full workflow, inputs, outputs, and cleaned-region behavior.
+- [x] Include all maintained example notebooks in the documentation website.
+- [x] Add user-facing docstrings and CLI help for currently supported commands.
+- [ ] Move Git-LFS/data-asset delivery to its dedicated follow-up project.
+- [ ] Continue legacy cleanup as separately scoped maintenance work.

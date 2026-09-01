@@ -18,6 +18,7 @@
       ~MethylSegConfig.from_instance
       ~MethylSegConfig.from_yaml
       ~MethylSegConfig.get_state_cutoffs
+      ~MethylSegConfig.rewrite_artifact_paths
       ~MethylSegConfig.to_yaml
    
    

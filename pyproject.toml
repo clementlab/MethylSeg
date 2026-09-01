@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "methylseg"
-version = "0.1.3"
+version = "0.1.4"
 description = "Methylation segmentation utilities used in the TCGA methylation analysis repo."
 readme = "README.md"
 requires-python = ">=3.10"
@@ -40,6 +40,9 @@ docs = [
   "Sphinx>=7.4.7",
   "sphinx-autobuild>=2024.4.16",
   "sphinx-rtd-theme>=2.0.0",
+]
+test = [
+  "pytest>=8.0",
 ]
 
 [tool.setuptools]
