@@ -34,6 +34,22 @@ The
 repository also includes a conda environment file at [environment.yml](./environment.yml)
 for local environment management.
 
+## Sample Data
+
+Sample data can be downloaded via:
+
+```bash
+methylseg download_data_files
+```
+
+To access the data 
+
+``python
+from methylseg.helper_classes import DATA_DIR
+
+REFERENCE_DIR = DATA_DIR / Path("reference_files")
+```
+
 ## Quickstart
 
 ```python
