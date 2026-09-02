@@ -97,16 +97,6 @@ class HMMType(MethylEnum):
 
     CT = "continuous-time"
     STICKY = "sticky"
-    GAUSSIAN = "gaussian"
-    MULTINOMIAL = "multinomial"
-
-
-class HMMObservationMode(MethylEnum):
-    """Observation representations supported by the downstream HMM segmentor."""
-
-    DISCRETE_STATES = "discrete_states"
-    GAUSSIAN_EMISSIONS = "gaussian_emissions"
-    PCA_EMISSIONS = "pca_emissions"
 
 
 @dataclass

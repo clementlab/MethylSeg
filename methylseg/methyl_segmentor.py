@@ -15,7 +15,6 @@ from .utils import (
     resolve_overlay_plot_args,
 )
 from .helper_classes import (
-    HMMObservationMode,
     MethylStateAssignmentMethod,
     MethylationStates,
     SampleInfo,
@@ -36,7 +35,6 @@ class MethylSegmentor:
         analyzer: MethylStateAnalyzer,
         hmm_model: MethylSegHMM,
         state_assignment_method: MethylStateAssignmentMethod = MethylStateAssignmentMethod.DEFINITION,
-        hmm_observation_mode: HMMObservationMode = HMMObservationMode.DISCRETE_STATES,
         out_dir=".",
         random_state: int = 42,
     ):
@@ -64,7 +62,6 @@ class MethylSegmentor:
         self.state_assignment_method = MethylStateAssignmentMethod(
             state_assignment_method
         )
-        self.hmm_observation_mode = HMMObservationMode(hmm_observation_mode)
         self.out_dir = out_dir
         self.random_state = random_state
         self.segment_results = {}
@@ -463,36 +460,10 @@ class MethylSegmentor:
             and chrom in self.segment_results[sample_info.sample_id]
         )
         if not chrom_segmented_on_sample or force_resegment:
-            if (
-                self.hmm_observation_mode.value
-                == HMMObservationMode.DISCRETE_STATES.value
-            ):
-                hidden_states, readable_states = self._segment_sample_discrete_states(
-                    sample_info=sample_info,
-                    chrom=chrom,
-                )
-            elif (
-                self.hmm_observation_mode.value
-                == HMMObservationMode.GAUSSIAN_EMISSIONS.value
-            ):
-                hidden_states, readable_states = (
-                    self._segment_sample_gaussian_emissions(
-                        sample_info=sample_info,
-                        chrom=chrom,
-                    )
-                )
-            elif (
-                self.hmm_observation_mode.value
-                == HMMObservationMode.PCA_EMISSIONS.value
-            ):
-                hidden_states, readable_states = self._segment_sample_pca_emissions(
-                    sample_info=sample_info,
-                    chrom=chrom,
-                )
-            else:
-                raise ValueError(
-                    f"Unknown HMM observation mode: {self.hmm_observation_mode}"
-                )
+            hidden_states, readable_states = self._segment_sample_pca_emissions(
+                sample_info=sample_info,
+                chrom=chrom,
+            )
 
             self.segment_results.setdefault(sample_info.sample_id, {})
             self.segment_results[sample_info.sample_id][chrom] = {

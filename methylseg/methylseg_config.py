@@ -12,7 +12,6 @@ import pandas as pd
 import yaml
 
 from .helper_classes import (
-    HMMObservationMode,
     MethylStateAssignmentMethod,
     MethylationStates,
     SampleInfo,
@@ -423,15 +422,8 @@ class MethylSegConfig:
             "params": serializable_hmm_params,
         }
 
-        hmm_observation_mode = getattr(inst, "hmm_observation_mode", None)
-
         if hasattr(getattr(inst, "hmm_type", None), "value"):
             cfg["hmm"]["type"] = getattr(inst, "hmm_type").value
-
-        if isinstance(hmm_observation_mode, HMMObservationMode):
-            hmm_observation_mode = hmm_observation_mode.value
-
-        cfg["hmm"]["observation_mode"] = hmm_observation_mode
 
         state_assignment_method = getattr(
             inst.segmentor,
@@ -447,9 +439,6 @@ class MethylSegConfig:
             "hmm_observation_mode",
             getattr(inst, "hmm_observation_mode", None),
         )
-
-        if isinstance(segmenter_hmm_observation_mode, HMMObservationMode):
-            segmenter_hmm_observation_mode = segmenter_hmm_observation_mode.value
 
         cfg["segmenter"] = {
             "state_assignment_method": state_assignment_method,
@@ -821,11 +810,6 @@ class MethylSegConfig:
         state_assignment_method = segmenter_cfg.get(
             "state_assignment_method",
             MethylStateAssignmentMethod.DEFINITION.value,
-        )
-
-        hmm_observation_mode = hmm_cfg.get(
-            "observation_mode",
-            HMMObservationMode.DISCRETE_STATES.value,
         )
 
         yaml_dir = (

@@ -8,8 +8,6 @@ PACKAGE_ROOT = Path(__file__).resolve().parents[1]
 DOCS_ROOT = Path(__file__).resolve().parent
 GENERATED_ROOT = DOCS_ROOT / "_generated"
 GENERATED_TUTORIALS = DOCS_ROOT / "tutorials" / "generated"
-QUICKSTART_NOTEBOOK = "01_quickstart.ipynb"
-STAGED_QUICKSTART = DOCS_ROOT / "quickstart.ipynb"
 STAGED_README = DOCS_ROOT / "readme.md"
 STAGED_TROUBLESHOOTING = DOCS_ROOT / "troubleshooting.md"
 README_IMAGE = "quickstart.png"
@@ -75,19 +73,13 @@ def _write(path: Path, content: str) -> None:
 
 
 def _manual_rst_pages() -> list[str]:
-    """Return hand-authored pages that belong in the generated root toctree."""
-    # Quickstart is a staged notebook rather than a hand-authored RST page.
-    pages = ["quickstart", "readme", "troubleshooting"]
-    for path in sorted(DOCS_ROOT.rglob("*.rst")):
-        relative = path.relative_to(DOCS_ROOT)
-        if relative.parts[0] in {"_build", "_generated", "generated"}:
-            continue
-        if relative.parts[:2] == ("tutorials", "generated"):
-            continue
-        if relative == Path("index.rst"):
-            continue
-        pages.append(relative.with_suffix("").as_posix())
-    return pages
+    return [
+        "readme",
+        "methylseg_methodology",
+        "tutorials",
+        "api",
+        "troubleshooting",
+    ]
 
 
 def _stage_readme() -> None:
@@ -112,32 +104,21 @@ def _generate_docs_sources(app) -> None:
     GENERATED_TUTORIALS.mkdir(parents=True, exist_ok=True)
 
     notebooks = sorted(examples_dir.glob("*.ipynb"))
-    quickstart = next(
-        (notebook for notebook in notebooks if notebook.name == QUICKSTART_NOTEBOOK),
-        None,
-    )
-    if quickstart is None:
-        raise RuntimeError(f"Missing canonical quickstart notebook: {QUICKSTART_NOTEBOOK}")
-
-    tutorial_notebooks = [notebook for notebook in notebooks if notebook != quickstart]
-    expected = {notebook.name for notebook in tutorial_notebooks}
+    expected = {notebook.name for notebook in notebooks}
     for staged in GENERATED_TUTORIALS.glob("*.ipynb"):
         if staged.name not in expected:
             staged.unlink()
-    for notebook in tutorial_notebooks:
+    for notebook in notebooks:
         copy2(notebook, GENERATED_TUTORIALS / notebook.name)
 
-    # The notebook itself owns the Quickstart URL; the tutorial list links to it.
-    copy2(quickstart, STAGED_QUICKSTART)
     _stage_readme()
     (GENERATED_TUTORIALS / "index.rst").unlink(missing_ok=True)
     tutorial_entries = [
         f"   /tutorials/generated/{notebook.stem}"
-        for notebook in tutorial_notebooks
+        for notebook in notebooks
     ]
     _write(
         GENERATED_TUTORIALS / "toctree.rst",
-        "* :doc:`Quickstart </quickstart>`\n\n"
         ".. toctree::\n   :maxdepth: 1\n\n"
         + "\n".join(tutorial_entries)
         + "\n",

@@ -5,7 +5,7 @@ whole-genome bisulfite sequencing (WGBS) and microarray methylation data. It
 supports data preparation, methylation-state model training, genome
 segmentation, region cleaning, and visualization.
 
-This README introduces the standard workflow. For the complete API reference
+This introduces the standard workflow. For the complete API reference
 and example notebooks, see the [MethylSeg documentation](https://clementlab.github.io/MethylSeg/).
 
 > [!IMPORTANT]

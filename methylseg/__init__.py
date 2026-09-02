@@ -1,7 +1,6 @@
 """Public package exports for the reusable methylseg workflow."""
 
 from .helper_classes import (
-    HMMObservationMode,
     MethylStateAssignmentMethod,
     MethylationStates,
     MethylDataPrep,
@@ -10,9 +9,7 @@ from .helper_classes import (
 )
 from .methylseg_hmm import (
     CTMethylSegHMM,
-    GaussianMethylSegHMM,
     MethylSegHMM,
-    MultinomialSegHMM,
     StickyCategoricalMethylSegHMM,
 )
 from .methyl_state_assigner import MethylStateAssigner
@@ -24,8 +21,6 @@ from .utils import get_biological_state_colors, get_cluster_colors
 
 __all__ = [
     "CTMethylSegHMM",
-    "GaussianMethylSegHMM",
-    "HMMObservationMode",
     "MethylDataPrep",
     "MethylSegConfig",
     "MethylSegHMM",
@@ -35,7 +30,6 @@ __all__ = [
     "MethylStateAssigner",
     "MethylStateAssignmentMethod",
     "MethylationStates",
-    "MultinomialSegHMM",
     "HMMType",
     "SampleInfo",
     "StickyCategoricalMethylSegHMM",

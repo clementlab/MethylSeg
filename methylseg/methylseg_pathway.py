@@ -12,15 +12,12 @@ from .methyl_state_analyzer import MethylStateAnalyzer
 from .methylseg_config import MethylSegConfig
 from .methylseg_hmm import (
     CTMethylSegHMM,
-    GaussianMethylSegHMM,
-    MultinomialSegHMM,
     StickyCategoricalMethylSegHMM,
 )
 from .methyl_segmentor import MethylSegmentor
 from .methyl_state_assigner import MethylStateAssigner
 from .helper_classes import (
     FILES,
-    HMMObservationMode,
     KMeansMethylationModel,
     MethylDataPrep,
     MethylStateAssignmentMethod,
@@ -208,7 +205,6 @@ class MethylSegPathway:
         merge_gap_bp: int = 100_000,
         merge_with_intermediate: bool = True,
         merge_with_intermediate_gap_bp: int = 100_000,
-        hmm_observation_mode: HMMObservationMode = HMMObservationMode.DISCRETE_STATES,
     ):
         """
         Initialize a complete methylation-state training and segmentation pathway.
@@ -351,25 +347,7 @@ class MethylSegPathway:
         self.merge_gap_bp = int(merge_gap_bp)
         self.merge_with_intermediate = bool(merge_with_intermediate)
         self.merge_with_intermediate_gap_bp = int(merge_with_intermediate_gap_bp)
-        self.hmm_observation_mode = HMMObservationMode(hmm_observation_mode)
-        if (
-            self.hmm_observation_mode
-            in (
-                HMMObservationMode.GAUSSIAN_EMISSIONS,
-                HMMObservationMode.PCA_EMISSIONS,
-            )
-            and self.hmm_type != HMMType.GAUSSIAN
-        ):
-            raise ValueError(
-                "Gaussian-backed observation modes require " "hmm_type='gaussian'."
-            )
-        if self.hmm_type == HMMType.GAUSSIAN and self.hmm_observation_mode not in (
-            HMMObservationMode.GAUSSIAN_EMISSIONS,
-            HMMObservationMode.PCA_EMISSIONS,
-        ):
-            raise ValueError(
-                "hmm_type='gaussian' requires " "a Gaussian-backed observation mode."
-            )
+        
         self._init_hmm()
 
         self.assigner = MethylStateAssigner(
@@ -588,12 +566,6 @@ class MethylSegPathway:
                     f"Invalid hmm_type string: {self.hmm_type}. "
                     f"Valid options are: {[e.value for e in HMMType]}"
                 )
-        if self.hmm_type == HMMType.MULTINOMIAL:
-            self.hmm_model = MultinomialSegHMM(
-                n_states=self.n_states,
-                random_state=self.random_state,
-                **self.hmm_params,
-            )
         elif self.hmm_type == HMMType.STICKY:
             self.hmm_model = StickyCategoricalMethylSegHMM(
                 n_states=self.n_states,
@@ -603,12 +575,6 @@ class MethylSegPathway:
         elif self.hmm_type == HMMType.CT:
             self.hmm_model = CTMethylSegHMM(
                 n_states=self.n_states,
-                **self.hmm_params,
-            )
-        elif self.hmm_type == HMMType.GAUSSIAN:
-            self.hmm_model = GaussianMethylSegHMM(
-                n_states=self.n_states,
-                random_state=self.random_state,
                 **self.hmm_params,
             )
         else:
@@ -1490,8 +1456,6 @@ class MethylSegPathway:
 
         joint_hmm_types = (
             HMMType.STICKY,
-            HMMType.MULTINOMIAL,
-            HMMType.GAUSSIAN,
         )
         if self.hmm_type in joint_hmm_types:
             self.segmentor.segment_sample(
