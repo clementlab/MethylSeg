@@ -166,7 +166,7 @@ MethylSeg evaluates all possible one-to-one mappings between the four K-means cl
 
 K-means clustering is performed using scikit-learn with 10 initializations and a fixed random seed of 42 for reproducibility.
 
-For a complete runnable example, see [`examples/03_kmeans_based_model.ipynb`](../examples/03_kmeans_based_model.ipynb).
+For a complete runnable example, see the {doc}`K-means-based model tutorial </tutorials/generated/03_kmeans_based_model>`.
 
 ### 3.2 Rule-based assignment
 
@@ -197,7 +197,7 @@ Rule-based assignment is most useful when interpretability of individual state a
 - investigating why individual CpGs received a particular state; or
 - defining states using explicit feature thresholds.
 
-For a complete runnable example, see [`examples/04_rule_based_model.ipynb`](../examples/04_rule_based_model.ipynb).
+For a complete runnable example, see the {doc}`rule-based model tutorial </tutorials/generated/04_rule_based_model>`.
 
 ## 4. HMM-based smoothing
 

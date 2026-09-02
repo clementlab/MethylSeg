@@ -27,13 +27,7 @@ values were observed during testing:
 
 ## Installation
 
-Install the current package from GitHub:
-
-```bash
-python -m pip install "git+https://github.com/clementlab/MethylSeg.git"
-```
-
-or from TestPyPI
+Install from TestPyPI
 
 ```bash
 python -m pip install \
@@ -41,6 +35,14 @@ python -m pip install \
   --extra-index-url https://pypi.org/simple/ \
   methylseg
 ```
+
+or install the current version from GitHub:
+
+```bash
+python -m pip install "git+https://github.com/clementlab/MethylSeg.git"
+```
+
+
 
 ## Reference files
 
