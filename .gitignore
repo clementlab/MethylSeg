@@ -10,3 +10,4 @@ docs/_generated/
 docs/tutorials/generated/
 data/archive.tar.gz
 data/*
+docs/_build/*

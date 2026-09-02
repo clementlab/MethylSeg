@@ -10,10 +10,9 @@ from sklearn.cluster import KMeans
 from sklearn.decomposition import PCA
 
 from .utils import (
-    plot_interactive_beta_scatter,
+    plot_state_labels,
     relabel_by_mean_emission,
     resolve_overlay_plot_args,
-    resolve_region_overlay_df,
 )
 from .helper_classes import (
     HMMObservationMode,
@@ -779,28 +778,21 @@ class MethylSegmentor:
         resolved_sample_info = (
             self.default_sample_info if sample_info is None else sample_info
         )
-        overlay_regions_df, resolved_overlay_style = resolve_region_overlay_df(
-            overlay_regions_df=overlay_regions_df,
-        )
-        return plot_interactive_beta_scatter(
+        return plot_state_labels(
             df_plot=meth_data.copy(),
             sample_info=resolved_sample_info,
             sample_info_removed=sample_info_removed,
             chrom=chrom,
             out_dir=self.out_dir,
             label_col="hmm_state_readable",
+            overlay_regions_df=overlay_regions_df,
+            overlay_style=overlay_style,
+            region_start=region_start,
+            region_end=region_end,
             x_col=x_col,
             y_col=y_col,
             label_title=label_title if label_title is not None else "HMM state",
             show_plot=show_plot,
             max_points=max_points,
-            overlay_regions_df=overlay_regions_df,
-            overlay_style=(
-                resolved_overlay_style
-                if overlay_regions_df is not None
-                else overlay_style
-            ),
             state_colors=state_colors,
-            region_start=region_start,
-            region_end=region_end,
         )

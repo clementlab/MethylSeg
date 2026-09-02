@@ -1706,7 +1706,23 @@ class MethylSegPathway:
                 max_points=max_points,
                 state_colors=state_colors,
             )
-        if label_source in {"kmeans", "rule_based"}:
+        if label_source == "kmeans":
+            return self.assigner.plot_labels(
+                sample_info=resolved_sample_info,
+                chrom=chrom,
+                sample_info_removed=sample_info_removed,
+                overlay_regions_df=overlay_df,
+                overlay_style=overlay_style,
+                region_start=region_start,
+                region_end=region_end,
+                x_col=x_col,
+                y_col=y_col,
+                label_title=label_title,
+                show_plot=show_plot,
+                max_points=max_points,
+                state_colors=state_colors,
+            )
+        if label_source == "rule_based":
             return self.analyzer.plot_labels(
                 sample_info=resolved_sample_info,
                 chrom=chrom,

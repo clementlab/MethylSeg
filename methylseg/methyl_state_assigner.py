@@ -35,6 +35,7 @@ from .utils import (
     get_biological_state_colors,
     get_present_biological_states,
     normalize_state_label,
+    plot_state_labels,
     relabel_by_mean_emission,
 )
 
@@ -2473,6 +2474,82 @@ class MethylStateAssigner:
             index=self.model.feature_cols,
         )
         return loadings
+
+    def _prepare_kmeans_label_plot_data(
+        self,
+        sample_info: SampleInfo | None = None,
+        chrom: str | None = None,
+    ) -> tuple[pd.DataFrame, SampleInfo | None]:
+        """Prepare probe-level KMeans labels for shared state plotting."""
+        if sample_info is None:
+            required_attrs = ["model", "train_meth", "train_emission_df", "train_labels"]
+            missing_attrs = [name for name in required_attrs if not hasattr(self, name)]
+            if missing_attrs:
+                raise ValueError(
+                    "No cached training data found for KMeans label plotting. "
+                    "Provide sample_info or fit a model first. Missing: "
+                    f"{missing_attrs}"
+                )
+            df_plot = pd.concat(
+                [self.train_meth.copy(), self.train_emission_df.copy()], axis=1
+            )
+            df_plot = df_plot.loc[:, ~df_plot.columns.duplicated()]
+            df_plot["kmeans_label"] = self.train_labels
+            return df_plot, getattr(self, "train_sample_info", None)
+
+        meth_data, emission_df, _, _, _, labels = self.apply_kmeans_to_sample(
+            sample_info=sample_info,
+            chrom=chrom,
+        )
+        df_plot = pd.concat([meth_data, emission_df], axis=1)
+        df_plot = df_plot.loc[:, ~df_plot.columns.duplicated()]
+        df_plot["kmeans_label"] = labels
+        return df_plot, sample_info
+
+    def plot_labels(
+        self,
+        sample_info: SampleInfo | None = None,
+        chrom: str | None = None,
+        sample_info_removed: pd.DataFrame | None = None,
+        overlay_regions_df: pd.DataFrame | None = None,
+        overlay_style: str = "state",
+        region_start: int | None = None,
+        region_end: int | None = None,
+        x_col: str = "CpG_beg",
+        y_col: str = "beta",
+        label_title: str | None = None,
+        show_plot: bool = True,
+        max_points: int = 120_000,
+        state_colors: dict | None = None,
+    ) -> object | None:
+        """Plot learned KMeans labels across genomic methylation measurements.
+
+        Use this method when only a fitted assigner is available. It prepares
+        KMeans labels for cached training data or a supplied sample, then uses
+        the shared state-label renderer for overlays and viewport controls.
+        """
+        df_plot, resolved_sample_info = self._prepare_kmeans_label_plot_data(
+            sample_info=sample_info,
+            chrom=chrom,
+        )
+        return plot_state_labels(
+            df_plot=df_plot,
+            sample_info=resolved_sample_info,
+            sample_info_removed=sample_info_removed,
+            chrom=chrom,
+            out_dir=self.out_dir,
+            label_col="kmeans_label",
+            overlay_regions_df=overlay_regions_df,
+            overlay_style=overlay_style,
+            region_start=region_start,
+            region_end=region_end,
+            x_col=x_col,
+            y_col=y_col,
+            label_title=label_title if label_title is not None else "KMeans state",
+            show_plot=show_plot,
+            max_points=max_points,
+            state_colors=state_colors,
+        )
 
     def plot_feature_distributions_by_kmeans_state(
         self,

@@ -403,6 +403,55 @@ def annotate_plot_df_with_regions(
     )
 
 
+def plot_state_labels(
+    *,
+    df_plot: pd.DataFrame,
+    sample_info: SampleInfo | None,
+    sample_info_removed: pd.DataFrame | None,
+    chrom: str | None,
+    out_dir: str | None,
+    label_col: str,
+    overlay_regions_df: pd.DataFrame | None = None,
+    overlay_style: str = "state",
+    region_start: int | None = None,
+    region_end: int | None = None,
+    x_col: str = "CpG_beg",
+    y_col: str = "beta",
+    label_title: str | None = None,
+    show_plot: bool = True,
+    max_points: int = 120_000,
+    state_colors: dict | None = None,
+) -> object | None:
+    """Render prepared state labels with consistent overlays and view controls.
+
+    This internal helper keeps state-label preparation in the component that
+    owns the labels while sharing the interactive rendering behavior.
+    """
+    overlay_regions_df, resolved_overlay_style = resolve_region_overlay_df(
+        overlay_regions_df=overlay_regions_df,
+    )
+    return plot_interactive_beta_scatter(
+        df_plot=df_plot,
+        sample_info=sample_info,
+        sample_info_removed=sample_info_removed,
+        chrom=chrom,
+        out_dir=out_dir,
+        label_col=label_col,
+        x_col=x_col,
+        y_col=y_col,
+        label_title=label_title,
+        show_plot=show_plot,
+        max_points=max_points,
+        overlay_regions_df=overlay_regions_df,
+        overlay_style=(
+            resolved_overlay_style if overlay_regions_df is not None else overlay_style
+        ),
+        state_colors=state_colors,
+        region_start=region_start,
+        region_end=region_end,
+    )
+
+
 def plot_interactive_beta_scatter(
     *,
     df_plot: pd.DataFrame,

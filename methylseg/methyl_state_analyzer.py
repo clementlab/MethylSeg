@@ -30,10 +30,9 @@ from .utils import (
     get_biological_state_colors,
     get_regional_window_labels,
     normalize_state_label,
-    plot_interactive_beta_scatter,
+    plot_state_labels,
     relabel_by_mean_emission,
     resolve_overlay_plot_args,
-    resolve_region_overlay_df,
 )
 
 
@@ -639,7 +638,6 @@ class MethylStateAnalyzer:
 
         return cm_df
 
-    #TODO: remove this so that analyzer is only used for the rule-based approach
     def plot_labels(
         self,
         sample_info: SampleInfo | None = None,
@@ -658,7 +656,11 @@ class MethylStateAnalyzer:
         state_colors: dict | None = None,
     ):
         """
-        Plot genomic-position vs beta for analyzer-owned labels.
+        Plot KMeans or rule-based labels to analyze state relationships.
+
+        This shared analysis helper renders learned KMeans clusters alongside
+        rule-derived clusters so their separation, agreement, and rule-based
+        CpG characterization can be inspected with the same plot controls.
 
         Parameters
         ----------
@@ -708,14 +710,18 @@ class MethylStateAnalyzer:
                 f"{self.__class__.__name__}. Received: {label_source!r}"
             )
 
-        if sample_info is None:
+        if label_source == "kmeans":
+            df_plot, resolved_sample_info = (
+                self.assigner._prepare_kmeans_label_plot_data(
+                    sample_info=sample_info,
+                    chrom=chrom,
+                )
+            )
+        elif sample_info is None:
             self._build_train_joint()
             df_plot = self.train_joint.copy()
             resolved_sample_info = getattr(self.assigner, "train_sample_info", None)
-            if (
-                label_source == "rule_based"
-                and "rule_based_label" not in df_plot.columns
-            ):
+            if "rule_based_label" not in df_plot.columns:
                 if resolved_sample_info is None:
                     raise ValueError(
                         "No train_sample_info is available to compute rule-based labels."
@@ -735,37 +741,29 @@ class MethylStateAnalyzer:
             df_plot = df_plot.loc[:, ~df_plot.columns.duplicated()]
             df_plot["kmeans_label"] = labels
 
-            if label_source == "rule_based":
-                df_plot["rule_based_label"] = self.define_states_by_rules(
-                    sample_info=sample_info,
-                    chrom=chrom,
-                    sample_emissions=emission_df,
-                )
+            df_plot["rule_based_label"] = self.define_states_by_rules(
+                sample_info=sample_info,
+                chrom=chrom,
+                sample_emissions=emission_df,
+            )
             resolved_sample_info = sample_info
 
-        overlay_regions_df, resolved_overlay_style = resolve_region_overlay_df(
-            overlay_regions_df=overlay_regions_df,
-        )
         label_col = f"{label_source}_label"
-        return plot_interactive_beta_scatter(
+        return plot_state_labels(
             df_plot=df_plot,
             sample_info=resolved_sample_info,
             sample_info_removed=sample_info_removed,
             chrom=chrom,
             out_dir=self.out_dir,
             label_col=label_col,
+            overlay_regions_df=overlay_regions_df,
+            overlay_style=overlay_style,
+            region_start=region_start,
+            region_end=region_end,
             x_col=x_col,
             y_col=y_col,
             label_title=label_title,
             show_plot=show_plot,
             max_points=max_points,
-            overlay_regions_df=overlay_regions_df,
             state_colors=state_colors,
-            overlay_style=(
-                resolved_overlay_style
-                if overlay_regions_df is not None
-                else overlay_style
-            ),
-            region_start=region_start,
-            region_end=region_end,
         )
