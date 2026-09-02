@@ -1,34 +1,44 @@
 # MethylSeg Methodology
 
-MethylSeg identifies large-scale DNA methylation domains by converting site-level methylation measurements into context-aware features, assigning each CpG to a biologically interpretable methylation state, and smoothing those assignments into genomic regions with a hidden Markov model (HMM). The workflow consists of five main stages:
+MethylSeg is a methylome segmentation framework that uses context-aware methylation features to assign CpGs to methylation states and construct coherent genomic domains. The workflow consists of five main stages:
 
-1. methylation-data preprocessing;
-2. context-aware emission generation;
-3. biological state assignment;
-4. HMM-based segmentation; and
-5. region cleaning.
+1. Data preprocessing
+2. Context-aware emission generation
+3. CpG state assignment
+4. HMM-based smoothing
+5. Region cleaning
+
+## Workflow at a glance
+
+MethylSeg converts CpG-level methylation measurements into coherent genomic domains through the following steps:
+
+1. **Data preprocessing** - remove potentially unreliable methylation measurements.
+2. **Context-aware emission generation** - summarize methylation across multiple genomic scales.
+3. **CpG state assignment** - classify CpGs into Low, Intermediate, PMD-associated, or High states.
+4. **HMM-based smoothing** - reduce isolated state changes and infer spatially coherent state sequences.
+5. **Region cleaning** - merge and filter raw domains to produce final calls.
 
 ## 1. Data preprocessing
 
-MethylSeg filters unreliable methylation measurements before generating model features. For WGBS data, two filtering strategies are available.
+MethylSeg provides two approaches for filtering potentially unreliable methylation measurements: coverage filtering and low-coverage-like filtering.
 
 ### Coverage filtering
 
-CpGs with insufficient read coverage are removed. By default, MethylSeg retains loci with coverage greater than 10, although this threshold can be changed by the user.
+When sequencing coverage information is available, MethylSeg can remove CpG loci with insufficient read coverage. By default, loci with coverage greater than 10 are retained.
 
-### Low-coverage-like value filtering
+### Low-coverage-like filtering
 
-When explicit coverage information is unavailable or an additional safeguard is desired, MethylSeg can remove CpGs whose beta values are characteristic of estimates derived from very few reads. The default set is:
+When coverage information is unavailable, MethylSeg can identify beta values that are consistent with low read counts and remove them from the analysis. By default, these values are:
 
-$$
-\left\{0,\ 0.25,\ 0.33,\ 0.50,\ 0.66,\ 0.75,\ 1.0\right\}.
-$$
+```text
+0, 0.25, 0.33, 0.50, 0.66, 0.75, 1.0
+```
 
-These discrete values can arise when only a small number of methylated and unmethylated reads contribute to an estimate. This filter is therefore a heuristic for identifying potentially low-depth measurements; it is not a substitute for direct coverage filtering when read counts are available.
+This filtering can also be used alongside explicit coverage filtering.
 
 ## 2. Context-aware emission generation
 
-A single CpG beta value contains little information about the larger methylation domain in which the locus occurs. MethylSeg therefore represents each CpG using both its observed beta value and summary features calculated from multiple genomic windows centered on that locus. Using several window sizes allows the model to capture methylation patterns at local, distal, and broad genomic scales.
+MethylSeg represents each CpG using its observed beta value together with summary features calculated across multiple genomic windows centered on the CpG. Using multiple window sizes allows MethylSeg to capture methylation patterns at different genomic scales, from local variation to broader regional patterns.
 
 Within each window, MethylSeg calculates:
 
@@ -38,221 +48,213 @@ Within each window, MethylSeg calculates:
 - the proportion of intermediately methylated CpGs; and
 - the proportion of highly methylated CpGs.
 
-The observed beta value and window-level summaries are combined into a multiscale emission profile for each CpG. These profiles form the input to the biological state-assignment step.
+The observed beta value and these window-level summaries are combined to form a multiscale emission profile for each CpG. These emission profiles provide the input for the state-assignment step.
 
-## 3. Biological state assignment
+Methylation-state proportions are calculated using the following beta-value thresholds:
 
-Before HMM smoothing, MethylSeg assigns every CpG to one of four coarse biological states:
+- **Low methylation:** beta value < 0.2
+- **Intermediate methylation:** beta value >= 0.2 and <= 0.7
+- **High methylation:** beta value > 0.7
 
-- **Low**: strongly hypomethylated loci;
-- **PMD-associated**: intermediately methylated loci with a surrounding methylation profile characteristic of a partially methylated domain (PMD);
-- **Intermediate**: loci with intermediate or heterogeneous methylation that do not exhibit the full PMD-associated profile; and
-- **High**: strongly methylated loci.
+The genomic window sizes are configurable, allowing users to adjust the genomic scales represented by the contextual features and identify methylation patterns at different scales.
 
-MethylSeg supports two state-assignment methods: a data-driven K-means method and an interpretable rule-based method. Both methods operate on the same context-aware emission features and pass their per-CpG labels to the same downstream segmentation procedure.
+## 3. CpG state assignment
 
-### 3.1 K-means-based assignment
+Following emission generation, MethylSeg groups CpGs with similar context-aware methylation profiles into four states:
 
-K-means is the default state-assignment method. It groups CpGs with similar multiscale emission profiles into four clusters. Because K-means cluster identifiers are arbitrary, MethylSeg maps the four clusters to the four biological states after clustering.
+- **Low**
+- **Intermediate**
+- **PMD-associated**
+- **High**
 
-For each cluster, MethylSeg summarizes the mean beta value ($\bar{\beta}$), beta-value standard deviation ($\sigma_\beta$), and proportions of lowly ($P_{low}$), intermediately ($P_{int}$), and highly ($P_{high}$) methylated CpGs across the contextual features. It also calculates how closely the cluster's mean beta value falls within the expected intermediate-methylation range.
+MethylSeg supports two approaches for state assignment:
 
-Let $C_{int}^{low}$ and $C_{int}^{high}$ denote the lower and upper intermediate-methylation cutoffs. The midpoint and half-width of this range are:
+1. K-means clustering
+2. Rule-based assignment
 
-$$
-M_{int} = \frac{C_{int}^{high} + C_{int}^{low}}{2}
-$$
+The K-means approach provides a data-driven method for identifying methylation states, whereas the rule-based approach provides more explicit and interpretable state definitions.
 
-$$
-H_{int} = \frac{C_{int}^{high} - C_{int}^{low}}{2}.
-$$
+### 3.1 K-means state assignment
 
-The intermediate-beta score is then:
+MethylSeg first applies K-means clustering to the context-aware emission profiles. Because K-means cluster labels are arbitrary, the resulting clusters must subsequently be mapped to the four biologically interpretable methylation states.
 
-$$
-S_{\beta,int} = \max\left(0,\ 1 - \frac{\left|\bar{\beta} - M_{int}\right|}{H_{int}}\right).
-$$
-
-MethylSeg calculates a score for assigning the cluster to each biological state:
+For each cluster, MethylSeg calculates the mean beta value and the mean proportions of low-, intermediate-, and highly methylated CpGs across each contextual window. These summaries are used to calculate a state-specific score for every possible cluster-to-state assignment. The scoring functions are shown below.
 
 $$
-S_{low} = 2P_{low} + (1-\bar{\beta}) - 0.5P_{int} - 0.75P_{high} - 0.5\sigma_\beta
+INT_{mid} = \frac{IntCutoff_{f_{high}} + IntCutoff_{f_{low}}}{2}
 $$
 
 $$
-S_{high} = 2P_{high} + \bar{\beta} - 0.5P_{int} - 0.75P_{low} - 0.5\sigma_\beta
+INT_{span\_half} = \frac{IntCutoff_{f_{high}} - IntCutoff_{f_{low}}}{2}
 $$
 
 $$
-S_{PMD} = 3P_{int} + P_{low} - 1.5P_{high} + S_{\beta,int} - \sigma_\beta
+Score_{\beta\_Int} =
+\max\left(
+0,
+1 -
+\left|
+\frac{\beta_{avg} - INT_{mid}}{INT_{span\_half}}
+\right|
+\right)
 $$
 
 $$
-S_{int} = 2P_{int} + 2P_{high} - 2P_{low} + S_{\beta,int} + \sigma_\beta.
+Score_{Low}
+=
+2 \times \%Low
++ (1 - \beta_{avg})
+- 0.5 \times \%Int
+- 0.75 \times \%High
+- 0.5 \times \beta_{std}
 $$
 
-The Low and High scores emphasize enrichment for lowly and highly methylated CpGs, respectively, while penalizing characteristics associated with other states. Both the PMD-associated and Intermediate scores favor intermediate methylation, but they capture different surrounding patterns. The PMD-associated score favors intermediate and low methylation while penalizing high methylation and variability, reflecting the broad hypomethylation expected within PMDs. The Intermediate score permits a greater contribution from highly methylated CpGs and local variability, representing transitional or heterogeneous methylation patterns.
+$$
+Score_{High}
+=
+2 \times \%High
++ \beta_{avg}
+- 0.5 \times \%Int
+- 0.75 \times \%Low
+- 0.5 \times \beta_{std}
+$$
 
-MethylSeg evaluates every possible one-to-one mapping between the four clusters and four biological states. It selects the mapping with the highest total score across all four cluster-state assignments. This global optimization prevents multiple clusters from receiving the same state label and makes the biological interpretation of K-means clusters consistent across model fits.
+$$
+Score_{PMD}
+=
+3 \times \%Int
++ \%Low
+- 1.5 \times \%High
++ Score_{\beta\_Int}
+- 1 \times \beta_{std}
+$$
 
-K-means clustering is performed with scikit-learn using 10 initializations and a fixed random seed of 42 for reproducibility.
+$$
+Score_{Int}
+=
+2 \times \%Int
++ 2 \times \%High
+- 2 \times \%Low
++ Score_{\beta\_Int}
++ 1 \times \beta_{std}
+$$
 
-#### When to use K-means assignment
+The variables used in these scores are summarized below:
 
-K-means assignment is most appropriate when:
+| Variable | Description |
+|---|---|
+| `beta_avg` | Mean beta value for the cluster across the contextual window. |
+| `beta_std` | Standard deviation of beta values for the cluster across the contextual window. |
+| `%Low` | Proportion of lowly methylated CpGs in the contextual window. |
+| `%Int` | Proportion of intermediately methylated CpGs in the contextual window. |
+| `%High` | Proportion of highly methylated CpGs in the contextual window. |
+| `IntCutoff_f_high` | Upper intermediate-methylation cutoff used for the feature being scored. |
+| `IntCutoff_f_low` | Lower intermediate-methylation cutoff used for the feature being scored. |
 
-- state definitions should be learned from the training data;
-- the fitted model will be reused across similarly prepared samples; or
-- state assignment should incorporate the complete multifeature emission profile rather than explicit feature cutoffs.
+The **Low** and **High** scores emphasize enrichment of lowly and highly methylated CpGs, respectively, while penalizing characteristics associated with alternative states. Both the **PMD-associated** and **Intermediate** scores emphasize intermediate methylation but distinguish the states using their broader methylation characteristics.
 
-#### Example
+The PMD-associated score favors:
 
-```python
-from pathlib import Path
+- increased intermediate methylation;
+- increased low methylation;
+- reduced high methylation; and
+- penalizes high within-window methylation variability.
 
-from methylseg import MethylSegPathway, MethylStateAssignmentMethod
+The Intermediate score also favors intermediate methylation but allows a greater contribution from highly methylated CpGs, distinguishing it from the PMD-associated state.
 
-sample_info, removed_df = MethylSegPathway.prepare_sample_info(
-    sample_name="sample_1",
-    sample_file="sample_1.tsv.gz",
-    resolution="wgbs",
-    min_coverage=10,
-)
+MethylSeg evaluates all possible one-to-one mappings between the four K-means clusters and the four biological states. The mapping that maximizes the combined state score across all four clusters is selected as the final cluster-to-state assignment.
 
-pathway = MethylSegPathway(
-    train_sample_info=sample_info,
-    state_assignment_method=MethylStateAssignmentMethod.KMEANS,
-    out_dir=Path("out") / sample_info.sample_id,
-)
+K-means clustering is performed using scikit-learn with 10 initializations and a fixed random seed of 42 for reproducibility.
 
-pathway.fit_pathway()
-regions = pathway.generate_regions(sample_info=sample_info, chrom="chr1")
-
-pathway.plot_labels(
-    label_source="kmeans",
-    sample_info=sample_info,
-    sample_info_removed=removed_df,
-    chrom="chr1",
-)
-```
-
-For a complete runnable example, see `examples/03_kmeans_based_model.ipynb`.
+For a complete runnable example, see [`examples/03_kmeans_based_model.ipynb`](../examples/03_kmeans_based_model.ipynb).
 
 ### 3.2 Rule-based assignment
 
-The rule-based method assigns biological states directly from explicit emission-feature thresholds. During pathway fitting, MethylSeg optimizes the rule parameters and then applies the resulting cutoffs to each CpG emission profile.
+The rule-based method provides greater interpretability because states are assigned using explicit thresholds rather than cluster labels. However, this comes at the cost of some flexibility compared with K-means. Because each CpG must satisfy predefined cutoff values, small changes in methylation or contextual features can cause adjacent CpGs within an otherwise coherent domain to receive different state assignments. As a result, regions identified as continuous domains by K-means may be fragmented or missed by the rule-based approach.
 
-State separation is based on:
+State assignment considers:
 
-- the beta value at the locus;
-- the proportion of intermediately methylated CpGs in the surrounding windows;
+- the beta value of the CpG;
+- the proportion of intermediately methylated CpGs in surrounding windows;
 - the within-window standard deviation of beta values;
 - the proportion of highly methylated CpGs in each window; and
 - the proportion of lowly methylated CpGs in each window.
 
-In the default implementation, a CpG is labeled:
+In the default implementation, CpGs are assigned as follows:
 
-- **Low** when its beta value is below `beta_low_max` and the PMD rule does not apply;
-- **High** when its beta value is above `beta_high_min` and the PMD rule does not apply;
-- **PMD-associated** when its beta value is within the intermediate range and at least one contextual window satisfies the PMD cutoffs; or
-- **Intermediate** when none of the preceding conditions is met.
+- **Low:** beta value is below `beta_low_max` and the PMD rule does not apply.
+- **High:** beta value is above `beta_high_min` and the PMD rule does not apply.
+- **PMD-associated:** beta value falls within the intermediate range and at least one contextual window satisfies the PMD cutoffs.
+- **Intermediate:** none of the preceding conditions is met.
 
-Because the rules are explicit, this method can help determine whether a locus was assigned to a state because of its own beta value, local heterogeneity, or the methylation profile of the surrounding region.
+Because the rules are explicit, this approach allows users to determine which characteristics contributed to a state assignment, including the CpG's beta value, local methylation variability, and methylation patterns in the surrounding region.
 
 #### When to use rule-based assignment
 
-Rule-based assignment is most appropriate when:
+Rule-based assignment is most useful when interpretability of individual state assignments is a priority, such as when:
 
-- the interpretation of individual state assignments is a priority;
-- a single sample is being examined closely; or
-- biological states need to be described using explicit feature thresholds.
+- examining a single sample in detail;
+- investigating why individual CpGs received a particular state; or
+- defining states using explicit feature thresholds.
 
-#### Example
+For a complete runnable example, see [`examples/04_rule_based_model.ipynb`](../examples/04_rule_based_model.ipynb).
 
-```python
-from pathlib import Path
+## 4. HMM-based smoothing
 
-from methylseg import MethylSegPathway, MethylStateAssignmentMethod
+Initial CpG-level state assignments can contain isolated state changes caused by biological variability, measurement noise, or uneven spacing between observed CpGs. MethylSeg applies a hidden Markov model (HMM) to smooth these assignments and infer a spatially coherent sequence of methylation states.
 
-sample_info, removed_df = MethylSegPathway.prepare_sample_info(
-    sample_name="sample_1",
-    sample_file="sample_1.tsv.gz",
-    resolution="wgbs",
-    min_coverage=10,
-)
-
-pathway = MethylSegPathway(
-    train_sample_info=sample_info,
-    state_assignment_method=MethylStateAssignmentMethod.DEFINITION,
-    out_dir=Path("out") / sample_info.sample_id,
-)
-
-pathway.fit_pathway()
-regions = pathway.generate_regions(sample_info=sample_info, chrom="chr1")
-
-pathway.plot_labels(
-    label_source="rule_based",
-    sample_info=sample_info,
-    sample_info_removed=removed_df,
-    chrom="chr1",
-)
-```
-
-For a complete runnable example, see `examples/04_rule_based_model.ipynb`.
-
-### 3.3 How assignment fits into the pipeline
-
-`MethylSegPathway.fit_pathway()` trains the K-means components through `MethylStateAssigner.train_kmeans_for_sample()`. When rule-based assignment is selected, the pathway also optimizes the rule cutoffs through `MethylStateAnalyzer.optimize_rule_params_random()`.
-
-During `generate_regions()` or `run_pathway()`, `MethylSegmentor.assign_states()` follows the selected branch:
-
-- `MethylStateAssignmentMethod.KMEANS` applies the trained K-means model to each emission profile; or
-- `MethylStateAssignmentMethod.DEFINITION` applies the optimized rule cutoffs directly to the emission features.
-
-After this branch, both methods use the same HMM smoothing and region-generation workflow. Initial and smoothed labels can be compared with:
-
-```python
-pathway.plot_labels(label_source="kmeans")
-pathway.plot_labels(label_source="rule_based")
-pathway.plot_labels(label_source="hmm")
-```
-
-## 4. HMM-based segmentation
-
-Per-CpG state assignments can change rapidly because of biological variability, measurement noise, and uneven spacing between observed CpGs. MethylSeg applies an HMM to smooth these initial labels and infer a coherent sequence of hidden methylation states. Consecutive loci assigned to the same smoothed state are then converted into genomic regions.
+After smoothing, consecutive CpGs assigned to the same state are merged into genomic regions.
 
 MethylSeg provides two HMM implementations:
 
 - a continuous-time HMM implemented with `ctHMM` (v0.0.3); and
-- a conventional categorical HMM implemented with `hmmlearn` (v0.3.3).
+- a sticky categorical HMM implemented with `hmmlearn` (v0.3.3).
+
+The two HMM implementations serve the same general purpose: reducing isolated state changes and converting CpG-level assignments into spatially coherent methylation domains.
 
 ### Continuous-time HMM
 
-The continuous-time HMM can account for the genomic distance between consecutive CpGs, which is useful because CpG spacing is irregular. By default, MethylSeg uses the forward-backward algorithm to calculate the posterior probability of each hidden state at every locus and assigns the state supported by those posterior probabilities.
+The continuous-time HMM explicitly accounts for the genomic distance between consecutive CpGs. This makes it well suited to sparse methylation datasets with irregular CpG spacing, such as HM450K data.
 
-### Categorical HMM
+By default, MethylSeg uses the forward-backward algorithm to calculate the posterior probability of each hidden state at every locus and assigns the state with the highest posterior support.
 
-The categorical HMM treats the initial biological state labels as a sequence of discrete observations. MethylSeg uses the Viterbi algorithm to identify the most probable sequence of hidden states given the observed labels and fitted model parameters.
+### Sticky categorical HMM
 
-The HMM stage serves the same purpose for both assignment methods: it reduces isolated state changes and converts noisy, site-level labels into spatially coherent methylation domains.
+The sticky categorical HMM is a conventional categorical HMM with a strong self-transition prior. This prior encourages neighboring CpGs to remain in the same state and reduces spurious state switching.
+
+MethylSeg uses the Viterbi algorithm to identify the most probable sequence of hidden states given the observed state assignments and fitted model parameters.
+
+### HMM recommendations
+
+For WGBS data, we recommend the sticky categorical HMM because WGBS provides dense, relatively uniform CpG coverage, making explicit modeling of genomic distance less critical while avoiding the additional computational cost of the ctHMM. For sparse microarray datasets, we recommend the continuous-time HMM because it accounts for the irregular genomic distances between neighboring CpGs.
 
 ## 5. Region cleaning
 
-MethylSeg exposes region cleaning as a separate step so that the transformation from raw HMM calls to final regions remains transparent and configurable. Cleaning proceeds in three stages:
+MethylSeg separates region cleaning from the initial HMM-derived calls so that the transition from raw segmentation results to final regions remains transparent and configurable.
 
-1. **Incorporate transitional regions.** Raw regions may optionally be merged with adjacent Intermediate regions, allowing transitional sequence to be retained in downstream analyses.
-2. **Merge nearby regions.** Adjacent regions assigned to the same state are merged when the gap between them does not exceed 100 kb by default.
-3. **Apply size thresholds.** Regions that do not meet the minimum CpG-count or genomic-length requirements are removed. The default thresholds are six CpGs and 5 kb per region.
+Cleaning proceeds in three stages:
 
-The resulting cleaned regions are suitable for downstream analyses, while the raw calls remain available for users who want to inspect or customize the filtering process.
+### 5.1 Incorporate transitional regions
+
+Raw regions may optionally be merged with adjacent Intermediate regions. This allows transitional sequence between methylation states to be retained in downstream analyses.
+
+### 5.2 Merge nearby regions
+
+Regions assigned to the same state can be merged when the genomic gap between them is no more than 100 kb by default.
+
+### 5.3 Apply size thresholds
+
+Regions that do not meet the minimum size requirements are removed. By default, regions must contain at least six CpGs and span at least 5 kb.
+
+The cleaned regions are intended for downstream analyses, while the raw HMM-derived regions remain available for users who want to inspect or customize post-processing.
 
 ## Implementation reference
 
-The main classes used by the workflow are:
+The primary classes used by the MethylSeg workflow are:
 
 | Class | Role |
 |---|---|
 | `methylseg.MethylSegPathway` | High-level interface for preparing data, fitting model components, running segmentation, and writing outputs. |
-| `methylseg.MethylStateAssigner` | Generates emission features and trains or applies the K-means model. |
-| `methylseg.MethylStateAnalyzer` | Optimizes and applies rule-based state definitions. |
-| `methylseg.MethylSegmentor` | Assigns per-CpG states and converts HMM-smoothed labels into genomic regions. |
+| `methylseg.MethylStateAssigner` | Generates context-aware emission features and performs K-means-based state assignment. |
+| `methylseg.MethylStateAnalyzer` | Defines, optimizes, and applies rule-based methylation-state assignments. |
+| `methylseg.MethylSegmentor` | Performs HMM-based state smoothing and converts the resulting state sequence into genomic regions. |
