@@ -42,8 +42,6 @@ python -m pip install \
   methylseg
 ```
 
-The repository also includes `environment.yml` for conda-based local setup.
-
 ## Reference files
 
 ### Sample data
@@ -154,9 +152,6 @@ fig = pathway.plot_labels(
 
 `run_pathway(sample_info=sample_info, chroms=["chr1"])` performs fitting,
 segmentation, cleaning, and summary-file writing in one call.
-
-See
-[run_full_pipeline.ipynb](examples/run_full_pipeline.ipynb) for the full end-to-end workflow.
 
 ## Input formats
 

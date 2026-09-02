@@ -8,6 +8,10 @@ examples/out
 methylseg_examples_output/
 docs/_generated/
 docs/tutorials/generated/
+docs/quickstart.ipynb
+docs/readme.md
+docs/troubleshooting.md
+docs/quickstart.png
 data/archive.tar.gz
 data/*
 docs/_build/*
