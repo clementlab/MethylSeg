@@ -3,6 +3,7 @@ import warnings
 from shutil import copy2
 from importlib import metadata
 from pathlib import Path
+from re import MULTILINE, compile as re_compile
 
 PACKAGE_ROOT = Path(__file__).resolve().parents[1]
 DOCS_ROOT = Path(__file__).resolve().parent
@@ -60,7 +61,7 @@ autodoc_default_options = {
 napoleon_google_docstring = False
 napoleon_numpy_docstring = True
 nbsphinx_execute = "never"
-myst_enable_extensions = ["amsmath", "dollarmath"]
+myst_enable_extensions = ["amsmath", "colon_fence", "dollarmath"]
 
 html_theme = "sphinx_rtd_theme"
 html_static_path = []
@@ -71,6 +72,26 @@ def _write(path: Path, content: str) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     if not path.exists() or path.read_text() != content:
         path.write_text(content)
+
+
+GITHUB_ALERT_PATTERN = re_compile(
+    r"^> \[!(?P<kind>IMPORTANT|NOTE|WARNING|TIP|CAUTION)\]\n"
+    r"(?P<body>(?:>.*(?:\n|$))*)",
+    MULTILINE,
+)
+
+
+def _convert_github_alerts(content: str) -> str:
+    """Convert GitHub alerts to MyST directives in staged documentation."""
+
+    def replace_alert(match) -> str:
+        body = "\n".join(
+            line[2:] if line.startswith("> ") else line[1:]
+            for line in match.group("body").splitlines()
+        ).strip()
+        return f":::{{{match.group('kind').lower()}}}\n{body}\n:::"
+
+    return GITHUB_ALERT_PATTERN.sub(replace_alert, content)
 
 
 def _manual_rst_pages() -> list[str]:
@@ -86,6 +107,7 @@ def _manual_rst_pages() -> list[str]:
 def _stage_readme() -> None:
     """Copy the README while retargeting links that are relative to the repo."""
     readme = (PACKAGE_ROOT / "README.md").read_text()
+    readme = _convert_github_alerts(readme)
     readme = readme.replace(
         "(TROUBLESHOOTING.md)", "(troubleshooting.md)"
     )
