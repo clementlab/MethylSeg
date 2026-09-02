@@ -25,7 +25,5 @@
    
       ~HMMType.CT
       ~HMMType.STICKY
-      ~HMMType.GAUSSIAN
-      ~HMMType.MULTINOMIAL
    
    

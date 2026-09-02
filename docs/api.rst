@@ -29,7 +29,6 @@ Enums and labels
    :nosignatures:
 
    MethylStateAssignmentMethod
-   HMMObservationMode
    MethylationStates
    HMMType
 
@@ -41,9 +40,7 @@ HMM backends
    :nosignatures:
 
    MethylSegHMM
-   MultinomialSegHMM
    StickyCategoricalMethylSegHMM
-   GaussianMethylSegHMM
    CTMethylSegHMM
 
 Utility helpers

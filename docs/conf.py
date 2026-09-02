@@ -60,6 +60,7 @@ autodoc_default_options = {
 napoleon_google_docstring = False
 napoleon_numpy_docstring = True
 nbsphinx_execute = "never"
+myst_enable_extensions = ["amsmath", "dollarmath"]
 
 html_theme = "sphinx_rtd_theme"
 html_static_path = []

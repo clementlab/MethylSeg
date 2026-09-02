@@ -259,9 +259,6 @@ class MethylSegPathway:
         merge_with_intermediate_gap_bp
             Maximum intermediate-state gap in base pairs permitted for that
             merge operation.
-        hmm_observation_mode
-            Representation passed to the HMM, such as discrete states or
-            continuous emissions.
         """
         self.window_specs = window_specs
         self.n_states = n_states
@@ -373,7 +370,6 @@ class MethylSegPathway:
             analyzer=self.analyzer,
             hmm_model=self.hmm_model,
             state_assignment_method=self.state_assignment_method,
-            hmm_observation_mode=self.hmm_observation_mode,
             out_dir=out_dir,
             random_state=self.random_state,
         )
@@ -566,7 +562,7 @@ class MethylSegPathway:
                     f"Invalid hmm_type string: {self.hmm_type}. "
                     f"Valid options are: {[e.value for e in HMMType]}"
                 )
-        elif self.hmm_type == HMMType.STICKY:
+        if self.hmm_type == HMMType.STICKY:
             self.hmm_model = StickyCategoricalMethylSegHMM(
                 n_states=self.n_states,
                 random_state=self.random_state,

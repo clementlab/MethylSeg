@@ -434,15 +434,8 @@ class MethylSegConfig:
         if isinstance(state_assignment_method, MethylStateAssignmentMethod):
             state_assignment_method = state_assignment_method.value
 
-        segmenter_hmm_observation_mode = getattr(
-            inst.segmentor,
-            "hmm_observation_mode",
-            getattr(inst, "hmm_observation_mode", None),
-        )
-
         cfg["segmenter"] = {
             "state_assignment_method": state_assignment_method,
-            "hmm_observation_mode": segmenter_hmm_observation_mode,
             "out_dir": ".",
         }
 
@@ -909,7 +902,6 @@ class MethylSegConfig:
             min_region_cpgs=min_region_cpgs,
             merge_gap_bp=merge_gap_bp,
             state_assignment_method=state_assignment_method,
-            hmm_observation_mode=hmm_observation_mode,
         )
 
         #

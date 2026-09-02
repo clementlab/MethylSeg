@@ -6,9 +6,6 @@ from typing import Dict, List, Optional, Tuple
 import numpy as np
 import pandas as pd
 
-from sklearn.cluster import KMeans
-from sklearn.decomposition import PCA
-
 from .utils import (
     plot_state_labels,
     relabel_by_mean_emission,
@@ -49,9 +46,6 @@ class MethylSegmentor:
             Configured HMM backend used to smooth state observations.
         state_assignment_method
             Strategy used to obtain state labels before segmentation.
-        hmm_observation_mode
-            Representation passed to the HMM, such as discrete states or
-            continuous emissions.
         out_dir
             Directory for segmentation artifacts and plot outputs.
         random_state
@@ -142,98 +136,6 @@ class MethylSegmentor:
             None if lengths is None else [int(length) for length in lengths]
         )
 
-    def _prepare_gaussian_feature_matrix(
-        self,
-        emission_df: pd.DataFrame,
-    ) -> np.ndarray:
-        feature_cols = self.analyzer.assigner.resolve_feature_cols(emission_df)
-        x_scaled, _imputer, _scaler = (
-            self.analyzer.assigner.preprocess_emission_features(
-                emission_df=emission_df,
-                feature_cols=feature_cols,
-                fit=True,
-            )
-        )
-        return x_scaled
-
-    def _get_gaussian_init_labels(
-        self,
-        emission_df: pd.DataFrame,
-        X_scaled: np.ndarray,
-    ) -> np.ndarray:
-        assigner = self.analyzer.assigner
-        if hasattr(assigner, "model") and getattr(assigner, "model", None) is not None:
-            try:
-                _, _, raw_labels, _ = assigner.apply_kmeans_to_emissions(emission_df)
-                return np.asarray(raw_labels, dtype=int)
-            except Exception:
-                pass
-
-        temp_kmeans = KMeans(
-            n_clusters=self.hmm_model.n_states,
-            n_init=10,
-            random_state=self.random_state,
-        )
-        return temp_kmeans.fit_predict(X_scaled)
-
-    def _prepare_pca_feature_matrix(
-        self,
-        emission_df: pd.DataFrame,
-    ) -> np.ndarray:
-        assigner = self.analyzer.assigner
-        feature_cols = assigner.resolve_feature_cols(emission_df)
-
-        if hasattr(assigner, "model") and getattr(assigner, "model", None) is not None:
-            model = assigner.model
-            X_scaled = assigner.preprocess_emission_features(
-                emission_df=emission_df,
-                feature_cols=model.feature_cols,
-                fit=False,
-            )
-            if model.pca is not None:
-                return model.pca.transform(X_scaled)
-
-        X_scaled = self._prepare_gaussian_feature_matrix(emission_df)
-        if assigner.n_pca is None or assigner.n_pca <= 0:
-            raise ValueError(
-                "PCA-emission observation mode requires n_pca to be a positive integer."
-            )
-
-        n_components = min(assigner.n_pca, X_scaled.shape[0], X_scaled.shape[1])
-        if n_components <= 0:
-            raise ValueError(
-                "Cannot fit PCA-emission features because the emission matrix is empty."
-            )
-
-        return PCA(
-            n_components=n_components,
-            random_state=self.random_state,
-        ).fit_transform(X_scaled)
-
-    def _get_pca_init_labels(
-        self,
-        emission_df: pd.DataFrame,
-        X_pca: np.ndarray,
-    ) -> np.ndarray:
-        assigner = self.analyzer.assigner
-        if (
-            hasattr(assigner, "model")
-            and getattr(assigner, "model", None) is not None
-            and getattr(assigner.model, "pca", None) is not None
-        ):
-            try:
-                _, _, raw_labels, _ = assigner.apply_kmeans_to_emissions(emission_df)
-                return np.asarray(raw_labels, dtype=int)
-            except Exception:
-                pass
-
-        temp_kmeans = KMeans(
-            n_clusters=self.hmm_model.n_states,
-            n_init=10,
-            random_state=self.random_state,
-        )
-        return temp_kmeans.fit_predict(X_pca)
-
     def _segment_sample_discrete_states(
         self,
         sample_info: SampleInfo,
@@ -249,54 +151,6 @@ class MethylSegmentor:
         self.hmm_model.create_model()
         self.hmm_model.fit(states, sample_info, chrom)
         hidden_states = self.hmm_model.predict(states)
-        readable_states = relabel_by_mean_emission(
-            hidden_states,
-            self.emissions_df,
-            self._get_state_cutoffs(),
-            self.analyzer.assigner.int_low_cutoff,
-            self.analyzer.assigner.int_high_cutoff,
-            self.analyzer.assigner.window_specs,
-        )
-        return hidden_states, readable_states
-
-    def _segment_sample_gaussian_emissions(
-        self,
-        sample_info: SampleInfo,
-        chrom: str | None = None,
-    ) -> Tuple[np.ndarray, np.ndarray]:
-        self._prepare_emissions(sample_info=sample_info, chrom=chrom)
-        X_scaled = self._prepare_gaussian_feature_matrix(self.emissions_df)
-        km_labels = self._get_gaussian_init_labels(self.emissions_df, X_scaled)
-
-        init_readable_states = relabel_by_mean_emission(
-            km_labels,
-            self.emissions_df,
-            self._get_state_cutoffs(),
-            self.analyzer.assigner.int_low_cutoff,
-            self.analyzer.assigner.int_high_cutoff,
-            self.analyzer.assigner.window_specs,
-        )
-        self.meth_data["state"] = MethylationStates.convert_to_numeric(
-            init_readable_states
-        )
-        self.meth_data["state_readable"] = init_readable_states
-
-        sequence_lengths = self._derive_sequence_lengths(self.meth_data, chrom=chrom)
-
-        if not hasattr(self.hmm_model, "initialize_from_kmeans"):
-            raise ValueError(
-                "Gaussian-emission observation mode requires an HMM model that "
-                "supports KMeans-based initialization."
-            )
-
-        self.hmm_model.create_model()
-        self.hmm_model.initialize_from_kmeans(
-            X_scaled=X_scaled,
-            km_labels=km_labels,
-            lengths=sequence_lengths,
-        )
-        self.hmm_model.fit(X_scaled, sample_info, chrom)
-        hidden_states = self.hmm_model.predict(X_scaled)
         readable_states = relabel_by_mean_emission(
             hidden_states,
             self.emissions_df,
@@ -373,54 +227,6 @@ class MethylSegmentor:
 
         return meth_data, emissions_df
 
-    def _segment_sample_pca_emissions(
-        self,
-        sample_info: SampleInfo,
-        chrom: str | None = None,
-    ) -> Tuple[np.ndarray, np.ndarray]:
-        self._prepare_emissions(sample_info=sample_info, chrom=chrom)
-        X_pca = self._prepare_pca_feature_matrix(self.emissions_df)
-        km_labels = self._get_pca_init_labels(self.emissions_df, X_pca)
-
-        init_readable_states = relabel_by_mean_emission(
-            km_labels,
-            self.emissions_df,
-            self._get_state_cutoffs(),
-            self.analyzer.assigner.int_low_cutoff,
-            self.analyzer.assigner.int_high_cutoff,
-            self.analyzer.assigner.window_specs,
-        )
-        self.meth_data["state"] = MethylationStates.convert_to_numeric(
-            init_readable_states
-        )
-        self.meth_data["state_readable"] = init_readable_states
-
-        sequence_lengths = self._derive_sequence_lengths(self.meth_data, chrom=chrom)
-
-        if not hasattr(self.hmm_model, "initialize_from_kmeans"):
-            raise ValueError(
-                "PCA-emission observation mode requires an HMM model that "
-                "supports KMeans-based initialization."
-            )
-
-        self.hmm_model.create_model()
-        self.hmm_model.initialize_from_kmeans(
-            X_scaled=X_pca,
-            km_labels=km_labels,
-            lengths=sequence_lengths,
-        )
-        self.hmm_model.fit(X_pca, sample_info, chrom)
-        hidden_states = self.hmm_model.predict(X_pca)
-        readable_states = relabel_by_mean_emission(
-            hidden_states,
-            self.emissions_df,
-            self._get_state_cutoffs(),
-            self.analyzer.assigner.int_low_cutoff,
-            self.analyzer.assigner.int_high_cutoff,
-            self.analyzer.assigner.window_specs,
-        )
-        return hidden_states, readable_states
-
     def segment_sample(
         self,
         sample_info: SampleInfo | None = None,
@@ -460,7 +266,7 @@ class MethylSegmentor:
             and chrom in self.segment_results[sample_info.sample_id]
         )
         if not chrom_segmented_on_sample or force_resegment:
-            hidden_states, readable_states = self._segment_sample_pca_emissions(
+            hidden_states, readable_states = self._segment_sample_discrete_states(
                 sample_info=sample_info,
                 chrom=chrom,
             )

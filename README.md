@@ -93,7 +93,7 @@ hm450k_saved = MethylSegPathway.get_pretrained_model(
 )
 ```
 
-## Quick start
+## Quickstart
 
 The default workflow trains a model on your input, segments the sample,
 cleans the calls, and draws a cleaned methylation state overlay.
