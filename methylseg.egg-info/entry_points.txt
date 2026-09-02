@@ -1,2 +1,0 @@
-[console_scripts]
-methylseg = methylseg.cli:main

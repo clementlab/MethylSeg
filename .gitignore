@@ -11,3 +11,5 @@ docs/tutorials/generated/
 data/archive.tar.gz
 data/*
 docs/_build/*
+dist/*
+methylseg.egg-info/*

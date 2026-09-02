@@ -1,2 +1,0 @@
-methylseg
-methylseg_examples_output
