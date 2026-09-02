@@ -64,7 +64,8 @@ nbsphinx_execute = "never"
 myst_enable_extensions = ["amsmath", "colon_fence", "dollarmath"]
 
 html_theme = "sphinx_rtd_theme"
-html_static_path = []
+html_static_path = ["_static"]
+html_favicon = "_static/favicon.ico"
 
 
 def _write(path: Path, content: str) -> None:
