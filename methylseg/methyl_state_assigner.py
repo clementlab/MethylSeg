@@ -34,6 +34,7 @@ from .utils import (
     build_emission_matrix_numba,
     get_biological_state_colors,
     get_present_biological_states,
+    normalize_state_label,
     relabel_by_mean_emission,
 )
 
@@ -2472,3 +2473,81 @@ class MethylStateAssigner:
             index=self.model.feature_cols,
         )
         return loadings
+
+    def plot_feature_distributions_by_kmeans_state(
+        self,
+        show_plots: bool = True,
+        state_colors: dict | None = None,
+        state_cutoffs: dict | None = None,
+    ):
+        """Plot training-emission histograms stratified by KMeans state.
+
+        ``state_cutoffs`` optionally controls the biological-state display
+        labels; it does not change the KMeans assignments.
+        """
+        if not hasattr(self, "model"):
+            raise ValueError("No trained model found. Please train a model first.")
+
+        train_joint = pd.concat(
+            [self.train_meth.copy(), self.train_emission_df.copy()], axis=1
+        )
+        train_joint = train_joint.loc[:, ~train_joint.columns.duplicated()]
+        _, _, raw_labels, _ = self.apply_kmeans_to_emissions(
+            self.train_emission_df.copy()
+        )
+        train_joint["kmeans_state_display"] = relabel_by_mean_emission(
+            raw_labels=raw_labels,
+            emission_df=self.train_emission_df.copy(),
+            state_cutoffs=state_cutoffs,
+            int_low_cutoff=self.int_low_cutoff,
+            int_high_cutoff=self.int_high_cutoff,
+            window_specs=self.window_specs,
+        )
+        train_joint["kmeans_state_display"] = train_joint[
+            "kmeans_state_display"
+        ].apply(normalize_state_label)
+
+        train_loadings = self.get_pca_loadings()
+        ranked_features = list(
+            train_loadings["PC2"].abs().sort_values(ascending=False).index
+        )
+        if "beta" in train_loadings.index:
+            ranked_features = ["beta"] + [
+                feature for feature in ranked_features if feature != "beta"
+            ]
+        _, _, _, state_colors_hex = get_biological_state_colors(
+            state_colors=state_colors
+        )
+        ordered_states = [state.name for state in MethylationStates]
+        for emission in ranked_features:
+            fig, ax = plt.subplots()
+            plotted = False
+            for state_name in ordered_states:
+                state_df = train_joint.loc[
+                    train_joint["kmeans_state_display"].eq(state_name)
+                ]
+                if state_df.empty:
+                    continue
+                state_df[emission].hist(
+                    bins=50,
+                    alpha=0.5,
+                    label=state_name,
+                    color=state_colors_hex[MethylationStates[state_name].value],
+                    ax=ax,
+                )
+                plotted = True
+
+            if not plotted:
+                plt.close(fig)
+                continue
+
+            ax.set_xlabel(emission)
+            ax.set_ylabel("Count")
+            ax.set_title(f"Distribution of {emission} by KMeans State")
+            ax.legend()
+            fig.tight_layout()
+            if show_plots:
+                plt.show()
+            elif self.out_dir is not None:
+                fig.savefig(f"{self.out_dir}/feature_distribution_{emission}.png")
+            plt.close(fig)

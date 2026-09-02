@@ -19,6 +19,14 @@ class MethylSegHMM:
     """Abstract base class for methylseg HMM backends."""
 
     def __init__(self, n_states: int):
+        """
+        Initialize an abstract HMM backend.
+
+        Parameters
+        ----------
+        n_states
+            Number of hidden methylation states the backend will model.
+        """
         raise NotImplementedError("MethylSegHMM is an abstract class")
 
     def fit(self, emissions, sample_info=None, chrom=None):
@@ -86,6 +94,14 @@ class DAMethylSegHMM(MethylSegHMM):
     """Placeholder for an alternative HMM implementation that is not yet built."""
 
     def __init__(self, n_states: int):
+        """
+        Initialize the unimplemented DA HMM placeholder.
+
+        Parameters
+        ----------
+        n_states
+            Number of hidden methylation states the backend would model.
+        """
         raise NotImplementedError("DAMethylSegHMM is not implemented")
 
     def fit(self, emissions, sample_info=None, chrom=None):
@@ -157,6 +173,20 @@ class MultinomialSegHMM(MethylSegHMM):
         n_iter: int = 30,
         alpha: float = 0.7,
     ):
+        """
+        Initialize a multinomial HMM for discrete state observations.
+
+        Parameters
+        ----------
+        n_states
+            Number of hidden and observed categorical states.
+        random_state
+            Random seed passed to the underlying HMM implementation.
+        n_iter
+            Maximum number of expectation-maximization iterations.
+        alpha
+            Compatibility smoothing parameter retained for this backend.
+        """
         self.random_state = random_state
         self.n_states = n_states
         self.n_iter = n_iter
@@ -259,6 +289,27 @@ class StickyCategoricalMethylSegHMM(MethylSegHMM):
         transition_prior_strength: float = TRANSITION_PRIOR_STRENGTH,
         fit_transitions: bool = False,
     ):
+        """
+        Initialize a sticky categorical HMM.
+
+        Parameters
+        ----------
+        n_states
+            Number of hidden and observed categorical states.
+        random_state
+            Random seed passed to the underlying HMM implementation.
+        n_iter
+            Maximum number of expectation-maximization iterations.
+        stay_prob
+            Initial self-transition probability for each hidden state.
+        emission_mismatch_prob
+            Probability mass assigned to nonmatching observed states.
+        transition_prior_strength
+            Weight of the sticky transition prior when transitions are fitted.
+        fit_transitions
+            If ``True``, estimate transitions during fitting; otherwise retain
+            the initialized sticky transition matrix.
+        """
         if not np.isfinite(stay_prob) or not 0 <= stay_prob <= 1:
             raise ValueError(
                 f"stay_prob must be a finite value strictly between 0 and 1. "
@@ -455,6 +506,27 @@ class GaussianMethylSegHMM(MethylSegHMM):
         init_params: str = "",
         params: str = "stmc",
     ):
+        """
+        Initialize a Gaussian HMM for continuous emission features.
+
+        Parameters
+        ----------
+        n_states
+            Number of hidden methylation states.
+        random_state
+            Random seed passed to the underlying HMM implementation.
+        n_iter
+            Maximum number of expectation-maximization iterations.
+        tol
+            Convergence tolerance for expectation-maximization.
+        covariance_type
+            Covariance parameterization; currently only ``"diag"`` is
+            supported.
+        init_params
+            ``hmmlearn`` parameter codes to initialize automatically.
+        params
+            ``hmmlearn`` parameter codes to update during fitting.
+        """
         if covariance_type != "diag":
             raise ValueError(
                 "GaussianMethylSegHMM currently supports only covariance_type='diag'."
@@ -695,6 +767,28 @@ class CTMethylSegHMM(MethylSegHMM):
         random_state: int = 42,
         algorithm="forward-backward",
     ):
+        """
+        Initialize a continuous-time HMM for unevenly spaced CpGs.
+
+        Parameters
+        ----------
+        n_states
+            Number of hidden methylation states.
+        n_emissions
+            Number of discrete observed emission categories.
+        holding_time_guess
+            Initial genomic holding-time scale in base pairs.
+        time_scale
+            Multiplier applied to genomic time intervals.
+        max_iter
+            Maximum fitting iterations for the continuous-time backend.
+        tol
+            Convergence tolerance for continuous-time fitting.
+        random_state
+            Random seed passed to the continuous-time backend.
+        algorithm
+            Fitting algorithm supported by the continuous-time backend.
+        """
         self.random_state = random_state
         self.n_states = n_states
         self.n_emissions = n_emissions

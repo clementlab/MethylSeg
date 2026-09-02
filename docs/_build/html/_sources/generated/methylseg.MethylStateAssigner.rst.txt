@@ -21,6 +21,7 @@
       ~MethylStateAssigner.fit_kmeans_on_emissions
       ~MethylStateAssigner.get_pca_loadings
       ~MethylStateAssigner.plot_embedding
+      ~MethylStateAssigner.plot_feature_distributions_by_kmeans_state
       ~MethylStateAssigner.plot_kmeans_clusters
       ~MethylStateAssigner.plot_pca_clusters
       ~MethylStateAssigner.plot_pca_clusters_with_region

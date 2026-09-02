@@ -5,16 +5,16 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>methylseg.methyl_state_assigner &mdash; methylseg 0.1.0 documentation</title>
-      <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=80d5e7a1" />
+  <title>methylseg.methyl_state_assigner &mdash; methylseg 0.1.4 documentation</title>
+      <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=b86133f3" />
       <link rel="stylesheet" type="text/css" href="../../_static/css/theme.css?v=9edc463e" />
 
   
       <script src="../../_static/jquery.js?v=5d32c60e"></script>
       <script src="../../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
-      <script src="../../_static/documentation_options.js?v=01f34227"></script>
-      <script src="../../_static/doctools.js?v=9bcbadda"></script>
-      <script src="../../_static/sphinx_highlight.js?v=dc90522c"></script>
+      <script src="../../_static/documentation_options.js?v=fd825880"></script>
+      <script src="../../_static/doctools.js?v=fd6eb6e6"></script>
+      <script src="../../_static/sphinx_highlight.js?v=6ffebe34"></script>
       <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
     <script src="../../_static/js/theme.js"></script>
     <link rel="index" title="Index" href="../../genindex.html" />
@@ -42,10 +42,13 @@
         </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
               <p class="caption" role="heading"><span class="caption-text">Contents</span></p>
 <ul>
+<li class="toctree-l1"><a class="reference internal" href="../../api.html">API Reference</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../full_pipeline.html">Full Pipeline And Outputs</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../input_format.html">Input Format</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../installation.html">Installation</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../quickstart.html">Quickstart</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../api.html">API Reference</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../tutorials.html">Tutorial Notebook</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../segmentation_methods.html">Segmentation Methods</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../tutorials.html">Example Notebooks</a></li>
 </ul>
 
         </div>
@@ -75,52 +78,53 @@
   <h1>Source code for methylseg.methyl_state_assigner</h1><div class="highlight"><pre>
 <span></span><span class="sd">&quot;&quot;&quot;Window-based emission feature engineering and KMeans state assignment.&quot;&quot;&quot;</span>
 
-<span class="kn">from</span> <span class="nn">enum</span> <span class="kn">import</span> <span class="n">Enum</span>
-<span class="kn">import</span> <span class="nn">textwrap</span>
-<span class="kn">import</span> <span class="nn">warnings</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">enum</span><span class="w"> </span><span class="kn">import</span> <span class="n">Enum</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">textwrap</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">warnings</span>
 
-<span class="kn">from</span> <span class="nn">matplotlib</span> <span class="kn">import</span> <span class="n">pyplot</span> <span class="k">as</span> <span class="n">plt</span>
-<span class="kn">from</span> <span class="nn">panel</span> <span class="kn">import</span> <span class="n">GridSpec</span>
-<span class="kn">import</span> <span class="nn">plotly.express</span> <span class="k">as</span> <span class="nn">px</span>
-<span class="kn">import</span> <span class="nn">matplotlib.colors</span> <span class="k">as</span> <span class="nn">mcolors</span>
-<span class="kn">from</span> <span class="nn">matplotlib.lines</span> <span class="kn">import</span> <span class="n">Line2D</span>
-<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
-<span class="kn">import</span> <span class="nn">pandas</span> <span class="k">as</span> <span class="nn">pd</span>
-<span class="kn">from</span> <span class="nn">typing</span> <span class="kn">import</span> <span class="n">Dict</span><span class="p">,</span> <span class="n">List</span><span class="p">,</span> <span class="n">Optional</span><span class="p">,</span> <span class="n">Tuple</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">matplotlib</span><span class="w"> </span><span class="kn">import</span> <span class="n">pyplot</span> <span class="k">as</span> <span class="n">plt</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">panel</span><span class="w"> </span><span class="kn">import</span> <span class="n">GridSpec</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">plotly.express</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">px</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">matplotlib.colors</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">mcolors</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">matplotlib.lines</span><span class="w"> </span><span class="kn">import</span> <span class="n">Line2D</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">pandas</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">pd</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">Dict</span><span class="p">,</span> <span class="n">List</span><span class="p">,</span> <span class="n">Optional</span><span class="p">,</span> <span class="n">Tuple</span>
 
-<span class="kn">from</span> <span class="nn">sklearn.cluster</span> <span class="kn">import</span> <span class="n">KMeans</span>
-<span class="kn">from</span> <span class="nn">sklearn.decomposition</span> <span class="kn">import</span> <span class="n">PCA</span>
-<span class="kn">from</span> <span class="nn">sklearn.impute</span> <span class="kn">import</span> <span class="n">SimpleImputer</span>
-<span class="kn">from</span> <span class="nn">sklearn.metrics</span> <span class="kn">import</span> <span class="p">(</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">sklearn.cluster</span><span class="w"> </span><span class="kn">import</span> <span class="n">KMeans</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">sklearn.decomposition</span><span class="w"> </span><span class="kn">import</span> <span class="n">PCA</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">sklearn.impute</span><span class="w"> </span><span class="kn">import</span> <span class="n">SimpleImputer</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">sklearn.metrics</span><span class="w"> </span><span class="kn">import</span> <span class="p">(</span>
     <span class="n">davies_bouldin_score</span><span class="p">,</span>
     <span class="n">silhouette_score</span><span class="p">,</span>
 <span class="p">)</span>
-<span class="kn">from</span> <span class="nn">sklearn.preprocessing</span> <span class="kn">import</span> <span class="n">StandardScaler</span>
-<span class="kn">import</span> <span class="nn">umap</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">sklearn.preprocessing</span><span class="w"> </span><span class="kn">import</span> <span class="n">StandardScaler</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">umap</span>
 
 
-<span class="kn">from</span> <span class="nn">.helper_classes</span> <span class="kn">import</span> <span class="p">(</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">.helper_classes</span><span class="w"> </span><span class="kn">import</span> <span class="p">(</span>
     <span class="n">KMeansMethylationModel</span><span class="p">,</span>
     <span class="n">MethylationStates</span><span class="p">,</span>
     <span class="n">SampleInfo</span><span class="p">,</span>
     <span class="n">CANONICAL_AUTOSOMES</span><span class="p">,</span>
 <span class="p">)</span>
-<span class="kn">from</span> <span class="nn">.utils</span> <span class="kn">import</span> <span class="p">(</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">.utils</span><span class="w"> </span><span class="kn">import</span> <span class="p">(</span>
     <span class="n">build_emission_matrix_numba</span><span class="p">,</span>
     <span class="n">get_biological_state_colors</span><span class="p">,</span>
     <span class="n">get_present_biological_states</span><span class="p">,</span>
+    <span class="n">normalize_state_label</span><span class="p">,</span>
     <span class="n">relabel_by_mean_emission</span><span class="p">,</span>
 <span class="p">)</span>
 
 
 <div class="viewcode-block" id="MethylStateAssigner">
 <a class="viewcode-back" href="../../generated/methylseg.MethylStateAssigner.html#methylseg.MethylStateAssigner">[docs]</a>
-<span class="k">class</span> <span class="nc">MethylStateAssigner</span><span class="p">:</span>
+<span class="k">class</span><span class="w"> </span><span class="nc">MethylStateAssigner</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;Create per-CpG window summaries and assign coarse methylation states.&quot;&quot;&quot;</span>
 
 <div class="viewcode-block" id="MethylStateAssigner.__init__">
 <a class="viewcode-back" href="../../generated/methylseg.MethylStateAssigner.html#methylseg.MethylStateAssigner.__init__">[docs]</a>
-    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span>
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span>
         <span class="bp">self</span><span class="p">,</span>
         <span class="n">window_specs</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="n">Tuple</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="nb">str</span><span class="p">]]</span> <span class="o">=</span> <span class="p">[</span>
             <span class="p">(</span><span class="mi">40_000</span><span class="p">,</span> <span class="s2">&quot;40kb&quot;</span><span class="p">),</span>
@@ -170,7 +174,7 @@
 
 
     <span class="nd">@staticmethod</span>
-    <span class="k">def</span> <span class="nf">_validate_cluster_space</span><span class="p">(</span><span class="n">cluster_space</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">_validate_cluster_space</span><span class="p">(</span><span class="n">cluster_space</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
         <span class="n">normalized_cluster_space</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">cluster_space</span><span class="p">)</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span>
         <span class="k">if</span> <span class="n">normalized_cluster_space</span> <span class="ow">not</span> <span class="ow">in</span> <span class="p">{</span><span class="s2">&quot;pca&quot;</span><span class="p">,</span> <span class="s2">&quot;raw&quot;</span><span class="p">}:</span>
             <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
@@ -181,7 +185,7 @@
 
 <div class="viewcode-block" id="MethylStateAssigner.build_emission_matrix">
 <a class="viewcode-back" href="../../generated/methylseg.MethylStateAssigner.html#methylseg.MethylStateAssigner.build_emission_matrix">[docs]</a>
-    <span class="k">def</span> <span class="nf">build_emission_matrix</span><span class="p">(</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">build_emission_matrix</span><span class="p">(</span>
         <span class="bp">self</span><span class="p">,</span>
         <span class="n">positions</span><span class="p">,</span>
         <span class="n">betas</span><span class="p">,</span>
@@ -241,7 +245,7 @@
         <span class="k">return</span> <span class="n">X</span><span class="p">,</span> <span class="n">feature_names</span></div>
 
 
-    <span class="k">def</span> <span class="nf">_transform_emission_features</span><span class="p">(</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">_transform_emission_features</span><span class="p">(</span>
         <span class="bp">self</span><span class="p">,</span>
         <span class="n">feature_matrix</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">,</span>
     <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">:</span>
@@ -259,7 +263,7 @@
 
 <div class="viewcode-block" id="MethylStateAssigner.preprocess_emission_features">
 <a class="viewcode-back" href="../../generated/methylseg.MethylStateAssigner.html#methylseg.MethylStateAssigner.preprocess_emission_features">[docs]</a>
-    <span class="k">def</span> <span class="nf">preprocess_emission_features</span><span class="p">(</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">preprocess_emission_features</span><span class="p">(</span>
         <span class="bp">self</span><span class="p">,</span>
         <span class="n">emission_df</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">,</span>
         <span class="n">feature_cols</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="nb">str</span><span class="p">],</span>
@@ -356,7 +360,7 @@
 
 <div class="viewcode-block" id="MethylStateAssigner.resolve_feature_cols">
 <a class="viewcode-back" href="../../generated/methylseg.MethylStateAssigner.html#methylseg.MethylStateAssigner.resolve_feature_cols">[docs]</a>
-    <span class="k">def</span> <span class="nf">resolve_feature_cols</span><span class="p">(</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">resolve_feature_cols</span><span class="p">(</span>
         <span class="bp">self</span><span class="p">,</span>
         <span class="n">emission_df</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">,</span>
         <span class="n">feature_cols</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">List</span><span class="p">[</span><span class="nb">str</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
@@ -395,14 +399,27 @@
 
 <div class="viewcode-block" id="MethylStateAssigner.fit_kmeans_on_emissions">
 <a class="viewcode-back" href="../../generated/methylseg.MethylStateAssigner.html#methylseg.MethylStateAssigner.fit_kmeans_on_emissions">[docs]</a>
-    <span class="k">def</span> <span class="nf">fit_kmeans_on_emissions</span><span class="p">(</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">fit_kmeans_on_emissions</span><span class="p">(</span>
         <span class="bp">self</span><span class="p">,</span>
         <span class="n">emission_df</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">,</span>
         <span class="n">feature_cols</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">List</span><span class="p">[</span><span class="nb">str</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
     <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Tuple</span><span class="p">[</span><span class="n">KMeansMethylationModel</span><span class="p">,</span> <span class="n">Optional</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">],</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">]:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Fit KMeans on emission features using the assigner&#39;s configured cluster space.</span>
-<span class="sd">        Also returns PCA scores for PCA-backed clustering and relabeled assignments.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        emission_df</span>
+<span class="sd">            Emission-feature table used for clustering.</span>
+<span class="sd">        feature_cols</span>
+<span class="sd">            Optional explicit feature-column list. When omitted, uses</span>
+<span class="sd">            ``resolve_feature_cols``.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        tuple</span>
+<span class="sd">            ``(model, pca_scores, relabeled_labels)`` where ``pca_scores`` is</span>
+<span class="sd">            ``None`` when clustering in raw feature space.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="n">feature_cols</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">resolve_feature_cols</span><span class="p">(</span>
             <span class="n">emission_df</span><span class="o">=</span><span class="n">emission_df</span><span class="p">,</span>
@@ -459,14 +476,23 @@
 
 <div class="viewcode-block" id="MethylStateAssigner.apply_kmeans_to_emissions">
 <a class="viewcode-back" href="../../generated/methylseg.MethylStateAssigner.html#methylseg.MethylStateAssigner.apply_kmeans_to_emissions">[docs]</a>
-    <span class="k">def</span> <span class="nf">apply_kmeans_to_emissions</span><span class="p">(</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">apply_kmeans_to_emissions</span><span class="p">(</span>
         <span class="bp">self</span><span class="p">,</span>
         <span class="n">emission_df</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">,</span>
     <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Tuple</span><span class="p">[</span><span class="n">Optional</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">],</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">]:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Apply a previously trained KMeansMethylationModel to a new emission_df.</span>
 
-<span class="sd">        Returns (pca_scores, raw_distances, raw_labels, relabeled_labels).</span>
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        emission_df</span>
+<span class="sd">            Emission-feature table to score with the trained model.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        tuple</span>
+<span class="sd">            ``(pca_scores, raw_distances, raw_labels, relabeled_labels)`` for</span>
+<span class="sd">            the supplied emission rows.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">if</span> <span class="ow">not</span> <span class="nb">hasattr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="s2">&quot;model&quot;</span><span class="p">):</span>
             <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;No trained model found. Please train a model first.&quot;</span><span class="p">)</span>
@@ -496,7 +522,7 @@
         <span class="k">return</span> <span class="n">pca_scores</span><span class="p">,</span> <span class="n">raw_distances</span><span class="p">,</span> <span class="n">raw_labels</span><span class="p">,</span> <span class="n">relabeled</span></div>
 
 
-    <span class="k">def</span> <span class="nf">_get_kmeans_metric_input</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">emission_df</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">_get_kmeans_metric_input</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">emission_df</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
         <span class="k">if</span> <span class="ow">not</span> <span class="nb">hasattr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="s2">&quot;model&quot;</span><span class="p">):</span>
             <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;No trained model found. Please train a model first.&quot;</span><span class="p">)</span>
 
@@ -517,13 +543,26 @@
 
 <div class="viewcode-block" id="MethylStateAssigner.calculate_kmeans_cluster_metrics">
 <a class="viewcode-back" href="../../generated/methylseg.MethylStateAssigner.html#methylseg.MethylStateAssigner.calculate_kmeans_cluster_metrics">[docs]</a>
-    <span class="k">def</span> <span class="nf">calculate_kmeans_cluster_metrics</span><span class="p">(</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">calculate_kmeans_cluster_metrics</span><span class="p">(</span>
         <span class="bp">self</span><span class="p">,</span>
         <span class="n">emission_df</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">,</span>
         <span class="n">labels</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span>
     <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">float</span><span class="p">]]:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Calculate clustering-quality metrics in the same feature space used for KMeans.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        emission_df</span>
+<span class="sd">            Emission-feature table aligned to ``labels``.</span>
+<span class="sd">        labels</span>
+<span class="sd">            Cluster labels to evaluate in the trained feature space.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        dict of str to float or None</span>
+<span class="sd">            Clustering metric values keyed by metric name. Metrics that cannot</span>
+<span class="sd">            be computed are returned as ``None``.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="n">metrics</span> <span class="o">=</span> <span class="p">{</span>
             <span class="s2">&quot;silhouette_score&quot;</span><span class="p">:</span> <span class="kc">None</span><span class="p">,</span>
@@ -568,7 +607,7 @@
         <span class="k">return</span> <span class="n">metrics</span></div>
 
 
-    <span class="k">def</span> <span class="nf">_fit_plot_pca</span><span class="p">(</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">_fit_plot_pca</span><span class="p">(</span>
         <span class="bp">self</span><span class="p">,</span>
         <span class="n">emission_df</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">,</span>
         <span class="n">n_pca_plot</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
@@ -608,7 +647,7 @@
 
 <div class="viewcode-block" id="MethylStateAssigner.plot_embedding">
 <a class="viewcode-back" href="../../generated/methylseg.MethylStateAssigner.html#methylseg.MethylStateAssigner.plot_embedding">[docs]</a>
-    <span class="k">def</span> <span class="nf">plot_embedding</span><span class="p">(</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">plot_embedding</span><span class="p">(</span>
         <span class="bp">self</span><span class="p">,</span>
         <span class="n">emission_df</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">,</span>
         <span class="n">labels</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span>
@@ -620,6 +659,11 @@
         <span class="n">n_components</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">2</span><span class="p">,</span>
         <span class="n">top_n_loadings</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">5</span><span class="p">,</span>
         <span class="n">hexbin</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+        <span class="n">hexbin_gridsize</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">60</span><span class="p">,</span>
+        <span class="n">hexbin_bins</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="nb">int</span> <span class="o">|</span> <span class="nb">list</span><span class="p">[</span><span class="nb">float</span><span class="p">]</span> <span class="o">|</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="s2">&quot;log&quot;</span><span class="p">,</span>
+        <span class="n">hexbin_mincnt</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="mi">1</span><span class="p">,</span>
+        <span class="n">hexbin_alpha</span><span class="p">:</span> <span class="nb">float</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">hexbin_linewidths</span><span class="p">:</span> <span class="nb">float</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
         <span class="n">interactive</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
         <span class="n">include_metrics</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
         <span class="n">include_biplot</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
@@ -630,6 +674,7 @@
         <span class="n">use_pca_features</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
         <span class="n">use_parallel</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
         <span class="n">show_plot</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
+        <span class="n">state_colors</span><span class="p">:</span> <span class="nb">dict</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
     <span class="p">):</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Plot PCA or UMAP embeddings for an emission table and state labels.</span>
@@ -656,6 +701,18 @@
 <span class="sd">            Number of PCA loading features to show in tables and biplots.</span>
 <span class="sd">        hexbin</span>
 <span class="sd">            If ``True``, render 2-D PCA as hexbins instead of points.</span>
+<span class="sd">        hexbin_gridsize</span>
+<span class="sd">            Hexbin grid resolution for 2-D PCA hexbin plots.</span>
+<span class="sd">        hexbin_bins</span>
+<span class="sd">            Hexbin binning strategy for 2-D PCA hexbin plots, for example</span>
+<span class="sd">            ``&quot;log&quot;``, an integer bin count, explicit bin edges, or ``None``.</span>
+<span class="sd">        hexbin_mincnt</span>
+<span class="sd">            Minimum points required to draw a hexbin in 2-D PCA hexbin plots.</span>
+<span class="sd">            Use ``None`` to let matplotlib draw all bins.</span>
+<span class="sd">        hexbin_alpha</span>
+<span class="sd">            Optional global transparency multiplier for 2-D PCA hexbin plots.</span>
+<span class="sd">        hexbin_linewidths</span>
+<span class="sd">            Optional hexagon border width for 2-D PCA hexbin plots.</span>
 <span class="sd">        interactive</span>
 <span class="sd">            If ``True``, use interactive rendering when supported by the chosen</span>
 <span class="sd">            method.</span>
@@ -675,6 +732,8 @@
 <span class="sd">            Whether to allow UMAP&#39;s parallel execution mode.</span>
 <span class="sd">        show_plot</span>
 <span class="sd">            If ``True``, display the figure immediately.</span>
+<span class="sd">        state_colors</span>
+<span class="sd">            Optional biological-state color overrides.</span>
 
 <span class="sd">        Returns</span>
 <span class="sd">        -------</span>
@@ -709,6 +768,11 @@
                     <span class="n">n_pca_plot</span><span class="o">=</span><span class="n">n_components</span><span class="p">,</span>
                     <span class="n">top_n_loadings</span><span class="o">=</span><span class="n">top_n_loadings</span><span class="p">,</span>
                     <span class="n">pca_hexbin</span><span class="o">=</span><span class="n">hexbin</span><span class="p">,</span>
+                    <span class="n">hexbin_gridsize</span><span class="o">=</span><span class="n">hexbin_gridsize</span><span class="p">,</span>
+                    <span class="n">hexbin_bins</span><span class="o">=</span><span class="n">hexbin_bins</span><span class="p">,</span>
+                    <span class="n">hexbin_mincnt</span><span class="o">=</span><span class="n">hexbin_mincnt</span><span class="p">,</span>
+                    <span class="n">hexbin_alpha</span><span class="o">=</span><span class="n">hexbin_alpha</span><span class="p">,</span>
+                    <span class="n">hexbin_linewidths</span><span class="o">=</span><span class="n">hexbin_linewidths</span><span class="p">,</span>
                     <span class="n">interactive</span><span class="o">=</span><span class="n">interactive</span><span class="p">,</span>
                     <span class="n">include_kmeans_metrics</span><span class="o">=</span><span class="n">include_metrics</span><span class="p">,</span>
                     <span class="n">include_biplot</span><span class="o">=</span><span class="n">include_biplot</span><span class="p">,</span>
@@ -716,6 +780,7 @@
                     <span class="n">sample_name</span><span class="o">=</span><span class="n">sample_name</span><span class="p">,</span>
                     <span class="n">chrom</span><span class="o">=</span><span class="n">chrom</span><span class="p">,</span>
                     <span class="n">show_plot</span><span class="o">=</span><span class="n">show_plot</span><span class="p">,</span>
+                    <span class="n">state_colors</span><span class="o">=</span><span class="n">state_colors</span><span class="p">,</span>
                 <span class="p">)</span>
             <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">plot_pca_clusters</span><span class="p">(</span>
                 <span class="n">emission_df</span><span class="o">=</span><span class="n">emission_df</span><span class="p">,</span>
@@ -723,6 +788,11 @@
                 <span class="n">n_pca_plot</span><span class="o">=</span><span class="n">n_components</span><span class="p">,</span>
                 <span class="n">top_n_loadings</span><span class="o">=</span><span class="n">top_n_loadings</span><span class="p">,</span>
                 <span class="n">pca_hexbin</span><span class="o">=</span><span class="n">hexbin</span><span class="p">,</span>
+                <span class="n">hexbin_gridsize</span><span class="o">=</span><span class="n">hexbin_gridsize</span><span class="p">,</span>
+                <span class="n">hexbin_bins</span><span class="o">=</span><span class="n">hexbin_bins</span><span class="p">,</span>
+                <span class="n">hexbin_mincnt</span><span class="o">=</span><span class="n">hexbin_mincnt</span><span class="p">,</span>
+                <span class="n">hexbin_alpha</span><span class="o">=</span><span class="n">hexbin_alpha</span><span class="p">,</span>
+                <span class="n">hexbin_linewidths</span><span class="o">=</span><span class="n">hexbin_linewidths</span><span class="p">,</span>
                 <span class="n">interactive</span><span class="o">=</span><span class="n">interactive</span><span class="p">,</span>
                 <span class="n">include_kmeans_metrics</span><span class="o">=</span><span class="n">include_metrics</span><span class="p">,</span>
                 <span class="n">include_biplot</span><span class="o">=</span><span class="n">include_biplot</span><span class="p">,</span>
@@ -730,6 +800,7 @@
                 <span class="n">sample_name</span><span class="o">=</span><span class="n">sample_name</span><span class="p">,</span>
                 <span class="n">chrom</span><span class="o">=</span><span class="n">chrom</span><span class="p">,</span>
                 <span class="n">show_plot</span><span class="o">=</span><span class="n">show_plot</span><span class="p">,</span>
+                <span class="n">state_colors</span><span class="o">=</span><span class="n">state_colors</span><span class="p">,</span>
             <span class="p">)</span>
 
         <span class="k">if</span> <span class="n">method</span> <span class="o">==</span> <span class="s2">&quot;umap&quot;</span><span class="p">:</span>
@@ -752,13 +823,18 @@
     <span class="c1">#TODO: remove this and make the plot embedding default to plotting training embedding</span>
 <div class="viewcode-block" id="MethylStateAssigner.plot_training_embedding">
 <a class="viewcode-back" href="../../generated/methylseg.MethylStateAssigner.html#methylseg.MethylStateAssigner.plot_training_embedding">[docs]</a>
-    <span class="k">def</span> <span class="nf">plot_training_embedding</span><span class="p">(</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">plot_training_embedding</span><span class="p">(</span>
         <span class="bp">self</span><span class="p">,</span>
         <span class="o">*</span><span class="p">,</span>
         <span class="n">method</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;pca&quot;</span><span class="p">,</span>
         <span class="n">n_components</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">2</span><span class="p">,</span>
         <span class="n">top_n_loadings</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">5</span><span class="p">,</span>
         <span class="n">hexbin</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+        <span class="n">hexbin_gridsize</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">60</span><span class="p">,</span>
+        <span class="n">hexbin_bins</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="nb">int</span> <span class="o">|</span> <span class="nb">list</span><span class="p">[</span><span class="nb">float</span><span class="p">]</span> <span class="o">|</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="s2">&quot;log&quot;</span><span class="p">,</span>
+        <span class="n">hexbin_mincnt</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="mi">1</span><span class="p">,</span>
+        <span class="n">hexbin_alpha</span><span class="p">:</span> <span class="nb">float</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">hexbin_linewidths</span><span class="p">:</span> <span class="nb">float</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
         <span class="n">interactive</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
         <span class="n">include_metrics</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
         <span class="n">include_biplot</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
@@ -769,6 +845,7 @@
         <span class="n">use_pca_features</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
         <span class="n">use_parallel</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
         <span class="n">show_plot</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
+        <span class="n">state_colors</span><span class="p">:</span> <span class="nb">dict</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
     <span class="p">):</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Plot embeddings for the cached training sample and labels.</span>
@@ -783,6 +860,18 @@
 <span class="sd">            Number of PCA loading features to show in tables and biplots.</span>
 <span class="sd">        hexbin</span>
 <span class="sd">            If ``True``, render 2-D PCA as hexbins instead of points.</span>
+<span class="sd">        hexbin_gridsize</span>
+<span class="sd">            Hexbin grid resolution for 2-D PCA hexbin plots.</span>
+<span class="sd">        hexbin_bins</span>
+<span class="sd">            Hexbin binning strategy for 2-D PCA hexbin plots, for example</span>
+<span class="sd">            ``&quot;log&quot;``, an integer bin count, explicit bin edges, or ``None``.</span>
+<span class="sd">        hexbin_mincnt</span>
+<span class="sd">            Minimum points required to draw a hexbin in 2-D PCA hexbin plots.</span>
+<span class="sd">            Use ``None`` to let matplotlib draw all bins.</span>
+<span class="sd">        hexbin_alpha</span>
+<span class="sd">            Optional global transparency multiplier for 2-D PCA hexbin plots.</span>
+<span class="sd">        hexbin_linewidths</span>
+<span class="sd">            Optional hexagon border width for 2-D PCA hexbin plots.</span>
 <span class="sd">        interactive</span>
 <span class="sd">            If ``True``, use interactive rendering when supported.</span>
 <span class="sd">        include_metrics</span>
@@ -801,6 +890,8 @@
 <span class="sd">            Whether to allow UMAP&#39;s parallel execution mode.</span>
 <span class="sd">        show_plot</span>
 <span class="sd">            If ``True``, display the figure immediately.</span>
+<span class="sd">        state_colors</span>
+<span class="sd">            Optional biological-state color overrides.</span>
 
 <span class="sd">        Returns</span>
 <span class="sd">        -------</span>
@@ -828,6 +919,11 @@
             <span class="n">n_components</span><span class="o">=</span><span class="n">n_components</span><span class="p">,</span>
             <span class="n">top_n_loadings</span><span class="o">=</span><span class="n">top_n_loadings</span><span class="p">,</span>
             <span class="n">hexbin</span><span class="o">=</span><span class="n">hexbin</span><span class="p">,</span>
+            <span class="n">hexbin_gridsize</span><span class="o">=</span><span class="n">hexbin_gridsize</span><span class="p">,</span>
+            <span class="n">hexbin_bins</span><span class="o">=</span><span class="n">hexbin_bins</span><span class="p">,</span>
+            <span class="n">hexbin_mincnt</span><span class="o">=</span><span class="n">hexbin_mincnt</span><span class="p">,</span>
+            <span class="n">hexbin_alpha</span><span class="o">=</span><span class="n">hexbin_alpha</span><span class="p">,</span>
+            <span class="n">hexbin_linewidths</span><span class="o">=</span><span class="n">hexbin_linewidths</span><span class="p">,</span>
             <span class="n">interactive</span><span class="o">=</span><span class="n">interactive</span><span class="p">,</span>
             <span class="n">include_metrics</span><span class="o">=</span><span class="n">include_metrics</span><span class="p">,</span>
             <span class="n">include_biplot</span><span class="o">=</span><span class="n">include_biplot</span><span class="p">,</span>
@@ -838,12 +934,13 @@
             <span class="n">use_pca_features</span><span class="o">=</span><span class="n">use_pca_features</span><span class="p">,</span>
             <span class="n">use_parallel</span><span class="o">=</span><span class="n">use_parallel</span><span class="p">,</span>
             <span class="n">show_plot</span><span class="o">=</span><span class="n">show_plot</span><span class="p">,</span>
+            <span class="n">state_colors</span><span class="o">=</span><span class="n">state_colors</span><span class="p">,</span>
         <span class="p">)</span></div>
 
 
 <div class="viewcode-block" id="MethylStateAssigner.plot_umap_clusters">
 <a class="viewcode-back" href="../../generated/methylseg.MethylStateAssigner.html#methylseg.MethylStateAssigner.plot_umap_clusters">[docs]</a>
-    <span class="k">def</span> <span class="nf">plot_umap_clusters</span><span class="p">(</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">plot_umap_clusters</span><span class="p">(</span>
         <span class="bp">self</span><span class="p">,</span>
         <span class="n">emission_df</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">,</span>
         <span class="n">labels</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span>
@@ -957,7 +1054,7 @@
 
 <div class="viewcode-block" id="MethylStateAssigner.plot_kmeans_clusters">
 <a class="viewcode-back" href="../../generated/methylseg.MethylStateAssigner.html#methylseg.MethylStateAssigner.plot_kmeans_clusters">[docs]</a>
-    <span class="k">def</span> <span class="nf">plot_kmeans_clusters</span><span class="p">(</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">plot_kmeans_clusters</span><span class="p">(</span>
         <span class="bp">self</span><span class="p">,</span>
         <span class="n">meth_data</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">,</span>
         <span class="n">labels</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span>
@@ -1105,13 +1202,18 @@
 
 <div class="viewcode-block" id="MethylStateAssigner.plot_pca_clusters">
 <a class="viewcode-back" href="../../generated/methylseg.MethylStateAssigner.html#methylseg.MethylStateAssigner.plot_pca_clusters">[docs]</a>
-    <span class="k">def</span> <span class="nf">plot_pca_clusters</span><span class="p">(</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">plot_pca_clusters</span><span class="p">(</span>
         <span class="bp">self</span><span class="p">,</span>
         <span class="n">emission_df</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">,</span>
         <span class="n">labels</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span>
         <span class="n">n_pca_plot</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">2</span><span class="p">,</span>  <span class="c1"># 2 or 3</span>
         <span class="n">top_n_loadings</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">5</span><span class="p">,</span>
         <span class="n">pca_hexbin</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>  <span class="c1"># True -&gt; old hexbin behavior</span>
+        <span class="n">hexbin_gridsize</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">60</span><span class="p">,</span>
+        <span class="n">hexbin_bins</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="nb">int</span> <span class="o">|</span> <span class="nb">list</span><span class="p">[</span><span class="nb">float</span><span class="p">]</span> <span class="o">|</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="s2">&quot;log&quot;</span><span class="p">,</span>
+        <span class="n">hexbin_mincnt</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="mi">1</span><span class="p">,</span>
+        <span class="n">hexbin_alpha</span><span class="p">:</span> <span class="nb">float</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">hexbin_linewidths</span><span class="p">:</span> <span class="nb">float</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
         <span class="n">interactive</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>  <span class="c1"># 3D Plotly option</span>
         <span class="n">include_kmeans_metrics</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
         <span class="n">include_biplot</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
@@ -1119,12 +1221,61 @@
         <span class="n">sample_name</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
         <span class="n">chrom</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
         <span class="n">show_plot</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
+        <span class="n">state_colors</span><span class="p">:</span> <span class="nb">dict</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
     <span class="p">):</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        PCA embedding + loadings, using consistent colors per state.</span>
 
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        emission_df</span>
+<span class="sd">            Emission-feature table to embed with PCA.</span>
+<span class="sd">        labels</span>
+<span class="sd">            Cluster or biological state labels aligned to ``emission_df``.</span>
+<span class="sd">        n_pca_plot</span>
+<span class="sd">            Number of PCA dimensions to render, usually ``2`` or ``3``.</span>
+<span class="sd">        top_n_loadings</span>
+<span class="sd">            Number of loading features to show in the summary table.</span>
+<span class="sd">        pca_hexbin</span>
+<span class="sd">            If ``True``, render 2-D PCA with hexbins instead of points.</span>
+<span class="sd">        hexbin_gridsize</span>
+<span class="sd">            Hexbin grid resolution for 2-D PCA hexbin plots.</span>
+<span class="sd">        hexbin_bins</span>
+<span class="sd">            Hexbin binning strategy for 2-D PCA hexbin plots.</span>
+<span class="sd">        hexbin_mincnt</span>
+<span class="sd">            Minimum points required to draw a hexbin in 2-D PCA hexbin plots.</span>
+<span class="sd">        hexbin_alpha</span>
+<span class="sd">            Optional transparency multiplier for 2-D PCA hexbin plots.</span>
+<span class="sd">        hexbin_linewidths</span>
+<span class="sd">            Optional border width for 2-D PCA hexbin plots.</span>
+<span class="sd">        interactive</span>
+<span class="sd">            If ``True``, use interactive rendering when supported.</span>
+<span class="sd">        include_kmeans_metrics</span>
+<span class="sd">            Include clustering-quality metrics in the plotted annotation.</span>
+<span class="sd">        include_biplot</span>
+<span class="sd">            Overlay top PCA loading vectors on 2-D PCA plots.</span>
+<span class="sd">        label_title</span>
+<span class="sd">            Legend or colorbar title.</span>
+<span class="sd">        sample_name</span>
+<span class="sd">            Optional sample identifier used in the plot title.</span>
+<span class="sd">        chrom</span>
+<span class="sd">            Optional chromosome label used in the plot title.</span>
+<span class="sd">        show_plot</span>
+<span class="sd">            If ``True``, display the figure immediately.</span>
+<span class="sd">        state_colors</span>
+<span class="sd">            Optional biological-state color overrides.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        object</span>
+<span class="sd">            Matplotlib or Plotly figure object from the PCA plotting backend.</span>
+
 <span class="sd">        Set ``include_kmeans_metrics=False`` to skip the expensive clustering</span>
 <span class="sd">        quality metric calculation and annotation.</span>
+
+<span class="sd">        In hexbin mode, ``hexbin_mincnt`` is evaluated separately for each</span>
+<span class="sd">        state and hexagon. The default of one keeps sparse chromosome-level</span>
+<span class="sd">        plots visible; use a larger value to show only dense bins.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_plot_pca_clusters_impl</span><span class="p">(</span>
             <span class="n">emission_df</span><span class="o">=</span><span class="n">emission_df</span><span class="p">,</span>
@@ -1132,6 +1283,11 @@
             <span class="n">n_pca_plot</span><span class="o">=</span><span class="n">n_pca_plot</span><span class="p">,</span>
             <span class="n">top_n_loadings</span><span class="o">=</span><span class="n">top_n_loadings</span><span class="p">,</span>
             <span class="n">pca_hexbin</span><span class="o">=</span><span class="n">pca_hexbin</span><span class="p">,</span>
+            <span class="n">hexbin_gridsize</span><span class="o">=</span><span class="n">hexbin_gridsize</span><span class="p">,</span>
+            <span class="n">hexbin_bins</span><span class="o">=</span><span class="n">hexbin_bins</span><span class="p">,</span>
+            <span class="n">hexbin_mincnt</span><span class="o">=</span><span class="n">hexbin_mincnt</span><span class="p">,</span>
+            <span class="n">hexbin_alpha</span><span class="o">=</span><span class="n">hexbin_alpha</span><span class="p">,</span>
+            <span class="n">hexbin_linewidths</span><span class="o">=</span><span class="n">hexbin_linewidths</span><span class="p">,</span>
             <span class="n">interactive</span><span class="o">=</span><span class="n">interactive</span><span class="p">,</span>
             <span class="n">include_kmeans_metrics</span><span class="o">=</span><span class="n">include_kmeans_metrics</span><span class="p">,</span>
             <span class="n">include_biplot</span><span class="o">=</span><span class="n">include_biplot</span><span class="p">,</span>
@@ -1140,10 +1296,11 @@
             <span class="n">chrom</span><span class="o">=</span><span class="n">chrom</span><span class="p">,</span>
             <span class="n">highlight_mask</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
             <span class="n">show_plot</span><span class="o">=</span><span class="n">show_plot</span><span class="p">,</span>
+            <span class="n">state_colors</span><span class="o">=</span><span class="n">state_colors</span><span class="p">,</span>
         <span class="p">)</span></div>
 
 
-    <span class="k">def</span> <span class="nf">_wrap_pca_loading_feature_name</span><span class="p">(</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">_wrap_pca_loading_feature_name</span><span class="p">(</span>
         <span class="bp">self</span><span class="p">,</span>
         <span class="n">feature_name</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
         <span class="n">width</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">24</span><span class="p">,</span>
@@ -1157,7 +1314,7 @@
             <span class="n">break_on_hyphens</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
         <span class="p">)</span>
 
-    <span class="k">def</span> <span class="nf">_build_pca_loadings_table</span><span class="p">(</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">_build_pca_loadings_table</span><span class="p">(</span>
         <span class="bp">self</span><span class="p">,</span>
         <span class="n">pca</span><span class="p">:</span> <span class="n">PCA</span><span class="p">,</span>
         <span class="n">feature_names</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="nb">str</span><span class="p">],</span>
@@ -1236,7 +1393,7 @@
 
         <span class="k">return</span> <span class="n">table_data</span><span class="p">,</span> <span class="n">col_labels</span>
 
-    <span class="k">def</span> <span class="nf">_add_pca_highlight_overlay</span><span class="p">(</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">_add_pca_highlight_overlay</span><span class="p">(</span>
         <span class="bp">self</span><span class="p">,</span>
         <span class="n">ax</span><span class="p">,</span>
         <span class="n">plot_scores</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span>
@@ -1266,11 +1423,11 @@
             <span class="n">label</span><span class="o">=</span><span class="s2">&quot;Highlighted region&quot;</span><span class="p">,</span>
         <span class="p">)</span>
 
-    <span class="k">def</span> <span class="nf">_format_kmeans_cluster_metrics</span><span class="p">(</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">_format_kmeans_cluster_metrics</span><span class="p">(</span>
         <span class="bp">self</span><span class="p">,</span>
         <span class="n">metrics</span><span class="p">:</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">float</span><span class="p">]],</span>
     <span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
-        <span class="k">def</span> <span class="nf">render_metric</span><span class="p">(</span><span class="n">metric_key</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+        <span class="k">def</span><span class="w"> </span><span class="nf">render_metric</span><span class="p">(</span><span class="n">metric_key</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
             <span class="n">metric_value</span> <span class="o">=</span> <span class="n">metrics</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">metric_key</span><span class="p">)</span>
             <span class="k">if</span> <span class="n">metric_value</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">or</span> <span class="ow">not</span> <span class="n">np</span><span class="o">.</span><span class="n">isfinite</span><span class="p">(</span><span class="n">metric_value</span><span class="p">):</span>
                 <span class="k">return</span> <span class="s2">&quot;n/a&quot;</span>
@@ -1283,7 +1440,7 @@
             <span class="p">]</span>
         <span class="p">)</span>
 
-    <span class="k">def</span> <span class="nf">_add_pca_metrics_annotation</span><span class="p">(</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">_add_pca_metrics_annotation</span><span class="p">(</span>
         <span class="bp">self</span><span class="p">,</span>
         <span class="n">ax</span><span class="p">,</span>
         <span class="n">metrics_text</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">],</span>
@@ -1305,7 +1462,7 @@
             <span class="p">},</span>
         <span class="p">)</span>
 
-    <span class="k">def</span> <span class="nf">_add_pca_metrics_annotation_3d</span><span class="p">(</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">_add_pca_metrics_annotation_3d</span><span class="p">(</span>
         <span class="bp">self</span><span class="p">,</span>
         <span class="n">ax</span><span class="p">,</span>
         <span class="n">metrics_text</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">],</span>
@@ -1327,7 +1484,7 @@
             <span class="p">},</span>
         <span class="p">)</span>
 
-    <span class="k">def</span> <span class="nf">_add_pca_metrics_annotation_plotly</span><span class="p">(</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">_add_pca_metrics_annotation_plotly</span><span class="p">(</span>
         <span class="bp">self</span><span class="p">,</span>
         <span class="n">fig</span><span class="p">,</span>
         <span class="n">metrics_text</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">],</span>
@@ -1353,7 +1510,7 @@
             <span class="p">]</span>
         <span class="p">)</span>
 
-    <span class="k">def</span> <span class="nf">_normalize_plot_labels</span><span class="p">(</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">_normalize_plot_labels</span><span class="p">(</span>
         <span class="bp">self</span><span class="p">,</span>
         <span class="n">labels</span><span class="p">,</span>
         <span class="n">expected_length</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
@@ -1393,7 +1550,7 @@
 
         <span class="k">return</span> <span class="n">labels_array</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="nb">int</span><span class="p">)</span>
 
-    <span class="k">def</span> <span class="nf">_add_pca_biplot_overlay</span><span class="p">(</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">_add_pca_biplot_overlay</span><span class="p">(</span>
         <span class="bp">self</span><span class="p">,</span>
         <span class="n">ax</span><span class="p">,</span>
         <span class="n">pca</span><span class="p">:</span> <span class="n">PCA</span><span class="p">,</span>
@@ -1457,13 +1614,18 @@
                 <span class="n">zorder</span><span class="o">=</span><span class="mi">7</span><span class="p">,</span>
             <span class="p">)</span>
 
-    <span class="k">def</span> <span class="nf">_plot_pca_clusters_impl</span><span class="p">(</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">_plot_pca_clusters_impl</span><span class="p">(</span>
         <span class="bp">self</span><span class="p">,</span>
         <span class="n">emission_df</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">,</span>
         <span class="n">labels</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span>
         <span class="n">n_pca_plot</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">2</span><span class="p">,</span>
         <span class="n">top_n_loadings</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">5</span><span class="p">,</span>
         <span class="n">pca_hexbin</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+        <span class="n">hexbin_gridsize</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">60</span><span class="p">,</span>
+        <span class="n">hexbin_bins</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="nb">int</span> <span class="o">|</span> <span class="nb">list</span><span class="p">[</span><span class="nb">float</span><span class="p">]</span> <span class="o">|</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="s2">&quot;log&quot;</span><span class="p">,</span>
+        <span class="n">hexbin_mincnt</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="mi">1</span><span class="p">,</span>
+        <span class="n">hexbin_alpha</span><span class="p">:</span> <span class="nb">float</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">hexbin_linewidths</span><span class="p">:</span> <span class="nb">float</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
         <span class="n">interactive</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
         <span class="n">include_kmeans_metrics</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
         <span class="n">include_biplot</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
@@ -1472,6 +1634,7 @@
         <span class="n">chrom</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
         <span class="n">highlight_mask</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
         <span class="n">show_plot</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
+        <span class="n">state_colors</span><span class="p">:</span> <span class="nb">dict</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
     <span class="p">):</span>
         <span class="k">if</span> <span class="ow">not</span> <span class="nb">hasattr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="s2">&quot;model&quot;</span><span class="p">):</span>
             <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;No trained model found. Please train a model first.&quot;</span><span class="p">)</span>
@@ -1480,7 +1643,9 @@
             <span class="n">emission_df</span><span class="o">=</span><span class="n">emission_df</span><span class="p">,</span>
             <span class="n">n_pca_plot</span><span class="o">=</span><span class="n">n_pca_plot</span><span class="p">,</span>
         <span class="p">)</span>
-        <span class="n">cmap</span><span class="p">,</span> <span class="n">norm</span><span class="p">,</span> <span class="n">state_colors_rgba</span><span class="p">,</span> <span class="n">state_colors_hex</span> <span class="o">=</span> <span class="n">get_biological_state_colors</span><span class="p">()</span>
+        <span class="n">cmap</span><span class="p">,</span> <span class="n">norm</span><span class="p">,</span> <span class="n">state_colors_rgba</span><span class="p">,</span> <span class="n">state_colors_hex</span> <span class="o">=</span> <span class="n">get_biological_state_colors</span><span class="p">(</span>
+            <span class="n">state_colors</span><span class="o">=</span><span class="n">state_colors</span>
+        <span class="p">)</span>
 
         <span class="n">labels_numeric</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_normalize_plot_labels</span><span class="p">(</span>
             <span class="n">labels</span><span class="o">=</span><span class="n">labels</span><span class="p">,</span>
@@ -1537,7 +1702,6 @@
             <span class="n">highlight_handle</span> <span class="o">=</span> <span class="kc">None</span>
 
             <span class="k">if</span> <span class="n">pca_hexbin</span><span class="p">:</span>
-                <span class="n">gridsize</span> <span class="o">=</span> <span class="mi">60</span>
                 <span class="n">cluster_cmaps</span> <span class="o">=</span> <span class="p">[]</span>
                 <span class="k">for</span> <span class="n">state_value</span> <span class="ow">in</span> <span class="n">present_states</span><span class="p">:</span>
                     <span class="n">base_color</span> <span class="o">=</span> <span class="n">state_colors_rgba</span><span class="p">[</span><span class="n">state_value</span><span class="p">]</span>
@@ -1551,13 +1715,22 @@
                     <span class="n">mask</span> <span class="o">=</span> <span class="n">labels_numeric</span> <span class="o">==</span> <span class="n">state_value</span>
                     <span class="k">if</span> <span class="ow">not</span> <span class="n">np</span><span class="o">.</span><span class="n">any</span><span class="p">(</span><span class="n">mask</span><span class="p">):</span>
                         <span class="k">continue</span>
+                    <span class="n">hexbin_kwargs</span> <span class="o">=</span> <span class="p">{</span>
+                        <span class="s2">&quot;gridsize&quot;</span><span class="p">:</span> <span class="n">hexbin_gridsize</span><span class="p">,</span>
+                        <span class="s2">&quot;cmap&quot;</span><span class="p">:</span> <span class="n">cluster_cmaps</span><span class="p">[</span><span class="n">cmap_idx</span><span class="p">],</span>
+                    <span class="p">}</span>
+                    <span class="k">if</span> <span class="n">hexbin_bins</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+                        <span class="n">hexbin_kwargs</span><span class="p">[</span><span class="s2">&quot;bins&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">hexbin_bins</span>
+                    <span class="k">if</span> <span class="n">hexbin_mincnt</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+                        <span class="n">hexbin_kwargs</span><span class="p">[</span><span class="s2">&quot;mincnt&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">hexbin_mincnt</span>
+                    <span class="k">if</span> <span class="n">hexbin_alpha</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+                        <span class="n">hexbin_kwargs</span><span class="p">[</span><span class="s2">&quot;alpha&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">hexbin_alpha</span>
+                    <span class="k">if</span> <span class="n">hexbin_linewidths</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+                        <span class="n">hexbin_kwargs</span><span class="p">[</span><span class="s2">&quot;linewidths&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">hexbin_linewidths</span>
                     <span class="n">ax0</span><span class="o">.</span><span class="n">hexbin</span><span class="p">(</span>
                         <span class="n">plot_scores</span><span class="p">[</span><span class="n">mask</span><span class="p">,</span> <span class="mi">0</span><span class="p">],</span>
                         <span class="n">plot_scores</span><span class="p">[</span><span class="n">mask</span><span class="p">,</span> <span class="mi">1</span><span class="p">],</span>
-                        <span class="n">gridsize</span><span class="o">=</span><span class="n">gridsize</span><span class="p">,</span>
-                        <span class="n">bins</span><span class="o">=</span><span class="s2">&quot;log&quot;</span><span class="p">,</span>
-                        <span class="n">mincnt</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span>
-                        <span class="n">cmap</span><span class="o">=</span><span class="n">cluster_cmaps</span><span class="p">[</span><span class="n">cmap_idx</span><span class="p">],</span>
+                        <span class="o">**</span><span class="n">hexbin_kwargs</span><span class="p">,</span>
                     <span class="p">)</span>
 
                 <span class="n">ax0</span><span class="o">.</span><span class="n">set_xlabel</span><span class="p">(</span><span class="n">pc_axis_labels</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
@@ -1573,7 +1746,7 @@
                         <span class="n">highlight_mask</span><span class="o">=</span><span class="n">highlight_mask</span><span class="p">,</span>
                     <span class="p">)</span>
 
-                <span class="kn">from</span> <span class="nn">matplotlib.patches</span> <span class="kn">import</span> <span class="n">Patch</span>
+                <span class="kn">from</span><span class="w"> </span><span class="nn">matplotlib.patches</span><span class="w"> </span><span class="kn">import</span> <span class="n">Patch</span>
 
                 <span class="n">handles</span> <span class="o">=</span> <span class="p">[</span>
                     <span class="n">Patch</span><span class="p">(</span>
@@ -1740,7 +1913,7 @@
 
 <div class="viewcode-block" id="MethylStateAssigner.plot_pca_clusters_with_region">
 <a class="viewcode-back" href="../../generated/methylseg.MethylStateAssigner.html#methylseg.MethylStateAssigner.plot_pca_clusters_with_region">[docs]</a>
-    <span class="k">def</span> <span class="nf">plot_pca_clusters_with_region</span><span class="p">(</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">plot_pca_clusters_with_region</span><span class="p">(</span>
         <span class="bp">self</span><span class="p">,</span>
         <span class="n">meth_data</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">,</span>
         <span class="n">emission_df</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">,</span>
@@ -1751,6 +1924,11 @@
         <span class="n">n_pca_plot</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">2</span><span class="p">,</span>
         <span class="n">top_n_loadings</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">5</span><span class="p">,</span>
         <span class="n">pca_hexbin</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+        <span class="n">hexbin_gridsize</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">60</span><span class="p">,</span>
+        <span class="n">hexbin_bins</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="nb">int</span> <span class="o">|</span> <span class="nb">list</span><span class="p">[</span><span class="nb">float</span><span class="p">]</span> <span class="o">|</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="s2">&quot;log&quot;</span><span class="p">,</span>
+        <span class="n">hexbin_mincnt</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="mi">1</span><span class="p">,</span>
+        <span class="n">hexbin_alpha</span><span class="p">:</span> <span class="nb">float</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">hexbin_linewidths</span><span class="p">:</span> <span class="nb">float</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
         <span class="n">interactive</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
         <span class="n">include_kmeans_metrics</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
         <span class="n">include_biplot</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
@@ -1758,6 +1936,7 @@
         <span class="n">sample_name</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
         <span class="n">chrom</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
         <span class="n">show_plot</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
+        <span class="n">state_colors</span><span class="p">:</span> <span class="nb">dict</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
     <span class="p">):</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Plot PCA clusters while highlighting CpGs overlapping a genomic region.</span>
@@ -1781,6 +1960,18 @@
 <span class="sd">            Number of PCA loading features to show in the side table.</span>
 <span class="sd">        pca_hexbin</span>
 <span class="sd">            If ``True``, render 2-D PCA as hexbins instead of points.</span>
+<span class="sd">        hexbin_gridsize</span>
+<span class="sd">            Hexbin grid resolution for 2-D PCA hexbin plots.</span>
+<span class="sd">        hexbin_bins</span>
+<span class="sd">            Hexbin binning strategy for 2-D PCA hexbin plots, for example</span>
+<span class="sd">            ``&quot;log&quot;``, an integer bin count, explicit bin edges, or ``None``.</span>
+<span class="sd">        hexbin_mincnt</span>
+<span class="sd">            Minimum points required to draw a hexbin in 2-D PCA hexbin plots.</span>
+<span class="sd">            Use ``None`` to let matplotlib draw all bins.</span>
+<span class="sd">        hexbin_alpha</span>
+<span class="sd">            Optional global transparency multiplier for 2-D PCA hexbin plots.</span>
+<span class="sd">        hexbin_linewidths</span>
+<span class="sd">            Optional hexagon border width for 2-D PCA hexbin plots.</span>
 <span class="sd">        interactive</span>
 <span class="sd">            If ``True``, use interactive rendering when supported.</span>
 <span class="sd">        include_kmeans_metrics</span>
@@ -1795,6 +1986,8 @@
 <span class="sd">            Optional chromosome label used in the plot title.</span>
 <span class="sd">        show_plot</span>
 <span class="sd">            If ``True``, display the figure immediately.</span>
+<span class="sd">        state_colors</span>
+<span class="sd">            Optional biological-state color overrides.</span>
 
 <span class="sd">        Returns</span>
 <span class="sd">        -------</span>
@@ -1859,6 +2052,11 @@
             <span class="n">n_pca_plot</span><span class="o">=</span><span class="n">n_pca_plot</span><span class="p">,</span>
             <span class="n">top_n_loadings</span><span class="o">=</span><span class="n">top_n_loadings</span><span class="p">,</span>
             <span class="n">pca_hexbin</span><span class="o">=</span><span class="n">pca_hexbin</span><span class="p">,</span>
+            <span class="n">hexbin_gridsize</span><span class="o">=</span><span class="n">hexbin_gridsize</span><span class="p">,</span>
+            <span class="n">hexbin_bins</span><span class="o">=</span><span class="n">hexbin_bins</span><span class="p">,</span>
+            <span class="n">hexbin_mincnt</span><span class="o">=</span><span class="n">hexbin_mincnt</span><span class="p">,</span>
+            <span class="n">hexbin_alpha</span><span class="o">=</span><span class="n">hexbin_alpha</span><span class="p">,</span>
+            <span class="n">hexbin_linewidths</span><span class="o">=</span><span class="n">hexbin_linewidths</span><span class="p">,</span>
             <span class="n">interactive</span><span class="o">=</span><span class="n">interactive</span><span class="p">,</span>
             <span class="n">include_kmeans_metrics</span><span class="o">=</span><span class="n">include_kmeans_metrics</span><span class="p">,</span>
             <span class="n">include_biplot</span><span class="o">=</span><span class="n">include_biplot</span><span class="p">,</span>
@@ -1867,10 +2065,11 @@
             <span class="n">chrom</span><span class="o">=</span><span class="n">chrom</span><span class="p">,</span>
             <span class="n">highlight_mask</span><span class="o">=</span><span class="n">highlight_mask</span><span class="p">,</span>
             <span class="n">show_plot</span><span class="o">=</span><span class="n">show_plot</span><span class="p">,</span>
+            <span class="n">state_colors</span><span class="o">=</span><span class="n">state_colors</span><span class="p">,</span>
         <span class="p">)</span></div>
 
 
-    <span class="k">def</span> <span class="nf">_format_train_chrom_label</span><span class="p">(</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">_format_train_chrom_label</span><span class="p">(</span>
         <span class="bp">self</span><span class="p">,</span>
     <span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span><span class="p">:</span>
         <span class="n">train_chroms</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="s2">&quot;train_chroms&quot;</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
@@ -1898,11 +2097,16 @@
     <span class="c1">#TODO: plotting region-specific PCA clusters is currently only not working and needs to be debugged</span>
 <div class="viewcode-block" id="MethylStateAssigner.plot_train_pca_clusters">
 <a class="viewcode-back" href="../../generated/methylseg.MethylStateAssigner.html#methylseg.MethylStateAssigner.plot_train_pca_clusters">[docs]</a>
-    <span class="k">def</span> <span class="nf">plot_train_pca_clusters</span><span class="p">(</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">plot_train_pca_clusters</span><span class="p">(</span>
         <span class="bp">self</span><span class="p">,</span>
         <span class="n">n_pca_plot</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">2</span><span class="p">,</span>
         <span class="n">top_n_loadings</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">5</span><span class="p">,</span>
         <span class="n">pca_hexbin</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+        <span class="n">hexbin_gridsize</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">60</span><span class="p">,</span>
+        <span class="n">hexbin_bins</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="nb">int</span> <span class="o">|</span> <span class="nb">list</span><span class="p">[</span><span class="nb">float</span><span class="p">]</span> <span class="o">|</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="s2">&quot;log&quot;</span><span class="p">,</span>
+        <span class="n">hexbin_mincnt</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="mi">1</span><span class="p">,</span>
+        <span class="n">hexbin_alpha</span><span class="p">:</span> <span class="nb">float</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">hexbin_linewidths</span><span class="p">:</span> <span class="nb">float</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
         <span class="n">interactive</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
         <span class="n">include_kmeans_metrics</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
         <span class="n">include_biplot</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
@@ -1913,6 +2117,44 @@
     <span class="p">):</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Convenience wrapper to plot the PCA embedding saved from k-means training.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        n_pca_plot</span>
+<span class="sd">            Number of PCA dimensions to render, usually ``2`` or ``3``.</span>
+<span class="sd">        top_n_loadings</span>
+<span class="sd">            Number of loading features to show in the summary table.</span>
+<span class="sd">        pca_hexbin</span>
+<span class="sd">            If ``True``, render 2-D PCA with hexbins instead of points.</span>
+<span class="sd">        hexbin_gridsize</span>
+<span class="sd">            Hexbin grid resolution for 2-D PCA hexbin plots.</span>
+<span class="sd">        hexbin_bins</span>
+<span class="sd">            Hexbin binning strategy for 2-D PCA hexbin plots.</span>
+<span class="sd">        hexbin_mincnt</span>
+<span class="sd">            Minimum points required to draw a hexbin in 2-D PCA hexbin plots.</span>
+<span class="sd">        hexbin_alpha</span>
+<span class="sd">            Optional transparency multiplier for 2-D PCA hexbin plots.</span>
+<span class="sd">        hexbin_linewidths</span>
+<span class="sd">            Optional border width for 2-D PCA hexbin plots.</span>
+<span class="sd">        interactive</span>
+<span class="sd">            If ``True``, use interactive rendering when supported.</span>
+<span class="sd">        include_kmeans_metrics</span>
+<span class="sd">            Include clustering-quality metrics in the plotted annotation.</span>
+<span class="sd">        include_biplot</span>
+<span class="sd">            Overlay top PCA loading vectors on 2-D PCA plots.</span>
+<span class="sd">        region_start</span>
+<span class="sd">            Optional genomic start coordinate for region highlighting.</span>
+<span class="sd">        region_end</span>
+<span class="sd">            Optional genomic end coordinate for region highlighting.</span>
+<span class="sd">        region_chrom</span>
+<span class="sd">            Optional chromosome for region highlighting.</span>
+<span class="sd">        show_plot</span>
+<span class="sd">            If ``True``, display the figure immediately.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        object</span>
+<span class="sd">            Matplotlib or Plotly figure object from the PCA plotting backend.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="n">region_requested</span> <span class="o">=</span> <span class="nb">any</span><span class="p">(</span>
             <span class="n">value</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="k">for</span> <span class="n">value</span> <span class="ow">in</span> <span class="p">(</span><span class="n">region_start</span><span class="p">,</span> <span class="n">region_end</span><span class="p">,</span> <span class="n">region_chrom</span><span class="p">)</span>
@@ -1948,6 +2190,11 @@
                 <span class="n">n_pca_plot</span><span class="o">=</span><span class="n">n_pca_plot</span><span class="p">,</span>
                 <span class="n">top_n_loadings</span><span class="o">=</span><span class="n">top_n_loadings</span><span class="p">,</span>
                 <span class="n">pca_hexbin</span><span class="o">=</span><span class="n">pca_hexbin</span><span class="p">,</span>
+                <span class="n">hexbin_gridsize</span><span class="o">=</span><span class="n">hexbin_gridsize</span><span class="p">,</span>
+                <span class="n">hexbin_bins</span><span class="o">=</span><span class="n">hexbin_bins</span><span class="p">,</span>
+                <span class="n">hexbin_mincnt</span><span class="o">=</span><span class="n">hexbin_mincnt</span><span class="p">,</span>
+                <span class="n">hexbin_alpha</span><span class="o">=</span><span class="n">hexbin_alpha</span><span class="p">,</span>
+                <span class="n">hexbin_linewidths</span><span class="o">=</span><span class="n">hexbin_linewidths</span><span class="p">,</span>
                 <span class="n">interactive</span><span class="o">=</span><span class="n">interactive</span><span class="p">,</span>
                 <span class="n">include_kmeans_metrics</span><span class="o">=</span><span class="n">include_kmeans_metrics</span><span class="p">,</span>
                 <span class="n">include_biplot</span><span class="o">=</span><span class="n">include_biplot</span><span class="p">,</span>
@@ -1962,6 +2209,11 @@
             <span class="n">n_pca_plot</span><span class="o">=</span><span class="n">n_pca_plot</span><span class="p">,</span>
             <span class="n">top_n_loadings</span><span class="o">=</span><span class="n">top_n_loadings</span><span class="p">,</span>
             <span class="n">pca_hexbin</span><span class="o">=</span><span class="n">pca_hexbin</span><span class="p">,</span>
+            <span class="n">hexbin_gridsize</span><span class="o">=</span><span class="n">hexbin_gridsize</span><span class="p">,</span>
+            <span class="n">hexbin_bins</span><span class="o">=</span><span class="n">hexbin_bins</span><span class="p">,</span>
+            <span class="n">hexbin_mincnt</span><span class="o">=</span><span class="n">hexbin_mincnt</span><span class="p">,</span>
+            <span class="n">hexbin_alpha</span><span class="o">=</span><span class="n">hexbin_alpha</span><span class="p">,</span>
+            <span class="n">hexbin_linewidths</span><span class="o">=</span><span class="n">hexbin_linewidths</span><span class="p">,</span>
             <span class="n">interactive</span><span class="o">=</span><span class="n">interactive</span><span class="p">,</span>
             <span class="n">include_kmeans_metrics</span><span class="o">=</span><span class="n">include_kmeans_metrics</span><span class="p">,</span>
             <span class="n">include_biplot</span><span class="o">=</span><span class="n">include_biplot</span><span class="p">,</span>
@@ -1971,7 +2223,7 @@
         <span class="p">)</span></div>
 
 
-    <span class="k">def</span> <span class="nf">_subset_emission_features</span><span class="p">(</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">_subset_emission_features</span><span class="p">(</span>
         <span class="bp">self</span><span class="p">,</span>
         <span class="n">X</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span>
         <span class="n">feature_names</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="nb">str</span><span class="p">],</span>
@@ -1996,7 +2248,7 @@
         <span class="n">col_indices</span> <span class="o">=</span> <span class="p">[</span><span class="n">feature_names</span><span class="o">.</span><span class="n">index</span><span class="p">(</span><span class="n">c</span><span class="p">)</span> <span class="k">for</span> <span class="n">c</span> <span class="ow">in</span> <span class="n">keep_cols</span><span class="p">]</span>
         <span class="k">return</span> <span class="n">X</span><span class="p">[:,</span> <span class="n">col_indices</span><span class="p">],</span> <span class="n">keep_cols</span>
 
-    <span class="k">def</span> <span class="nf">_prepare_filtered_sample_for_clustering</span><span class="p">(</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">_prepare_filtered_sample_for_clustering</span><span class="p">(</span>
         <span class="bp">self</span><span class="p">,</span>
         <span class="n">meth_data</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">,</span>
         <span class="n">windows_to_use</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">List</span><span class="p">[</span><span class="nb">str</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
@@ -2030,21 +2282,30 @@
 
 <div class="viewcode-block" id="MethylStateAssigner.prepare_sample_for_clustering">
 <a class="viewcode-back" href="../../generated/methylseg.MethylStateAssigner.html#methylseg.MethylStateAssigner.prepare_sample_for_clustering">[docs]</a>
-    <span class="k">def</span> <span class="nf">prepare_sample_for_clustering</span><span class="p">(</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">prepare_sample_for_clustering</span><span class="p">(</span>
         <span class="bp">self</span><span class="p">,</span>
         <span class="n">sample_info</span><span class="p">:</span> <span class="n">SampleInfo</span><span class="p">,</span>
         <span class="n">chrom</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
         <span class="n">windows_to_use</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">List</span><span class="p">[</span><span class="nb">str</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
     <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Tuple</span><span class="p">[</span><span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">,</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">]:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">        Convenience wrapper to:</span>
-<span class="sd">        1. Filter methylation DataFrame (optionally by chromosome).</span>
-<span class="sd">        2. Build emission matrix using NumPy sliding windows.</span>
-<span class="sd">        3. Optionally subset windows.</span>
+<span class="sd">        Prepare probe-level and emission-feature tables for clustering.</span>
 
-<span class="sd">        Returns:</span>
-<span class="sd">            meth_data (filtered DataFrame),</span>
-<span class="sd">            emission_df (pandas DataFrame)</span>
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        sample_info</span>
+<span class="sd">            Prepared sample whose methylation rows should be summarized.</span>
+<span class="sd">        chrom</span>
+<span class="sd">            Optional chromosome restriction for per-chromosome preparation.</span>
+<span class="sd">        windows_to_use</span>
+<span class="sd">            Optional subset of configured window labels to retain in the</span>
+<span class="sd">            emission matrix.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        tuple</span>
+<span class="sd">            ``(meth_data, emission_df)`` aligned for downstream clustering or</span>
+<span class="sd">            plotting.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
 
         <span class="n">meth_data</span> <span class="o">=</span> <span class="n">sample_info</span><span class="o">.</span><span class="n">meth_data</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
@@ -2086,7 +2347,7 @@
         <span class="k">return</span> <span class="n">combined_meth</span><span class="p">,</span> <span class="n">combined_emission_df</span></div>
 
 
-    <span class="k">def</span> <span class="nf">_resolve_train_chroms</span><span class="p">(</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">_resolve_train_chroms</span><span class="p">(</span>
         <span class="bp">self</span><span class="p">,</span>
         <span class="n">sample_info</span><span class="p">:</span> <span class="n">SampleInfo</span><span class="p">,</span>
         <span class="n">train_chroms</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">List</span><span class="p">[</span><span class="nb">str</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
@@ -2121,7 +2382,7 @@
 
         <span class="k">return</span> <span class="n">resolved</span><span class="p">,</span> <span class="n">missing</span>
 
-    <span class="k">def</span> <span class="nf">_prepare_training_data_for_kmeans</span><span class="p">(</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">_prepare_training_data_for_kmeans</span><span class="p">(</span>
         <span class="bp">self</span><span class="p">,</span>
         <span class="n">sample_info</span><span class="p">:</span> <span class="n">SampleInfo</span><span class="p">,</span>
         <span class="n">train_chroms</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">List</span><span class="p">[</span><span class="nb">str</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
@@ -2201,7 +2462,7 @@
 
 <div class="viewcode-block" id="MethylStateAssigner.train_kmeans_for_sample">
 <a class="viewcode-back" href="../../generated/methylseg.MethylStateAssigner.html#methylseg.MethylStateAssigner.train_kmeans_for_sample">[docs]</a>
-    <span class="k">def</span> <span class="nf">train_kmeans_for_sample</span><span class="p">(</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">train_kmeans_for_sample</span><span class="p">(</span>
         <span class="bp">self</span><span class="p">,</span>
         <span class="n">sample_info</span><span class="p">:</span> <span class="n">SampleInfo</span><span class="p">,</span>
         <span class="n">train_chroms</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">List</span><span class="p">[</span><span class="nb">str</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
@@ -2211,13 +2472,30 @@
         <span class="n">sampling_random_state</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
     <span class="p">):</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">        High-level: given a sample ID and training chromosomes,</span>
-<span class="sd">        train a KMeans model and return:</span>
-<span class="sd">        - model (reusable)</span>
-<span class="sd">        - meth_data</span>
-<span class="sd">        - emission_df</span>
-<span class="sd">        - pca_scores (or None when clustering in raw feature space)</span>
-<span class="sd">        - labels</span>
+<span class="sd">        Train a KMeans model on one prepared sample.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        sample_info</span>
+<span class="sd">            Prepared sample used to build the training emission matrix.</span>
+<span class="sd">        train_chroms</span>
+<span class="sd">            Optional chromosome list to use for training. When omitted, uses</span>
+<span class="sd">            the canonical autosomes present in the sample.</span>
+<span class="sd">        windows_to_use</span>
+<span class="sd">            Optional subset of configured window labels to retain in the</span>
+<span class="sd">            emission matrix.</span>
+<span class="sd">        feature_cols</span>
+<span class="sd">            Optional explicit feature-column list passed to clustering.</span>
+<span class="sd">        max_cpg_per_chrom</span>
+<span class="sd">            Optional maximum CpGs to sample per chromosome before fitting.</span>
+<span class="sd">        sampling_random_state</span>
+<span class="sd">            Optional random seed controlling per-chromosome subsampling.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        tuple</span>
+<span class="sd">            ``(model, meth_data, emission_df, pca_scores, labels)`` for the</span>
+<span class="sd">            fitted training sample.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">train_sample</span> <span class="o">=</span> <span class="n">sample_info</span><span class="o">.</span><span class="n">sample_id</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">train_sample_info</span> <span class="o">=</span> <span class="n">sample_info</span>
@@ -2252,7 +2530,7 @@
 
 <div class="viewcode-block" id="MethylStateAssigner.apply_kmeans_to_sample">
 <a class="viewcode-back" href="../../generated/methylseg.MethylStateAssigner.html#methylseg.MethylStateAssigner.apply_kmeans_to_sample">[docs]</a>
-    <span class="k">def</span> <span class="nf">apply_kmeans_to_sample</span><span class="p">(</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">apply_kmeans_to_sample</span><span class="p">(</span>
         <span class="bp">self</span><span class="p">,</span>
         <span class="n">sample_info</span><span class="p">:</span> <span class="n">SampleInfo</span><span class="p">,</span>
         <span class="n">chrom</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
@@ -2260,15 +2538,25 @@
         <span class="n">sample_meth_data</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
     <span class="p">):</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">        High-level: apply an already-trained model to a new sample (same features).</span>
+<span class="sd">        Apply an already-trained KMeans model to a prepared sample.</span>
 
-<span class="sd">        Returns:</span>
-<span class="sd">        - meth_data</span>
-<span class="sd">        - emission_df</span>
-<span class="sd">        - pca_scores</span>
-<span class="sd">        - raw_distances</span>
-<span class="sd">        - raw_labels</span>
-<span class="sd">        - relabeled_labels</span>
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        sample_info</span>
+<span class="sd">            Prepared sample to score with the trained model.</span>
+<span class="sd">        chrom</span>
+<span class="sd">            Optional chromosome restriction for per-chromosome scoring.</span>
+<span class="sd">        windows_to_use</span>
+<span class="sd">            Optional subset of configured window labels to retain in the</span>
+<span class="sd">            emission matrix.</span>
+<span class="sd">        sample_meth_data</span>
+<span class="sd">            Reserved compatibility argument for prefiltered methylation rows.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        tuple</span>
+<span class="sd">            ``(meth_data, emission_df, pca_scores, raw_distances, raw_labels,</span>
+<span class="sd">            relabeled_labels)`` for the supplied sample.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">if</span> <span class="ow">not</span> <span class="nb">hasattr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="s2">&quot;model&quot;</span><span class="p">):</span>
             <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;No trained model found. Please train a model first.&quot;</span><span class="p">)</span>
@@ -2300,7 +2588,7 @@
 
 <div class="viewcode-block" id="MethylStateAssigner.get_pca_loadings">
 <a class="viewcode-back" href="../../generated/methylseg.MethylStateAssigner.html#methylseg.MethylStateAssigner.get_pca_loadings">[docs]</a>
-    <span class="k">def</span> <span class="nf">get_pca_loadings</span><span class="p">(</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">get_pca_loadings</span><span class="p">(</span>
         <span class="bp">self</span><span class="p">,</span>
     <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
@@ -2318,6 +2606,87 @@
             <span class="n">index</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">feature_cols</span><span class="p">,</span>
         <span class="p">)</span>
         <span class="k">return</span> <span class="n">loadings</span></div>
+
+
+<div class="viewcode-block" id="MethylStateAssigner.plot_feature_distributions_by_kmeans_state">
+<a class="viewcode-back" href="../../generated/methylseg.MethylStateAssigner.html#methylseg.MethylStateAssigner.plot_feature_distributions_by_kmeans_state">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">plot_feature_distributions_by_kmeans_state</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">show_plots</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
+        <span class="n">state_colors</span><span class="p">:</span> <span class="nb">dict</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">state_cutoffs</span><span class="p">:</span> <span class="nb">dict</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Plot training-emission histograms stratified by KMeans state.</span>
+
+<span class="sd">        ``state_cutoffs`` optionally controls the biological-state display</span>
+<span class="sd">        labels; it does not change the KMeans assignments.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">hasattr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="s2">&quot;model&quot;</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;No trained model found. Please train a model first.&quot;</span><span class="p">)</span>
+
+        <span class="n">train_joint</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">concat</span><span class="p">(</span>
+            <span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">train_meth</span><span class="o">.</span><span class="n">copy</span><span class="p">(),</span> <span class="bp">self</span><span class="o">.</span><span class="n">train_emission_df</span><span class="o">.</span><span class="n">copy</span><span class="p">()],</span> <span class="n">axis</span><span class="o">=</span><span class="mi">1</span>
+        <span class="p">)</span>
+        <span class="n">train_joint</span> <span class="o">=</span> <span class="n">train_joint</span><span class="o">.</span><span class="n">loc</span><span class="p">[:,</span> <span class="o">~</span><span class="n">train_joint</span><span class="o">.</span><span class="n">columns</span><span class="o">.</span><span class="n">duplicated</span><span class="p">()]</span>
+        <span class="n">_</span><span class="p">,</span> <span class="n">_</span><span class="p">,</span> <span class="n">raw_labels</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">apply_kmeans_to_emissions</span><span class="p">(</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">train_emission_df</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+        <span class="p">)</span>
+        <span class="n">train_joint</span><span class="p">[</span><span class="s2">&quot;kmeans_state_display&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">relabel_by_mean_emission</span><span class="p">(</span>
+            <span class="n">raw_labels</span><span class="o">=</span><span class="n">raw_labels</span><span class="p">,</span>
+            <span class="n">emission_df</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">train_emission_df</span><span class="o">.</span><span class="n">copy</span><span class="p">(),</span>
+            <span class="n">state_cutoffs</span><span class="o">=</span><span class="n">state_cutoffs</span><span class="p">,</span>
+            <span class="n">int_low_cutoff</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">int_low_cutoff</span><span class="p">,</span>
+            <span class="n">int_high_cutoff</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">int_high_cutoff</span><span class="p">,</span>
+            <span class="n">window_specs</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">window_specs</span><span class="p">,</span>
+        <span class="p">)</span>
+        <span class="n">train_joint</span><span class="p">[</span><span class="s2">&quot;kmeans_state_display&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">train_joint</span><span class="p">[</span>
+            <span class="s2">&quot;kmeans_state_display&quot;</span>
+        <span class="p">]</span><span class="o">.</span><span class="n">apply</span><span class="p">(</span><span class="n">normalize_state_label</span><span class="p">)</span>
+
+        <span class="n">train_loadings</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_pca_loadings</span><span class="p">()</span>
+        <span class="n">ranked_features</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span>
+            <span class="n">train_loadings</span><span class="p">[</span><span class="s2">&quot;PC2&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">abs</span><span class="p">()</span><span class="o">.</span><span class="n">sort_values</span><span class="p">(</span><span class="n">ascending</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span><span class="o">.</span><span class="n">index</span>
+        <span class="p">)</span>
+        <span class="k">if</span> <span class="s2">&quot;beta&quot;</span> <span class="ow">in</span> <span class="n">train_loadings</span><span class="o">.</span><span class="n">index</span><span class="p">:</span>
+            <span class="n">ranked_features</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;beta&quot;</span><span class="p">]</span> <span class="o">+</span> <span class="p">[</span>
+                <span class="n">feature</span> <span class="k">for</span> <span class="n">feature</span> <span class="ow">in</span> <span class="n">ranked_features</span> <span class="k">if</span> <span class="n">feature</span> <span class="o">!=</span> <span class="s2">&quot;beta&quot;</span>
+            <span class="p">]</span>
+        <span class="n">_</span><span class="p">,</span> <span class="n">_</span><span class="p">,</span> <span class="n">_</span><span class="p">,</span> <span class="n">state_colors_hex</span> <span class="o">=</span> <span class="n">get_biological_state_colors</span><span class="p">(</span>
+            <span class="n">state_colors</span><span class="o">=</span><span class="n">state_colors</span>
+        <span class="p">)</span>
+        <span class="n">ordered_states</span> <span class="o">=</span> <span class="p">[</span><span class="n">state</span><span class="o">.</span><span class="n">name</span> <span class="k">for</span> <span class="n">state</span> <span class="ow">in</span> <span class="n">MethylationStates</span><span class="p">]</span>
+        <span class="k">for</span> <span class="n">emission</span> <span class="ow">in</span> <span class="n">ranked_features</span><span class="p">:</span>
+            <span class="n">fig</span><span class="p">,</span> <span class="n">ax</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">subplots</span><span class="p">()</span>
+            <span class="n">plotted</span> <span class="o">=</span> <span class="kc">False</span>
+            <span class="k">for</span> <span class="n">state_name</span> <span class="ow">in</span> <span class="n">ordered_states</span><span class="p">:</span>
+                <span class="n">state_df</span> <span class="o">=</span> <span class="n">train_joint</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span>
+                    <span class="n">train_joint</span><span class="p">[</span><span class="s2">&quot;kmeans_state_display&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">eq</span><span class="p">(</span><span class="n">state_name</span><span class="p">)</span>
+                <span class="p">]</span>
+                <span class="k">if</span> <span class="n">state_df</span><span class="o">.</span><span class="n">empty</span><span class="p">:</span>
+                    <span class="k">continue</span>
+                <span class="n">state_df</span><span class="p">[</span><span class="n">emission</span><span class="p">]</span><span class="o">.</span><span class="n">hist</span><span class="p">(</span>
+                    <span class="n">bins</span><span class="o">=</span><span class="mi">50</span><span class="p">,</span>
+                    <span class="n">alpha</span><span class="o">=</span><span class="mf">0.5</span><span class="p">,</span>
+                    <span class="n">label</span><span class="o">=</span><span class="n">state_name</span><span class="p">,</span>
+                    <span class="n">color</span><span class="o">=</span><span class="n">state_colors_hex</span><span class="p">[</span><span class="n">MethylationStates</span><span class="p">[</span><span class="n">state_name</span><span class="p">]</span><span class="o">.</span><span class="n">value</span><span class="p">],</span>
+                    <span class="n">ax</span><span class="o">=</span><span class="n">ax</span><span class="p">,</span>
+                <span class="p">)</span>
+                <span class="n">plotted</span> <span class="o">=</span> <span class="kc">True</span>
+
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">plotted</span><span class="p">:</span>
+                <span class="n">plt</span><span class="o">.</span><span class="n">close</span><span class="p">(</span><span class="n">fig</span><span class="p">)</span>
+                <span class="k">continue</span>
+
+            <span class="n">ax</span><span class="o">.</span><span class="n">set_xlabel</span><span class="p">(</span><span class="n">emission</span><span class="p">)</span>
+            <span class="n">ax</span><span class="o">.</span><span class="n">set_ylabel</span><span class="p">(</span><span class="s2">&quot;Count&quot;</span><span class="p">)</span>
+            <span class="n">ax</span><span class="o">.</span><span class="n">set_title</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Distribution of </span><span class="si">{</span><span class="n">emission</span><span class="si">}</span><span class="s2"> by KMeans State&quot;</span><span class="p">)</span>
+            <span class="n">ax</span><span class="o">.</span><span class="n">legend</span><span class="p">()</span>
+            <span class="n">fig</span><span class="o">.</span><span class="n">tight_layout</span><span class="p">()</span>
+            <span class="k">if</span> <span class="n">show_plots</span><span class="p">:</span>
+                <span class="n">plt</span><span class="o">.</span><span class="n">show</span><span class="p">()</span>
+            <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">out_dir</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="n">fig</span><span class="o">.</span><span class="n">savefig</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">out_dir</span><span class="si">}</span><span class="s2">/feature_distribution_</span><span class="si">{</span><span class="n">emission</span><span class="si">}</span><span class="s2">.png&quot;</span><span class="p">)</span>
+            <span class="n">plt</span><span class="o">.</span><span class="n">close</span><span class="p">(</span><span class="n">fig</span><span class="p">)</span></div>
 </div>
 
 </pre></div>

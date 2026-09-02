@@ -38,9 +38,26 @@ from .utils import (
 
 
 class MethylStateAnalyzer:
-    """Inspect training outputs and optimize rule-based state cutoffs."""
+    """Analyze learned state separation and define rule-based CpG states.
+
+    Uses KMeans assignments as a reference for inspecting state separation and
+    evaluating rule concordance. It also defines, tunes, and applies
+    interpretable cutoff rules that characterize each CpG as a biological
+    methylation state.
+    """
 
     def __init__(self, assigner: MethylStateAssigner, out_dir="."):
+        """
+        Initialize rule-based state analysis around a fitted state assigner.
+
+        Parameters
+        ----------
+        assigner
+            State assigner that provides training emissions, KMeans labels, and
+            feature configuration.
+        out_dir
+            Directory for analysis artifacts and figures.
+        """
         self.assigner = assigner
         self.out_dir = out_dir
         self.train_joint = None
@@ -85,68 +102,6 @@ class MethylStateAnalyzer:
         )
         train_joint = train_joint.loc[:, ~train_joint.columns.duplicated()]
         self.train_joint = self._populate_kmeans_state_display(train_joint)
-
-    def plot_feature_distributions_by_kmeans_state(
-        self,
-        show_plots=True,
-        state_colors: dict | None = None,
-    ):
-        """
-        Plot per-feature histograms stratified by learned KMeans state.
-
-        Parameters
-        ----------
-        show_plots
-            If ``True``, display each figure immediately. Otherwise, save plots
-            to ``out_dir`` when configured.
-        state_colors
-            Optional biological-state color overrides for the histogram fills.
-        """
-        self._build_train_joint()
-        train_loadings = self.assigner.get_pca_loadings()
-        ranked_features = list(
-            train_loadings["PC2"].abs().sort_values(ascending=False).index
-        )
-        if "beta" in train_loadings.index:
-            ranked_features = ["beta"] + [
-                feature for feature in ranked_features if feature != "beta"
-            ]
-        _, _, _, state_colors_hex = get_biological_state_colors(
-            state_colors=state_colors
-        )
-        ordered_states = [state.name for state in MethylationStates]
-        for emission in ranked_features:
-            fig, ax = plt.subplots()
-            plotted = False
-            for state_name in ordered_states:
-                df = self.train_joint.loc[
-                    self.train_joint["kmeans_state_display"].eq(state_name)
-                ]
-                if df.empty:
-                    continue
-                df[emission].hist(
-                    bins=50,
-                    alpha=0.5,
-                    label=state_name,
-                    color=state_colors_hex[MethylationStates[state_name].value],
-                    ax=ax,
-                )
-                plotted = True
-
-            if not plotted:
-                plt.close(fig)
-                continue
-
-            ax.set_xlabel(emission)
-            ax.set_ylabel("Count")
-            ax.set_title(f"Distribution of {emission} by KMeans State")
-            ax.legend()
-            fig.tight_layout()
-            if show_plots:
-                plt.show()
-            elif self.out_dir is not None:
-                fig.savefig(f"{self.out_dir}/feature_distribution_{emission}.png")
-            plt.close(fig)
 
     def define_states_by_rules_param(
         self,
@@ -684,71 +639,7 @@ class MethylStateAnalyzer:
 
         return cm_df
 
-    def plot_interactive_beta_by_label(
-        self,
-        label_type: str = "kmeans",
-        use_train_data: bool = True,
-        chrom: str | None = None,
-        sample_info: SampleInfo | None = None,
-        sample_info_removed: pd.DataFrame | None = None,
-        x_col: str = "CpG_beg",
-        y_col: str = "beta",
-        label_title: str | None = None,
-        show_plot: bool = True,
-        max_points: int = 120_000,
-        color_pmd_only: bool = False,
-        color_regions_df: pd.DataFrame | None = None,
-    ):
-        """
-        Backward-compatible wrapper for interactive analyzer-owned label plots.
-
-        Parameters
-        ----------
-        label_type
-            Label source to visualize, typically ``"kmeans"`` or
-            ``"rule_based"``.
-        use_train_data
-            If ``True``, plot cached training labels instead of a new sample.
-        chrom
-            Optional chromosome restriction when plotting a new sample.
-        sample_info
-            Sample to analyze when ``use_train_data`` is ``False``.
-        sample_info_removed
-            Optional table of filtered CpGs to overlay as removed points.
-        x_col, y_col
-            Probe-level columns used for the scatter plot axes.
-        label_title
-            Legend title override.
-        show_plot
-            If ``True``, display the plot immediately.
-        max_points
-            Maximum number of probe rows to render in the interactive scatter.
-        color_pmd_only, color_regions_df
-            Legacy overlay controls translated into ``overlay_regions_df``.
-
-        Returns
-        -------
-        plotly.graph_objects.Figure
-            Interactive scatter plot returned by ``plot_labels``.
-        """
-        overlay_regions_df, overlay_style = resolve_overlay_plot_args(
-            color_pmd_only=color_pmd_only,
-            color_regions_df=color_regions_df,
-        )
-        return self.plot_labels(
-            sample_info=None if use_train_data else sample_info,
-            chrom=chrom,
-            sample_info_removed=sample_info_removed,
-            label_source=label_type,
-            overlay_regions_df=overlay_regions_df,
-            x_col=x_col,
-            y_col=y_col,
-            label_title=label_title,
-            show_plot=show_plot,
-            max_points=max_points,
-            overlay_style=overlay_style,
-        )
-
+    #TODO: remove this so that analyzer is only used for the rule-based approach
     def plot_labels(
         self,
         sample_info: SampleInfo | None = None,

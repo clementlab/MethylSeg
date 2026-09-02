@@ -29,6 +29,15 @@ class MethylSegConfig:
     """
 
     def __init__(self, config_dict: dict):
+        """
+        Initialize a serializable MethylSeg configuration wrapper.
+
+        Parameters
+        ----------
+        config_dict
+            Configuration mapping to validate, serialize, or use when restoring
+            a pathway.
+        """
         self.config = config_dict
         self.source_path: Path | None = None
 

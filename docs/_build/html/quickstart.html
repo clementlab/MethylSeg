@@ -6,21 +6,21 @@
   <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
 
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Quickstart &mdash; methylseg 0.1.0 documentation</title>
-      <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=80d5e7a1" />
+  <title>Quickstart &mdash; methylseg 0.1.4 documentation</title>
+      <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=b86133f3" />
       <link rel="stylesheet" type="text/css" href="_static/css/theme.css?v=9edc463e" />
 
   
       <script src="_static/jquery.js?v=5d32c60e"></script>
       <script src="_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
-      <script src="_static/documentation_options.js?v=01f34227"></script>
-      <script src="_static/doctools.js?v=9bcbadda"></script>
-      <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
+      <script src="_static/documentation_options.js?v=fd825880"></script>
+      <script src="_static/doctools.js?v=fd6eb6e6"></script>
+      <script src="_static/sphinx_highlight.js?v=6ffebe34"></script>
       <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
     <script src="_static/js/theme.js"></script>
     <link rel="index" title="Index" href="genindex.html" />
     <link rel="search" title="Search" href="search.html" />
-    <link rel="next" title="API Reference" href="api.html" />
+    <link rel="next" title="Segmentation Methods" href="segmentation_methods.html" />
     <link rel="prev" title="Installation" href="installation.html" /> 
 </head>
 
@@ -45,16 +45,18 @@
         </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
               <p class="caption" role="heading"><span class="caption-text">Contents</span></p>
 <ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="api.html">API Reference</a></li>
+<li class="toctree-l1"><a class="reference internal" href="full_pipeline.html">Full Pipeline And Outputs</a></li>
+<li class="toctree-l1"><a class="reference internal" href="input_format.html">Input Format</a></li>
 <li class="toctree-l1"><a class="reference internal" href="installation.html">Installation</a></li>
 <li class="toctree-l1 current"><a class="current reference internal" href="#">Quickstart</a><ul>
-<li class="toctree-l2"><a class="reference internal" href="#core-workflow">Core workflow</a></li>
-<li class="toctree-l2"><a class="reference internal" href="#example">Example</a></li>
-<li class="toctree-l2"><a class="reference internal" href="#important-entrypoints">Important entrypoints</a></li>
-<li class="toctree-l2"><a class="reference internal" href="#notebook-tutorial">Notebook tutorial</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#train-a-wgbs-model">Train A WGBS Model</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#train-a-tcga-hm450k-model">Train A TCGA HM450K Model</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#saved-models">Saved Models</a></li>
 </ul>
 </li>
-<li class="toctree-l1"><a class="reference internal" href="api.html">API Reference</a></li>
-<li class="toctree-l1"><a class="reference internal" href="tutorials.html">Tutorial Notebook</a></li>
+<li class="toctree-l1"><a class="reference internal" href="segmentation_methods.html">Segmentation Methods</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tutorials.html">Example Notebooks</a></li>
 </ul>
 
         </div>
@@ -83,75 +85,72 @@
              
   <section id="quickstart">
 <h1>Quickstart<a class="headerlink" href="#quickstart" title="Link to this heading"></a></h1>
-<section id="core-workflow">
-<h2>Core workflow<a class="headerlink" href="#core-workflow" title="Link to this heading"></a></h2>
-<p>The most common flow is:</p>
-<ol class="arabic simple">
-<li><p>Prepare an input methylation table with <code class="docutils literal notranslate"><span class="pre">MethylDataPrep</span></code>.</p></li>
-<li><p>Load or train a <code class="docutils literal notranslate"><span class="pre">MethylSegPathway</span></code>.</p></li>
-<li><p>Segment a sample into regions.</p></li>
-<li><p>Build cleaned whole-genome region artifacts with <code class="docutils literal notranslate"><span class="pre">get_clean_regions</span></code> when
-you want cleaned overlays or summary exports.</p></li>
-</ol>
-</section>
-<section id="example">
-<h2>Example<a class="headerlink" href="#example" title="Link to this heading"></a></h2>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">pathlib</span> <span class="kn">import</span> <span class="n">Path</span>
+<p>The standard MethylSeg workflow trains a model on a prepared sample, generates
+regions, cleans them, and optionally plots the cleaned calls. See
+<a class="reference internal" href="input_format.html"><span class="doc">Input Format</span></a> before adapting this example to your own files, and see
+<a class="reference internal" href="segmentation_methods.html"><span class="doc">Segmentation Methods</span></a> for guidance on choosing between KMeans-based and
+rule-based state assignment before HMM smoothing.</p>
+<section id="train-a-wgbs-model">
+<h2>Train A WGBS Model<a class="headerlink" href="#train-a-wgbs-model" title="Link to this heading"></a></h2>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">pathlib</span><span class="w"> </span><span class="kn">import</span> <span class="n">Path</span>
 
-<span class="kn">from</span> <span class="nn">methylseg</span> <span class="kn">import</span> <span class="n">MethylDataPrep</span><span class="p">,</span> <span class="n">MethylSegPathway</span><span class="p">,</span> <span class="n">MethylationStates</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">methylseg</span><span class="w"> </span><span class="kn">import</span> <span class="n">MethylSegPathway</span><span class="p">,</span> <span class="n">MethylationStates</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">methylseg.helper_classes</span><span class="w"> </span><span class="kn">import</span> <span class="n">DATA_DIR</span>
 
-<span class="n">reference_dir</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="s2">&quot;data/reference_files&quot;</span><span class="p">)</span>
-<span class="n">sample_name</span> <span class="o">=</span> <span class="s2">&quot;TCGA-BD-A3EP-01A&quot;</span>
-<span class="n">sample_file</span> <span class="o">=</span> <span class="n">reference_dir</span> <span class="o">/</span> <span class="s2">&quot;TCGA-BD-A3EP-01A_450k.tsv.gz&quot;</span>
-
-<span class="n">sample_info</span><span class="p">,</span> <span class="n">removed_df</span> <span class="o">=</span> <span class="n">MethylDataPrep</span><span class="p">(</span>
-    <span class="n">meth_file</span><span class="o">=</span><span class="n">sample_file</span><span class="p">,</span>
-    <span class="n">sample_id</span><span class="o">=</span><span class="n">sample_name</span><span class="p">,</span>
-    <span class="n">resolution</span><span class="o">=</span><span class="s2">&quot;450k&quot;</span><span class="p">,</span>
-<span class="p">)</span><span class="o">.</span><span class="n">prepare</span><span class="p">()</span>
-
-<span class="n">pathway</span> <span class="o">=</span> <span class="n">MethylSegPathway</span><span class="o">.</span><span class="n">get_pretrained_model</span><span class="p">(</span>
-    <span class="n">out_dir</span><span class="o">=</span><span class="s2">&quot;out&quot;</span><span class="p">,</span>
-    <span class="n">hmm_type</span><span class="o">=</span><span class="s2">&quot;ct&quot;</span><span class="p">,</span>
+<span class="n">reference_dir</span> <span class="o">=</span> <span class="n">DATA_DIR</span> <span class="o">/</span> <span class="s2">&quot;reference_files&quot;</span>
+<span class="n">sample_info</span><span class="p">,</span> <span class="n">removed_df</span> <span class="o">=</span> <span class="n">MethylSegPathway</span><span class="o">.</span><span class="n">prepare_sample_info</span><span class="p">(</span>
+    <span class="n">sample_name</span><span class="o">=</span><span class="s2">&quot;WGBS_colon-primary-tumor_1&quot;</span><span class="p">,</span>
+    <span class="n">sample_file</span><span class="o">=</span><span class="n">reference_dir</span> <span class="o">/</span> <span class="s2">&quot;WGBS_colon-primary-tumor_1_wgbs.tsv.gz&quot;</span><span class="p">,</span>
+    <span class="n">resolution</span><span class="o">=</span><span class="s2">&quot;wgbs&quot;</span><span class="p">,</span>
+    <span class="n">min_coverage</span><span class="o">=</span><span class="mi">10</span><span class="p">,</span>
 <span class="p">)</span>
-
-<span class="n">regions</span> <span class="o">=</span> <span class="n">pathway</span><span class="o">.</span><span class="n">generate_regions</span><span class="p">(</span>
-    <span class="n">sample_info</span><span class="o">=</span><span class="n">sample_info</span><span class="p">,</span>
-    <span class="n">chrom</span><span class="o">=</span><span class="s2">&quot;chr1&quot;</span><span class="p">,</span>
-    <span class="n">force_resegment</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+<span class="n">pathway</span> <span class="o">=</span> <span class="n">MethylSegPathway</span><span class="p">(</span>
+    <span class="n">train_sample_info</span><span class="o">=</span><span class="n">sample_info</span><span class="p">,</span>
+    <span class="n">out_dir</span><span class="o">=</span><span class="n">Path</span><span class="p">(</span><span class="s2">&quot;methylseg_output&quot;</span><span class="p">)</span> <span class="o">/</span> <span class="n">sample_info</span><span class="o">.</span><span class="n">sample_id</span><span class="p">,</span>
 <span class="p">)</span>
-<span class="n">_</span><span class="p">,</span> <span class="n">clean_dir</span> <span class="o">=</span> <span class="n">pathway</span><span class="o">.</span><span class="n">get_clean_regions</span><span class="p">(</span>
+<span class="n">pathway</span><span class="o">.</span><span class="n">fit_pathway</span><span class="p">()</span>
+<span class="n">regions</span> <span class="o">=</span> <span class="n">pathway</span><span class="o">.</span><span class="n">generate_regions</span><span class="p">(</span><span class="n">sample_info</span><span class="o">=</span><span class="n">sample_info</span><span class="p">,</span> <span class="n">chrom</span><span class="o">=</span><span class="s2">&quot;chr1&quot;</span><span class="p">)</span>
+<span class="n">pathway</span><span class="o">.</span><span class="n">get_clean_regions</span><span class="p">(</span>
     <span class="n">regions_df</span><span class="o">=</span><span class="n">regions</span><span class="p">,</span>
     <span class="n">sample_id</span><span class="o">=</span><span class="n">sample_info</span><span class="o">.</span><span class="n">sample_id</span><span class="p">,</span>
     <span class="n">chrom</span><span class="o">=</span><span class="s2">&quot;chr1&quot;</span><span class="p">,</span>
 <span class="p">)</span>
-
-<span class="n">fig</span> <span class="o">=</span> <span class="n">pathway</span><span class="o">.</span><span class="n">plot_labels</span><span class="p">(</span>
+<span class="n">pathway</span><span class="o">.</span><span class="n">plot_labels</span><span class="p">(</span>
     <span class="n">sample_info</span><span class="o">=</span><span class="n">sample_info</span><span class="p">,</span>
+    <span class="n">sample_info_removed</span><span class="o">=</span><span class="n">removed_df</span><span class="p">,</span>
     <span class="n">chrom</span><span class="o">=</span><span class="s2">&quot;chr1&quot;</span><span class="p">,</span>
     <span class="n">overlay_state</span><span class="o">=</span><span class="n">MethylationStates</span><span class="o">.</span><span class="n">PMD</span><span class="p">,</span>
     <span class="n">use_cleaned_regions</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
-    <span class="n">label_title</span><span class="o">=</span><span class="s2">&quot;Cleaned PMD overlay&quot;</span><span class="p">,</span>
 <span class="p">)</span>
 </pre></div>
 </div>
 </section>
-<section id="important-entrypoints">
-<h2>Important entrypoints<a class="headerlink" href="#important-entrypoints" title="Link to this heading"></a></h2>
-<ul class="simple">
-<li><p><code class="docutils literal notranslate"><span class="pre">MethylDataPrep</span></code> standardizes WGBS and 450k-style input tables.</p></li>
-<li><p><code class="docutils literal notranslate"><span class="pre">MethylSegPathway</span></code> is the top-level workflow object for training and
-segmentation.</p></li>
-<li><p><code class="docutils literal notranslate"><span class="pre">MethylStateAssigner</span></code> builds window-based emissions and KMeans state labels.</p></li>
-<li><p><code class="docutils literal notranslate"><span class="pre">MethylSegmentor</span></code> applies an HMM backend to convert state labels into
-genomic segments.</p></li>
-<li><p><code class="docutils literal notranslate"><span class="pre">MethylSegConfig</span></code> serializes a trained pathway to YAML plus sidecar tables.</p></li>
-</ul>
+<section id="train-a-tcga-hm450k-model">
+<h2>Train A TCGA HM450K Model<a class="headerlink" href="#train-a-tcga-hm450k-model" title="Link to this heading"></a></h2>
+<p>Use the same workflow with a beta-value table and <code class="docutils literal notranslate"><span class="pre">resolution=&quot;450k&quot;</span></code>:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">sample_info</span><span class="p">,</span> <span class="n">removed_df</span> <span class="o">=</span> <span class="n">MethylSegPathway</span><span class="o">.</span><span class="n">prepare_sample_info</span><span class="p">(</span>
+    <span class="n">sample_name</span><span class="o">=</span><span class="s2">&quot;TCGA-BD-A3EP-01A&quot;</span><span class="p">,</span>
+    <span class="n">sample_file</span><span class="o">=</span><span class="n">reference_dir</span> <span class="o">/</span> <span class="s2">&quot;TCGA-BD-A3EP-01A_450k.tsv.gz&quot;</span><span class="p">,</span>
+    <span class="n">resolution</span><span class="o">=</span><span class="s2">&quot;450k&quot;</span><span class="p">,</span>
+<span class="p">)</span>
+<span class="n">pathway</span> <span class="o">=</span> <span class="n">MethylSegPathway</span><span class="p">(</span>
+    <span class="n">train_sample_info</span><span class="o">=</span><span class="n">sample_info</span><span class="p">,</span>
+    <span class="n">out_dir</span><span class="o">=</span><span class="n">Path</span><span class="p">(</span><span class="s2">&quot;methylseg_output&quot;</span><span class="p">)</span> <span class="o">/</span> <span class="n">sample_info</span><span class="o">.</span><span class="n">sample_id</span><span class="p">,</span>
+<span class="p">)</span>
+<span class="n">summary_paths</span> <span class="o">=</span> <span class="n">pathway</span><span class="o">.</span><span class="n">run_pathway</span><span class="p">(</span>
+    <span class="n">sample_info</span><span class="o">=</span><span class="n">sample_info</span><span class="p">,</span>
+    <span class="n">chroms</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;chr1&quot;</span><span class="p">],</span>
+<span class="p">)</span>
+</pre></div>
+</div>
+<p>The defaults select a Sticky HMM for WGBS and a continuous-time HMM for 450K
+data. <code class="docutils literal notranslate"><span class="pre">summary_paths</span></code> lists the raw and cleaned summary BED files.</p>
 </section>
-<section id="notebook-tutorial">
-<h2>Notebook tutorial<a class="headerlink" href="#notebook-tutorial" title="Link to this heading"></a></h2>
-<p>The packaged example notebook is included under <a class="reference internal" href="tutorials.html"><span class="doc">Tutorial Notebook</span></a> and is rendered
-without execution during docs builds.</p>
+<section id="saved-models">
+<h2>Saved Models<a class="headerlink" href="#saved-models" title="Link to this heading"></a></h2>
+<p>After completing a training run, use a saved model for fast downstream
+experiments. The public advanced notebooks demonstrate this path, and
+<code class="docutils literal notranslate"><span class="pre">examples/use_preloaded_model.ipynb</span></code> is the focused saved-model tutorial.</p>
 </section>
 </section>
 
@@ -160,7 +159,7 @@ without execution during docs builds.</p>
           </div>
           <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
         <a href="installation.html" class="btn btn-neutral float-left" title="Installation" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
-        <a href="api.html" class="btn btn-neutral float-right" title="API Reference" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+        <a href="segmentation_methods.html" class="btn btn-neutral float-right" title="Segmentation Methods" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
     </div>
 
   <hr/>

@@ -2,14 +2,7 @@ MethylSeg Documentation
 =======================
 
 ``methylseg`` is the reusable methylation segmentation package in this repository.
-These docs cover package installation, the main workflow objects, and the example
-notebook that ships with the package.
+Start with the README or :doc:`quickstart` to train a model from WGBS or TCGA
+HM450K data. The API reference and example notebooks provide advanced workflows.
 
-.. toctree::
-   :maxdepth: 2
-   :caption: Contents
-
-   installation
-   quickstart
-   api
-   tutorials
+.. include:: _generated/contents.rst

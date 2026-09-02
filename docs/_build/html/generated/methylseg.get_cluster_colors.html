@@ -6,21 +6,21 @@
   <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
 
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>methylseg.get_cluster_colors &mdash; methylseg 0.1.0 documentation</title>
-      <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=80d5e7a1" />
+  <title>methylseg.get_cluster_colors &mdash; methylseg 0.1.4 documentation</title>
+      <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=b86133f3" />
       <link rel="stylesheet" type="text/css" href="../_static/css/theme.css?v=9edc463e" />
 
   
       <script src="../_static/jquery.js?v=5d32c60e"></script>
       <script src="../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
-      <script src="../_static/documentation_options.js?v=01f34227"></script>
-      <script src="../_static/doctools.js?v=9bcbadda"></script>
-      <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
+      <script src="../_static/documentation_options.js?v=fd825880"></script>
+      <script src="../_static/doctools.js?v=fd6eb6e6"></script>
+      <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
       <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
     <script src="../_static/js/theme.js"></script>
     <link rel="index" title="Index" href="../genindex.html" />
     <link rel="search" title="Search" href="../search.html" />
-    <link rel="next" title="Tutorial Notebook" href="../tutorials.html" />
+    <link rel="next" title="Full Pipeline And Outputs" href="../full_pipeline.html" />
     <link rel="prev" title="methylseg.get_biological_state_colors" href="methylseg.get_biological_state_colors.html" /> 
 </head>
 
@@ -45,8 +45,6 @@
         </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
               <p class="caption" role="heading"><span class="caption-text">Contents</span></p>
 <ul class="current">
-<li class="toctree-l1"><a class="reference internal" href="../installation.html">Installation</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../quickstart.html">Quickstart</a></li>
 <li class="toctree-l1 current"><a class="reference internal" href="../api.html">API Reference</a><ul class="current">
 <li class="toctree-l2"><a class="reference internal" href="../api.html#workflow-objects">Workflow objects</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../api.html#enums-and-labels">Enums and labels</a></li>
@@ -61,7 +59,12 @@
 </li>
 </ul>
 </li>
-<li class="toctree-l1"><a class="reference internal" href="../tutorials.html">Tutorial Notebook</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../full_pipeline.html">Full Pipeline And Outputs</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../input_format.html">Input Format</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../installation.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../quickstart.html">Quickstart</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../segmentation_methods.html">Segmentation Methods</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../tutorials.html">Example Notebooks</a></li>
 </ul>
 
         </div>
@@ -94,15 +97,20 @@
 <dl class="py function">
 <dt class="sig sig-object py" id="methylseg.get_cluster_colors">
 <span class="sig-prename descclassname"><span class="pre">methylseg.</span></span><span class="sig-name descname"><span class="pre">get_cluster_colors</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">n_states</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">cmap_name</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'viridis'</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/methylseg/utils.html#get_cluster_colors"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#methylseg.get_cluster_colors" title="Link to this definition"></a></dt>
-<dd><p>Return a discrete colormap, norm, and per-state hex colors
-such that state k always uses the k-th color.</p>
-<p>States are assumed to be integers 0..n_states-1.</p>
+<dd><p>Return a discrete colormap and color lookup for integer cluster labels.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
-<li><p><strong>n_states</strong> (<em>int</em>)</p></li>
-<li><p><strong>cmap_name</strong> (<em>str</em>)</p></li>
+<li><p><strong>n_states</strong> (<em>int</em>) – Number of integer cluster labels to color.</p></li>
+<li><p><strong>cmap_name</strong> (<em>str</em>) – Matplotlib colormap name used to draw the discrete palette.</p></li>
 </ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><code class="docutils literal notranslate"><span class="pre">(cmap,</span> <span class="pre">norm,</span> <span class="pre">state_colors_rgba,</span> <span class="pre">state_colors_hex)</span></code> indexed in
+cluster-label order.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>tuple</p>
 </dd>
 </dl>
 </dd></dl>
@@ -114,7 +122,7 @@ such that state k always uses the k-th color.</p>
           </div>
           <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
         <a href="methylseg.get_biological_state_colors.html" class="btn btn-neutral float-left" title="methylseg.get_biological_state_colors" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
-        <a href="../tutorials.html" class="btn btn-neutral float-right" title="Tutorial Notebook" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+        <a href="../full_pipeline.html" class="btn btn-neutral float-right" title="Full Pipeline And Outputs" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
     </div>
 
   <hr/>

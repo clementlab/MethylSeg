@@ -6,16 +6,16 @@
   <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
 
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>methylseg.MethylationStates &mdash; methylseg 0.1.0 documentation</title>
-      <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=80d5e7a1" />
+  <title>methylseg.MethylationStates &mdash; methylseg 0.1.4 documentation</title>
+      <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=b86133f3" />
       <link rel="stylesheet" type="text/css" href="../_static/css/theme.css?v=9edc463e" />
 
   
       <script src="../_static/jquery.js?v=5d32c60e"></script>
       <script src="../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
-      <script src="../_static/documentation_options.js?v=01f34227"></script>
-      <script src="../_static/doctools.js?v=9bcbadda"></script>
-      <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
+      <script src="../_static/documentation_options.js?v=fd825880"></script>
+      <script src="../_static/doctools.js?v=fd6eb6e6"></script>
+      <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
       <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
     <script src="../_static/js/theme.js"></script>
     <link rel="index" title="Index" href="../genindex.html" />
@@ -45,8 +45,6 @@
         </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
               <p class="caption" role="heading"><span class="caption-text">Contents</span></p>
 <ul class="current">
-<li class="toctree-l1"><a class="reference internal" href="../installation.html">Installation</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../quickstart.html">Quickstart</a></li>
 <li class="toctree-l1 current"><a class="reference internal" href="../api.html">API Reference</a><ul class="current">
 <li class="toctree-l2"><a class="reference internal" href="../api.html#workflow-objects">Workflow objects</a></li>
 <li class="toctree-l2 current"><a class="reference internal" href="../api.html#enums-and-labels">Enums and labels</a><ul class="current">
@@ -63,7 +61,12 @@
 <li class="toctree-l2"><a class="reference internal" href="../api.html#utility-helpers">Utility helpers</a></li>
 </ul>
 </li>
-<li class="toctree-l1"><a class="reference internal" href="../tutorials.html">Tutorial Notebook</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../full_pipeline.html">Full Pipeline And Outputs</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../input_format.html">Input Format</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../installation.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../quickstart.html">Quickstart</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../segmentation_methods.html">Segmentation Methods</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../tutorials.html">Example Notebooks</a></li>
 </ul>
 
         </div>
@@ -95,12 +98,12 @@
 <h1>methylseg.MethylationStates<a class="headerlink" href="#methylseg-methylationstates" title="Link to this heading"></a></h1>
 <dl class="py class">
 <dt class="sig sig-object py" id="methylseg.MethylationStates">
-<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">methylseg.</span></span><span class="sig-name descname"><span class="pre">MethylationStates</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">value</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/methylseg/helper_classes.html#MethylationStates"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#methylseg.MethylationStates" title="Link to this definition"></a></dt>
+<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">methylseg.</span></span><span class="sig-name descname"><span class="pre">MethylationStates</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">value</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/methylseg/helper_classes.html#MethylationStates"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#methylseg.MethylationStates" title="Link to this definition"></a></dt>
 <dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">MethylEnum</span></code></p>
 <p>Canonical biological methylation states used throughout the package.</p>
 <dl class="py method">
 <dt class="sig sig-object py" id="methylseg.MethylationStates.__init__">
-<span class="sig-name descname"><span class="pre">__init__</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#methylseg.MethylationStates.__init__" title="Link to this definition"></a></dt>
+<span class="sig-name descname"><span class="pre">__init__</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">*</span></span><span class="n"><span class="pre">args</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwds</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#methylseg.MethylationStates.__init__" title="Link to this definition"></a></dt>
 <dd></dd></dl>
 
 <p class="rubric">Methods</p>
@@ -133,27 +136,27 @@
 </table>
 <dl class="py attribute">
 <dt class="sig sig-object py" id="methylseg.MethylationStates.LOW">
-<span class="sig-name descname"><span class="pre">LOW</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">0</span></em><a class="headerlink" href="#methylseg.MethylationStates.LOW" title="Link to this definition"></a></dt>
+<span class="sig-name descname"><span class="pre">LOW</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">0</span></span><a class="headerlink" href="#methylseg.MethylationStates.LOW" title="Link to this definition"></a></dt>
 <dd></dd></dl>
 
 <dl class="py attribute">
 <dt class="sig sig-object py" id="methylseg.MethylationStates.PMD">
-<span class="sig-name descname"><span class="pre">PMD</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">1</span></em><a class="headerlink" href="#methylseg.MethylationStates.PMD" title="Link to this definition"></a></dt>
+<span class="sig-name descname"><span class="pre">PMD</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">1</span></span><a class="headerlink" href="#methylseg.MethylationStates.PMD" title="Link to this definition"></a></dt>
 <dd></dd></dl>
 
 <dl class="py attribute">
 <dt class="sig sig-object py" id="methylseg.MethylationStates.INTERMEDIATE">
-<span class="sig-name descname"><span class="pre">INTERMEDIATE</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">2</span></em><a class="headerlink" href="#methylseg.MethylationStates.INTERMEDIATE" title="Link to this definition"></a></dt>
+<span class="sig-name descname"><span class="pre">INTERMEDIATE</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">2</span></span><a class="headerlink" href="#methylseg.MethylationStates.INTERMEDIATE" title="Link to this definition"></a></dt>
 <dd></dd></dl>
 
 <dl class="py attribute">
 <dt class="sig sig-object py" id="methylseg.MethylationStates.HIGH">
-<span class="sig-name descname"><span class="pre">HIGH</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">3</span></em><a class="headerlink" href="#methylseg.MethylationStates.HIGH" title="Link to this definition"></a></dt>
+<span class="sig-name descname"><span class="pre">HIGH</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">3</span></span><a class="headerlink" href="#methylseg.MethylationStates.HIGH" title="Link to this definition"></a></dt>
 <dd></dd></dl>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="methylseg.MethylationStates.convert_to_numeric">
-<em class="property"><span class="pre">static</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">convert_to_numeric</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">arr</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/methylseg/helper_classes.html#MethylationStates.convert_to_numeric"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#methylseg.MethylationStates.convert_to_numeric" title="Link to this definition"></a></dt>
+<span class="property"><span class="k"><span class="pre">static</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">convert_to_numeric</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">arr</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/methylseg/helper_classes.html#MethylationStates.convert_to_numeric"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#methylseg.MethylationStates.convert_to_numeric" title="Link to this definition"></a></dt>
 <dd><p>Convert methylation-state labels into integer codes.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>

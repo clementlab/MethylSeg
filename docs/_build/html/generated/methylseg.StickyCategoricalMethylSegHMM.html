@@ -6,16 +6,16 @@
   <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
 
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>methylseg.StickyCategoricalMethylSegHMM &mdash; methylseg 0.1.0 documentation</title>
-      <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=80d5e7a1" />
+  <title>methylseg.StickyCategoricalMethylSegHMM &mdash; methylseg 0.1.4 documentation</title>
+      <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=b86133f3" />
       <link rel="stylesheet" type="text/css" href="../_static/css/theme.css?v=9edc463e" />
 
   
       <script src="../_static/jquery.js?v=5d32c60e"></script>
       <script src="../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
-      <script src="../_static/documentation_options.js?v=01f34227"></script>
-      <script src="../_static/doctools.js?v=9bcbadda"></script>
-      <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
+      <script src="../_static/documentation_options.js?v=fd825880"></script>
+      <script src="../_static/doctools.js?v=fd6eb6e6"></script>
+      <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
       <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
     <script src="../_static/js/theme.js"></script>
     <link rel="index" title="Index" href="../genindex.html" />
@@ -45,8 +45,6 @@
         </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
               <p class="caption" role="heading"><span class="caption-text">Contents</span></p>
 <ul class="current">
-<li class="toctree-l1"><a class="reference internal" href="../installation.html">Installation</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../quickstart.html">Quickstart</a></li>
 <li class="toctree-l1 current"><a class="reference internal" href="../api.html">API Reference</a><ul class="current">
 <li class="toctree-l2"><a class="reference internal" href="../api.html#workflow-objects">Workflow objects</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../api.html#enums-and-labels">Enums and labels</a></li>
@@ -64,7 +62,12 @@
 <li class="toctree-l2"><a class="reference internal" href="../api.html#utility-helpers">Utility helpers</a></li>
 </ul>
 </li>
-<li class="toctree-l1"><a class="reference internal" href="../tutorials.html">Tutorial Notebook</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../full_pipeline.html">Full Pipeline And Outputs</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../input_format.html">Input Format</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../installation.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../quickstart.html">Quickstart</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../segmentation_methods.html">Segmentation Methods</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../tutorials.html">Example Notebooks</a></li>
 </ul>
 
         </div>
@@ -96,7 +99,7 @@
 <h1>methylseg.StickyCategoricalMethylSegHMM<a class="headerlink" href="#methylseg-stickycategoricalmethylseghmm" title="Link to this heading"></a></h1>
 <dl class="py class">
 <dt class="sig sig-object py" id="methylseg.StickyCategoricalMethylSegHMM">
-<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">methylseg.</span></span><span class="sig-name descname"><span class="pre">StickyCategoricalMethylSegHMM</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">n_states</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">random_state</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">42</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">n_iter</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">30</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">stay_prob</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0.99995</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">emission_mismatch_prob</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0.45</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">transition_prior_strength</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">50.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">fit_transitions</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/methylseg/methylseg_hmm.html#StickyCategoricalMethylSegHMM"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#methylseg.StickyCategoricalMethylSegHMM" title="Link to this definition"></a></dt>
+<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">methylseg.</span></span><span class="sig-name descname"><span class="pre">StickyCategoricalMethylSegHMM</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">n_states</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">random_state</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">42</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">n_iter</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">30</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">stay_prob</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0.99995</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">emission_mismatch_prob</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0.45</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">transition_prior_strength</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">50.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">fit_transitions</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/methylseg/methylseg_hmm.html#StickyCategoricalMethylSegHMM"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#methylseg.StickyCategoricalMethylSegHMM" title="Link to this definition"></a></dt>
 <dd><p>Bases: <a class="reference internal" href="methylseg.MethylSegHMM.html#methylseg.MethylSegHMM" title="methylseg.methylseg_hmm.MethylSegHMM"><code class="xref py py-class docutils literal notranslate"><span class="pre">MethylSegHMM</span></code></a></p>
 <p>Categorical HMM with strong self-transition priors for smoother segments.</p>
 <dl class="field-list simple">
@@ -115,16 +118,18 @@
 <dl class="py method">
 <dt class="sig sig-object py" id="methylseg.StickyCategoricalMethylSegHMM.__init__">
 <span class="sig-name descname"><span class="pre">__init__</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">n_states</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">random_state</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">42</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">n_iter</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">30</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">stay_prob</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0.99995</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">emission_mismatch_prob</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0.45</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">transition_prior_strength</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">50.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">fit_transitions</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/methylseg/methylseg_hmm.html#StickyCategoricalMethylSegHMM.__init__"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#methylseg.StickyCategoricalMethylSegHMM.__init__" title="Link to this definition"></a></dt>
-<dd><dl class="field-list simple">
+<dd><p>Initialize a sticky categorical HMM.</p>
+<dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
-<li><p><strong>n_states</strong> (<em>int</em>)</p></li>
-<li><p><strong>random_state</strong> (<em>int</em>)</p></li>
-<li><p><strong>n_iter</strong> (<em>int</em>)</p></li>
-<li><p><strong>stay_prob</strong> (<em>float</em>)</p></li>
-<li><p><strong>emission_mismatch_prob</strong> (<em>float</em>)</p></li>
-<li><p><strong>transition_prior_strength</strong> (<em>float</em>)</p></li>
-<li><p><strong>fit_transitions</strong> (<em>bool</em>)</p></li>
+<li><p><strong>n_states</strong> (<em>int</em>) – Number of hidden and observed categorical states.</p></li>
+<li><p><strong>random_state</strong> (<em>int</em>) – Random seed passed to the underlying HMM implementation.</p></li>
+<li><p><strong>n_iter</strong> (<em>int</em>) – Maximum number of expectation-maximization iterations.</p></li>
+<li><p><strong>stay_prob</strong> (<em>float</em>) – Initial self-transition probability for each hidden state.</p></li>
+<li><p><strong>emission_mismatch_prob</strong> (<em>float</em>) – Probability mass assigned to nonmatching observed states.</p></li>
+<li><p><strong>transition_prior_strength</strong> (<em>float</em>) – Weight of the sticky transition prior when transitions are fitted.</p></li>
+<li><p><strong>fit_transitions</strong> (<em>bool</em>) – If <code class="docutils literal notranslate"><span class="pre">True</span></code>, estimate transitions during fitting; otherwise retain
+the initialized sticky transition matrix.</p></li>
 </ul>
 </dd>
 </dl>
@@ -134,7 +139,7 @@
 <table class="autosummary longtable docutils align-default">
 <tbody>
 <tr class="row-odd"><td><p><a class="reference internal" href="#methylseg.StickyCategoricalMethylSegHMM.__init__" title="methylseg.StickyCategoricalMethylSegHMM.__init__"><code class="xref py py-obj docutils literal notranslate"><span class="pre">__init__</span></code></a>(n_states[, random_state, n_iter, ...])</p></td>
-<td><p></p></td>
+<td><p>Initialize a sticky categorical HMM.</p></td>
 </tr>
 <tr class="row-even"><td><p><a class="reference internal" href="#methylseg.StickyCategoricalMethylSegHMM.create_model" title="methylseg.StickyCategoricalMethylSegHMM.create_model"><code class="xref py py-obj docutils literal notranslate"><span class="pre">create_model</span></code></a>()</p></td>
 <td><p>Create and initialize the sticky categorical HMM backend.</p></td>
@@ -175,17 +180,17 @@
 </table>
 <dl class="py attribute">
 <dt class="sig sig-object py" id="methylseg.StickyCategoricalMethylSegHMM.DEFAULT_STAY_PROB">
-<span class="sig-name descname"><span class="pre">DEFAULT_STAY_PROB</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">0.99995</span></em><a class="headerlink" href="#methylseg.StickyCategoricalMethylSegHMM.DEFAULT_STAY_PROB" title="Link to this definition"></a></dt>
+<span class="sig-name descname"><span class="pre">DEFAULT_STAY_PROB</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">0.99995</span></span><a class="headerlink" href="#methylseg.StickyCategoricalMethylSegHMM.DEFAULT_STAY_PROB" title="Link to this definition"></a></dt>
 <dd></dd></dl>
 
 <dl class="py attribute">
 <dt class="sig sig-object py" id="methylseg.StickyCategoricalMethylSegHMM.EMISSION_MISMATCH_PROB">
-<span class="sig-name descname"><span class="pre">EMISSION_MISMATCH_PROB</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">0.45</span></em><a class="headerlink" href="#methylseg.StickyCategoricalMethylSegHMM.EMISSION_MISMATCH_PROB" title="Link to this definition"></a></dt>
+<span class="sig-name descname"><span class="pre">EMISSION_MISMATCH_PROB</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">0.45</span></span><a class="headerlink" href="#methylseg.StickyCategoricalMethylSegHMM.EMISSION_MISMATCH_PROB" title="Link to this definition"></a></dt>
 <dd></dd></dl>
 
 <dl class="py attribute">
 <dt class="sig sig-object py" id="methylseg.StickyCategoricalMethylSegHMM.TRANSITION_PRIOR_STRENGTH">
-<span class="sig-name descname"><span class="pre">TRANSITION_PRIOR_STRENGTH</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">50.0</span></em><a class="headerlink" href="#methylseg.StickyCategoricalMethylSegHMM.TRANSITION_PRIOR_STRENGTH" title="Link to this definition"></a></dt>
+<span class="sig-name descname"><span class="pre">TRANSITION_PRIOR_STRENGTH</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">50.0</span></span><a class="headerlink" href="#methylseg.StickyCategoricalMethylSegHMM.TRANSITION_PRIOR_STRENGTH" title="Link to this definition"></a></dt>
 <dd></dd></dl>
 
 <dl class="py method">
@@ -209,23 +214,42 @@
 <dt class="sig sig-object py" id="methylseg.StickyCategoricalMethylSegHMM.format_predict">
 <span class="sig-name descname"><span class="pre">format_predict</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">emissions</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/methylseg/methylseg_hmm.html#StickyCategoricalMethylSegHMM.format_predict"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#methylseg.StickyCategoricalMethylSegHMM.format_predict" title="Link to this definition"></a></dt>
 <dd><p>Format categorical observations for prediction.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>emissions</strong> – Integer observation labels in <code class="docutils literal notranslate"><span class="pre">[0,</span> <span class="pre">n_states)</span></code>.</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Column vector with one categorical code per observation.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>numpy.ndarray</p>
+</dd>
+</dl>
 </dd></dl>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="methylseg.StickyCategoricalMethylSegHMM.make_sticky_transmat">
 <span class="sig-name descname"><span class="pre">make_sticky_transmat</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">n_states</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">stay_prob</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/methylseg/methylseg_hmm.html#StickyCategoricalMethylSegHMM.make_sticky_transmat"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#methylseg.StickyCategoricalMethylSegHMM.make_sticky_transmat" title="Link to this definition"></a></dt>
 <dd><p>Build a ‘sticky’ transition matrix.</p>
-<p>stay_prob controls the diagonal self-transition probability for every
-state. Remaining mass is shared uniformly across off-diagonal entries.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
-<li><p><strong>n_states</strong> (<em>int</em><em> | </em><em>None</em>)</p></li>
-<li><p><strong>stay_prob</strong> (<em>float</em><em> | </em><em>None</em>)</p></li>
+<li><p><strong>n_states</strong> (<em>int</em><em> | </em><em>None</em>) – Optional number of hidden states. When omitted, uses
+<code class="docutils literal notranslate"><span class="pre">self.n_states</span></code>.</p></li>
+<li><p><strong>stay_prob</strong> (<em>float</em><em> | </em><em>None</em>) – Optional diagonal self-transition probability. When omitted, uses
+<code class="docutils literal notranslate"><span class="pre">self.stay_prob</span></code>.</p></li>
 </ul>
 </dd>
-<dt class="field-even">Return type<span class="colon">:</span></dt>
-<dd class="field-even"><p><em>ndarray</em></p>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><ul class="simple">
+<li><p><em>numpy.ndarray</em> – Square transition matrix whose rows sum to one.</p></li>
+<li><p><em>stay_prob controls the diagonal self-transition probability for every</em></p></li>
+<li><p><em>state. Remaining mass is shared uniformly across off-diagonal entries.</em></p></li>
+</ul>
+</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><em>ndarray</em></p>
 </dd>
 </dl>
 </dd></dl>

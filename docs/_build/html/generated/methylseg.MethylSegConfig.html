@@ -6,16 +6,16 @@
   <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
 
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>methylseg.MethylSegConfig &mdash; methylseg 0.1.0 documentation</title>
-      <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=80d5e7a1" />
+  <title>methylseg.MethylSegConfig &mdash; methylseg 0.1.4 documentation</title>
+      <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=b86133f3" />
       <link rel="stylesheet" type="text/css" href="../_static/css/theme.css?v=9edc463e" />
 
   
       <script src="../_static/jquery.js?v=5d32c60e"></script>
       <script src="../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
-      <script src="../_static/documentation_options.js?v=01f34227"></script>
-      <script src="../_static/doctools.js?v=9bcbadda"></script>
-      <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
+      <script src="../_static/documentation_options.js?v=fd825880"></script>
+      <script src="../_static/doctools.js?v=fd6eb6e6"></script>
+      <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
       <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
     <script src="../_static/js/theme.js"></script>
     <link rel="index" title="Index" href="../genindex.html" />
@@ -45,8 +45,6 @@
         </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
               <p class="caption" role="heading"><span class="caption-text">Contents</span></p>
 <ul class="current">
-<li class="toctree-l1"><a class="reference internal" href="../installation.html">Installation</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../quickstart.html">Quickstart</a></li>
 <li class="toctree-l1 current"><a class="reference internal" href="../api.html">API Reference</a><ul class="current">
 <li class="toctree-l2 current"><a class="reference internal" href="../api.html#workflow-objects">Workflow objects</a><ul class="current">
 <li class="toctree-l3"><a class="reference internal" href="methylseg.MethylSegPathway.html">methylseg.MethylSegPathway</a></li>
@@ -66,7 +64,12 @@
 <li class="toctree-l2"><a class="reference internal" href="../api.html#utility-helpers">Utility helpers</a></li>
 </ul>
 </li>
-<li class="toctree-l1"><a class="reference internal" href="../tutorials.html">Tutorial Notebook</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../full_pipeline.html">Full Pipeline And Outputs</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../input_format.html">Input Format</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../installation.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../quickstart.html">Quickstart</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../segmentation_methods.html">Segmentation Methods</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../tutorials.html">Example Notebooks</a></li>
 </ul>
 
         </div>
@@ -98,7 +101,7 @@
 <h1>methylseg.MethylSegConfig<a class="headerlink" href="#methylseg-methylsegconfig" title="Link to this heading"></a></h1>
 <dl class="py class">
 <dt class="sig sig-object py" id="methylseg.MethylSegConfig">
-<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">methylseg.</span></span><span class="sig-name descname"><span class="pre">MethylSegConfig</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">config_dict</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/methylseg/methylseg_config.html#MethylSegConfig"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#methylseg.MethylSegConfig" title="Link to this definition"></a></dt>
+<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">methylseg.</span></span><span class="sig-name descname"><span class="pre">MethylSegConfig</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">config_dict</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/methylseg/methylseg_config.html#MethylSegConfig"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#methylseg.MethylSegConfig" title="Link to this definition"></a></dt>
 <dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
 <p>Lightweight helper that knows how to build a serializable dictionary
 from a MethylSegPathway instance and how to write/read YAML.</p>
@@ -110,9 +113,11 @@ from a MethylSegPathway instance and how to write/read YAML.</p>
 <dl class="py method">
 <dt class="sig sig-object py" id="methylseg.MethylSegConfig.__init__">
 <span class="sig-name descname"><span class="pre">__init__</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">config_dict</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/methylseg/methylseg_config.html#MethylSegConfig.__init__"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#methylseg.MethylSegConfig.__init__" title="Link to this definition"></a></dt>
-<dd><dl class="field-list simple">
+<dd><p>Initialize a serializable MethylSeg configuration wrapper.</p>
+<dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><p><strong>config_dict</strong> (<em>dict</em>)</p>
+<dd class="field-odd"><p><strong>config_dict</strong> (<em>dict</em>) – Configuration mapping to validate, serialize, or use when restoring
+a pathway.</p>
 </dd>
 </dl>
 </dd></dl>
@@ -121,7 +126,7 @@ from a MethylSegPathway instance and how to write/read YAML.</p>
 <table class="autosummary longtable docutils align-default">
 <tbody>
 <tr class="row-odd"><td><p><a class="reference internal" href="#methylseg.MethylSegConfig.__init__" title="methylseg.MethylSegConfig.__init__"><code class="xref py py-obj docutils literal notranslate"><span class="pre">__init__</span></code></a>(config_dict)</p></td>
-<td><p></p></td>
+<td><p>Initialize a serializable MethylSeg configuration wrapper.</p></td>
 </tr>
 <tr class="row-even"><td><p><a class="reference internal" href="#methylseg.MethylSegConfig.build_pathway" title="methylseg.MethylSegConfig.build_pathway"><code class="xref py py-obj docutils literal notranslate"><span class="pre">build_pathway</span></code></a>([load_learned])</p></td>
 <td><p>Reconstruct a <code class="docutils literal notranslate"><span class="pre">MethylSegPathway</span></code> from the serialized config.</p></td>
@@ -135,14 +140,39 @@ from a MethylSegPathway instance and how to write/read YAML.</p>
 <tr class="row-odd"><td><p><a class="reference internal" href="#methylseg.MethylSegConfig.get_state_cutoffs" title="methylseg.MethylSegConfig.get_state_cutoffs"><code class="xref py py-obj docutils literal notranslate"><span class="pre">get_state_cutoffs</span></code></a>()</p></td>
 <td><p>Return the normalized rule-based cutoff configuration, if present.</p></td>
 </tr>
-<tr class="row-even"><td><p><a class="reference internal" href="#methylseg.MethylSegConfig.to_yaml" title="methylseg.MethylSegConfig.to_yaml"><code class="xref py py-obj docutils literal notranslate"><span class="pre">to_yaml</span></code></a>(yaml_path)</p></td>
+<tr class="row-even"><td><p><a class="reference internal" href="#methylseg.MethylSegConfig.rewrite_artifact_paths" title="methylseg.MethylSegConfig.rewrite_artifact_paths"><code class="xref py py-obj docutils literal notranslate"><span class="pre">rewrite_artifact_paths</span></code></a>(source_dir, target_dir)</p></td>
+<td><p>Rewrite serialized artifact references from one base directory to another.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#methylseg.MethylSegConfig.to_yaml" title="methylseg.MethylSegConfig.to_yaml"><code class="xref py py-obj docutils literal notranslate"><span class="pre">to_yaml</span></code></a>(yaml_path)</p></td>
 <td><p>Write the serialized configuration dictionary to YAML.</p></td>
 </tr>
 </tbody>
 </table>
 <dl class="py method">
+<dt class="sig sig-object py" id="methylseg.MethylSegConfig.rewrite_artifact_paths">
+<span class="sig-name descname"><span class="pre">rewrite_artifact_paths</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">source_dir</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">target_dir</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/methylseg/methylseg_config.html#MethylSegConfig.rewrite_artifact_paths"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#methylseg.MethylSegConfig.rewrite_artifact_paths" title="Link to this definition"></a></dt>
+<dd><p>Rewrite serialized artifact references from one base directory to another.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>source_dir</strong> (<em>str</em><em> | </em><em>Path</em>) – Directory that relative artifact paths in <code class="docutils literal notranslate"><span class="pre">self.config</span></code> currently
+resolve against.</p></li>
+<li><p><strong>target_dir</strong> (<em>str</em><em> | </em><em>Path</em>) – Directory the rewritten paths should resolve against, typically the
+parent directory of the YAML file being written.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>The same config wrapper with rewritten artifact references.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><a class="reference internal" href="#methylseg.MethylSegConfig" title="methylseg.MethylSegConfig">MethylSegConfig</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
 <dt class="sig sig-object py" id="methylseg.MethylSegConfig.from_instance">
-<em class="property"><span class="pre">classmethod</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">from_instance</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">inst</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">out_dir</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">include_learned</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/methylseg/methylseg_config.html#MethylSegConfig.from_instance"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#methylseg.MethylSegConfig.from_instance" title="Link to this definition"></a></dt>
+<span class="property"><span class="k"><span class="pre">classmethod</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">from_instance</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">inst</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">out_dir</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">include_learned</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/methylseg/methylseg_config.html#MethylSegConfig.from_instance"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#methylseg.MethylSegConfig.from_instance" title="Link to this definition"></a></dt>
 <dd><p>Serialize a fitted pathway into a portable configuration bundle.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
@@ -194,7 +224,7 @@ created automatically.</p>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="methylseg.MethylSegConfig.from_yaml">
-<em class="property"><span class="pre">classmethod</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">from_yaml</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">yaml_path</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/methylseg/methylseg_config.html#MethylSegConfig.from_yaml"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#methylseg.MethylSegConfig.from_yaml" title="Link to this definition"></a></dt>
+<span class="property"><span class="k"><span class="pre">classmethod</span></span><span class="w"> </span></span><span class="sig-name descname"><span class="pre">from_yaml</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">yaml_path</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/methylseg/methylseg_config.html#MethylSegConfig.from_yaml"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#methylseg.MethylSegConfig.from_yaml" title="Link to this definition"></a></dt>
 <dd><p>Load a serialized methylseg configuration from YAML.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>

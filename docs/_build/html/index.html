@@ -6,23 +6,21 @@
   <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
 
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>MethylSeg Documentation &mdash; methylseg 0.1.0 documentation</title>
-      <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=80d5e7a1" />
+  <title>MethylSeg Documentation &mdash; methylseg 0.1.4 documentation</title>
+      <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=b86133f3" />
       <link rel="stylesheet" type="text/css" href="_static/css/theme.css?v=9edc463e" />
 
   
       <script src="_static/jquery.js?v=5d32c60e"></script>
       <script src="_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
-      <script src="_static/documentation_options.js?v=01f34227"></script>
-      <script src="_static/doctools.js?v=9bcbadda"></script>
-      <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
+      <script src="_static/documentation_options.js?v=fd825880"></script>
+      <script src="_static/doctools.js?v=fd6eb6e6"></script>
+      <script src="_static/sphinx_highlight.js?v=6ffebe34"></script>
       <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
-      <script>window.MathJax = {"tex": {"inlineMath": [["$", "$"], ["\\(", "\\)"]], "processEscapes": true}, "options": {"ignoreHtmlClass": "tex2jax_ignore|mathjax_ignore|document", "processHtmlClass": "tex2jax_process|mathjax_process|math|output_area"}}</script>
-      <script defer="defer" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
     <script src="_static/js/theme.js"></script>
     <link rel="index" title="Index" href="genindex.html" />
     <link rel="search" title="Search" href="search.html" />
-    <link rel="next" title="Installation" href="installation.html" /> 
+    <link rel="next" title="API Reference" href="api.html" /> 
 </head>
 
 <body class="wy-body-for-nav"> 
@@ -46,10 +44,13 @@
         </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
               <p class="caption" role="heading"><span class="caption-text">Contents</span></p>
 <ul>
+<li class="toctree-l1"><a class="reference internal" href="api.html">API Reference</a></li>
+<li class="toctree-l1"><a class="reference internal" href="full_pipeline.html">Full Pipeline And Outputs</a></li>
+<li class="toctree-l1"><a class="reference internal" href="input_format.html">Input Format</a></li>
 <li class="toctree-l1"><a class="reference internal" href="installation.html">Installation</a></li>
 <li class="toctree-l1"><a class="reference internal" href="quickstart.html">Quickstart</a></li>
-<li class="toctree-l1"><a class="reference internal" href="api.html">API Reference</a></li>
-<li class="toctree-l1"><a class="reference internal" href="tutorials.html">Tutorial Notebook</a></li>
+<li class="toctree-l1"><a class="reference internal" href="segmentation_methods.html">Segmentation Methods</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tutorials.html">Example Notebooks</a></li>
 </ul>
 
         </div>
@@ -79,24 +80,14 @@
   <section id="methylseg-documentation">
 <h1>MethylSeg Documentation<a class="headerlink" href="#methylseg-documentation" title="Link to this heading"></a></h1>
 <p><code class="docutils literal notranslate"><span class="pre">methylseg</span></code> is the reusable methylation segmentation package in this repository.
-These docs cover package installation, the main workflow objects, and the example
-notebook that ships with the package.</p>
+Start with the README or <a class="reference internal" href="quickstart.html"><span class="doc">Quickstart</span></a> to train a model from WGBS or TCGA
+HM450K data. The API reference and example notebooks provide advanced workflows.</p>
+</section>
+<section id="documentation">
+<h1>Documentation<a class="headerlink" href="#documentation" title="Link to this heading"></a></h1>
 <div class="toctree-wrapper compound">
 <p class="caption" role="heading"><span class="caption-text">Contents</span></p>
 <ul>
-<li class="toctree-l1"><a class="reference internal" href="installation.html">Installation</a><ul>
-<li class="toctree-l2"><a class="reference internal" href="installation.html#github-install">GitHub install</a></li>
-<li class="toctree-l2"><a class="reference internal" href="installation.html#future-pypi-release">Future PyPI release</a></li>
-<li class="toctree-l2"><a class="reference internal" href="installation.html#conda-environment">Conda environment</a></li>
-</ul>
-</li>
-<li class="toctree-l1"><a class="reference internal" href="quickstart.html">Quickstart</a><ul>
-<li class="toctree-l2"><a class="reference internal" href="quickstart.html#core-workflow">Core workflow</a></li>
-<li class="toctree-l2"><a class="reference internal" href="quickstart.html#example">Example</a></li>
-<li class="toctree-l2"><a class="reference internal" href="quickstart.html#important-entrypoints">Important entrypoints</a></li>
-<li class="toctree-l2"><a class="reference internal" href="quickstart.html#notebook-tutorial">Notebook tutorial</a></li>
-</ul>
-</li>
 <li class="toctree-l1"><a class="reference internal" href="api.html">API Reference</a><ul>
 <li class="toctree-l2"><a class="reference internal" href="api.html#workflow-objects">Workflow objects</a></li>
 <li class="toctree-l2"><a class="reference internal" href="api.html#enums-and-labels">Enums and labels</a></li>
@@ -104,9 +95,34 @@ notebook that ships with the package.</p>
 <li class="toctree-l2"><a class="reference internal" href="api.html#utility-helpers">Utility helpers</a></li>
 </ul>
 </li>
-<li class="toctree-l1"><a class="reference internal" href="tutorials.html">Tutorial Notebook</a><ul>
-<li class="toctree-l2"><a class="reference internal" href="tutorials/example.html">Generate Regions with a pretrained model</a></li>
-<li class="toctree-l2"><a class="reference internal" href="tutorials/example.html#Generate-on-new-model">Generate on new model</a></li>
+<li class="toctree-l1"><a class="reference internal" href="full_pipeline.html">Full Pipeline And Outputs</a></li>
+<li class="toctree-l1"><a class="reference internal" href="input_format.html">Input Format</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="input_format.html#wgbs">WGBS</a></li>
+<li class="toctree-l2"><a class="reference internal" href="input_format.html#hm450k-tcga">HM450K / TCGA</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="installation.html">Installation</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="installation.html#github-install">GitHub install</a></li>
+<li class="toctree-l2"><a class="reference internal" href="installation.html#future-pypi-release">Future PyPI release</a></li>
+<li class="toctree-l2"><a class="reference internal" href="installation.html#conda-environment">Conda environment</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="quickstart.html">Quickstart</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="quickstart.html#train-a-wgbs-model">Train A WGBS Model</a></li>
+<li class="toctree-l2"><a class="reference internal" href="quickstart.html#train-a-tcga-hm450k-model">Train A TCGA HM450K Model</a></li>
+<li class="toctree-l2"><a class="reference internal" href="quickstart.html#saved-models">Saved Models</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="segmentation_methods.html">Segmentation Methods</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="segmentation_methods.html#core-classes">Core Classes</a></li>
+<li class="toctree-l2"><a class="reference internal" href="segmentation_methods.html#how-the-two-methods-fit-into-the-pipeline">How The Two Methods Fit Into The Pipeline</a></li>
+<li class="toctree-l2"><a class="reference internal" href="segmentation_methods.html#kmeans-based-segmentation">KMeans-Based Segmentation</a></li>
+<li class="toctree-l2"><a class="reference internal" href="segmentation_methods.html#rule-based-segmentation">Rule-Based Segmentation</a></li>
+<li class="toctree-l2"><a class="reference internal" href="segmentation_methods.html#comparing-the-two">Comparing The Two</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="tutorials.html">Example Notebooks</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="tutorials/generated/index.html">Example Notebooks</a></li>
 </ul>
 </li>
 </ul>
@@ -117,7 +133,7 @@ notebook that ships with the package.</p>
            </div>
           </div>
           <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
-        <a href="installation.html" class="btn btn-neutral float-right" title="Installation" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+        <a href="api.html" class="btn btn-neutral float-right" title="API Reference" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
     </div>
 
   <hr/>

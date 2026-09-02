@@ -19,8 +19,6 @@
       ~MethylStateAnalyzer.evaluate_clustering_concordance
       ~MethylStateAnalyzer.evaluate_rules_against_kmeans
       ~MethylStateAnalyzer.optimize_rule_params_random
-      ~MethylStateAnalyzer.plot_feature_distributions_by_kmeans_state
-      ~MethylStateAnalyzer.plot_interactive_beta_by_label
       ~MethylStateAnalyzer.plot_labels
       ~MethylStateAnalyzer.pretty_print_rules
       ~MethylStateAnalyzer.set_state_cutoffs

@@ -5,16 +5,16 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>methylseg.methyl_state_analyzer &mdash; methylseg 0.1.0 documentation</title>
-      <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=80d5e7a1" />
+  <title>methylseg.methyl_state_analyzer &mdash; methylseg 0.1.4 documentation</title>
+      <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=b86133f3" />
       <link rel="stylesheet" type="text/css" href="../../_static/css/theme.css?v=9edc463e" />
 
   
       <script src="../../_static/jquery.js?v=5d32c60e"></script>
       <script src="../../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
-      <script src="../../_static/documentation_options.js?v=01f34227"></script>
-      <script src="../../_static/doctools.js?v=9bcbadda"></script>
-      <script src="../../_static/sphinx_highlight.js?v=dc90522c"></script>
+      <script src="../../_static/documentation_options.js?v=fd825880"></script>
+      <script src="../../_static/doctools.js?v=fd6eb6e6"></script>
+      <script src="../../_static/sphinx_highlight.js?v=6ffebe34"></script>
       <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
     <script src="../../_static/js/theme.js"></script>
     <link rel="index" title="Index" href="../../genindex.html" />
@@ -42,10 +42,13 @@
         </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
               <p class="caption" role="heading"><span class="caption-text">Contents</span></p>
 <ul>
+<li class="toctree-l1"><a class="reference internal" href="../../api.html">API Reference</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../full_pipeline.html">Full Pipeline And Outputs</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../input_format.html">Input Format</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../installation.html">Installation</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../quickstart.html">Quickstart</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../api.html">API Reference</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../tutorials.html">Tutorial Notebook</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../segmentation_methods.html">Segmentation Methods</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../tutorials.html">Example Notebooks</a></li>
 </ul>
 
         </div>
@@ -75,14 +78,14 @@
   <h1>Source code for methylseg.methyl_state_analyzer</h1><div class="highlight"><pre>
 <span></span><span class="sd">&quot;&quot;&quot;Utilities for analyzing, comparing, and tuning methylation state assignments.&quot;&quot;&quot;</span>
 
-<span class="kn">from</span> <span class="nn">enum</span> <span class="kn">import</span> <span class="n">Enum</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">enum</span><span class="w"> </span><span class="kn">import</span> <span class="n">Enum</span>
 
-<span class="kn">from</span> <span class="nn">matplotlib</span> <span class="kn">import</span> <span class="n">pyplot</span> <span class="k">as</span> <span class="n">plt</span>
-<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
-<span class="kn">import</span> <span class="nn">pandas</span> <span class="k">as</span> <span class="nn">pd</span>
-<span class="kn">from</span> <span class="nn">typing</span> <span class="kn">import</span> <span class="n">Dict</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">matplotlib</span><span class="w"> </span><span class="kn">import</span> <span class="n">pyplot</span> <span class="k">as</span> <span class="n">plt</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">pandas</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">pd</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">Dict</span>
 
-<span class="kn">from</span> <span class="nn">sklearn.metrics</span> <span class="kn">import</span> <span class="p">(</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">sklearn.metrics</span><span class="w"> </span><span class="kn">import</span> <span class="p">(</span>
     <span class="n">accuracy_score</span><span class="p">,</span>
     <span class="n">adjusted_rand_score</span><span class="p">,</span>
     <span class="n">classification_report</span><span class="p">,</span>
@@ -92,16 +95,16 @@
     <span class="n">precision_score</span><span class="p">,</span>
     <span class="n">recall_score</span><span class="p">,</span>
 <span class="p">)</span>
-<span class="kn">from</span> <span class="nn">tqdm</span> <span class="kn">import</span> <span class="n">tqdm</span>
-<span class="kn">import</span> <span class="nn">seaborn</span> <span class="k">as</span> <span class="nn">sns</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">tqdm</span><span class="w"> </span><span class="kn">import</span> <span class="n">tqdm</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">seaborn</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">sns</span>
 
-<span class="kn">from</span> <span class="nn">.methyl_state_assigner</span> <span class="kn">import</span> <span class="n">MethylStateAssigner</span>
-<span class="kn">from</span> <span class="nn">.methylseg_config</span> <span class="kn">import</span> <span class="n">MethylSegConfig</span>
-<span class="kn">from</span> <span class="nn">.helper_classes</span> <span class="kn">import</span> <span class="p">(</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">.methyl_state_assigner</span><span class="w"> </span><span class="kn">import</span> <span class="n">MethylStateAssigner</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">.methylseg_config</span><span class="w"> </span><span class="kn">import</span> <span class="n">MethylSegConfig</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">.helper_classes</span><span class="w"> </span><span class="kn">import</span> <span class="p">(</span>
     <span class="n">MethylationStates</span><span class="p">,</span>
     <span class="n">SampleInfo</span><span class="p">,</span>
 <span class="p">)</span>
-<span class="kn">from</span> <span class="nn">.utils</span> <span class="kn">import</span> <span class="p">(</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">.utils</span><span class="w"> </span><span class="kn">import</span> <span class="p">(</span>
     <span class="n">get_biological_state_colors</span><span class="p">,</span>
     <span class="n">get_regional_window_labels</span><span class="p">,</span>
     <span class="n">normalize_state_label</span><span class="p">,</span>
@@ -114,19 +117,36 @@
 
 <div class="viewcode-block" id="MethylStateAnalyzer">
 <a class="viewcode-back" href="../../generated/methylseg.MethylStateAnalyzer.html#methylseg.MethylStateAnalyzer">[docs]</a>
-<span class="k">class</span> <span class="nc">MethylStateAnalyzer</span><span class="p">:</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Inspect training outputs and optimize rule-based state cutoffs.&quot;&quot;&quot;</span>
+<span class="k">class</span><span class="w"> </span><span class="nc">MethylStateAnalyzer</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Analyze learned state separation and define rule-based CpG states.</span>
+
+<span class="sd">    Uses KMeans assignments as a reference for inspecting state separation and</span>
+<span class="sd">    evaluating rule concordance. It also defines, tunes, and applies</span>
+<span class="sd">    interpretable cutoff rules that characterize each CpG as a biological</span>
+<span class="sd">    methylation state.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
 
 <div class="viewcode-block" id="MethylStateAnalyzer.__init__">
 <a class="viewcode-back" href="../../generated/methylseg.MethylStateAnalyzer.html#methylseg.MethylStateAnalyzer.__init__">[docs]</a>
-    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">assigner</span><span class="p">:</span> <span class="n">MethylStateAssigner</span><span class="p">,</span> <span class="n">out_dir</span><span class="o">=</span><span class="s2">&quot;.&quot;</span><span class="p">):</span>
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">assigner</span><span class="p">:</span> <span class="n">MethylStateAssigner</span><span class="p">,</span> <span class="n">out_dir</span><span class="o">=</span><span class="s2">&quot;.&quot;</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Initialize rule-based state analysis around a fitted state assigner.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        assigner</span>
+<span class="sd">            State assigner that provides training emissions, KMeans labels, and</span>
+<span class="sd">            feature configuration.</span>
+<span class="sd">        out_dir</span>
+<span class="sd">            Directory for analysis artifacts and figures.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">assigner</span> <span class="o">=</span> <span class="n">assigner</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">out_dir</span> <span class="o">=</span> <span class="n">out_dir</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">train_joint</span> <span class="o">=</span> <span class="kc">None</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">window_specs</span> <span class="o">=</span> <span class="n">assigner</span><span class="o">.</span><span class="n">window_specs</span></div>
 
 
-    <span class="k">def</span> <span class="nf">_populate_kmeans_state_display</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">train_joint</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">:</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">_populate_kmeans_state_display</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">train_joint</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">:</span>
         <span class="n">train_joint</span> <span class="o">=</span> <span class="n">train_joint</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
         <span class="k">if</span> <span class="s2">&quot;kmeans_label&quot;</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">train_joint</span><span class="o">.</span><span class="n">columns</span><span class="p">:</span>
             <span class="n">train_joint</span><span class="p">[</span><span class="s2">&quot;kmeans_label&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">assigner</span><span class="o">.</span><span class="n">train_labels</span>
@@ -149,7 +169,7 @@
         <span class="p">)</span>
         <span class="k">return</span> <span class="n">train_joint</span>
 
-    <span class="k">def</span> <span class="nf">_build_train_joint</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">_build_train_joint</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">train_joint</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
             <span class="k">if</span> <span class="p">(</span>
                 <span class="s2">&quot;kmeans_label&quot;</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">train_joint</span><span class="o">.</span><span class="n">columns</span>
@@ -166,66 +186,9 @@
         <span class="n">train_joint</span> <span class="o">=</span> <span class="n">train_joint</span><span class="o">.</span><span class="n">loc</span><span class="p">[:,</span> <span class="o">~</span><span class="n">train_joint</span><span class="o">.</span><span class="n">columns</span><span class="o">.</span><span class="n">duplicated</span><span class="p">()]</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">train_joint</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_populate_kmeans_state_display</span><span class="p">(</span><span class="n">train_joint</span><span class="p">)</span>
 
-<div class="viewcode-block" id="MethylStateAnalyzer.plot_feature_distributions_by_kmeans_state">
-<a class="viewcode-back" href="../../generated/methylseg.MethylStateAnalyzer.html#methylseg.MethylStateAnalyzer.plot_feature_distributions_by_kmeans_state">[docs]</a>
-    <span class="k">def</span> <span class="nf">plot_feature_distributions_by_kmeans_state</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">show_plots</span><span class="o">=</span><span class="kc">True</span><span class="p">):</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">        Plot per-feature histograms stratified by learned KMeans state.</span>
-
-<span class="sd">        Parameters</span>
-<span class="sd">        ----------</span>
-<span class="sd">        show_plots</span>
-<span class="sd">            If ``True``, display each figure immediately. Otherwise, save plots</span>
-<span class="sd">            to ``out_dir`` when configured.</span>
-<span class="sd">        &quot;&quot;&quot;</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">_build_train_joint</span><span class="p">()</span>
-        <span class="n">train_loadings</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">assigner</span><span class="o">.</span><span class="n">get_pca_loadings</span><span class="p">()</span>
-        <span class="n">ranked_features</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span>
-            <span class="n">train_loadings</span><span class="p">[</span><span class="s2">&quot;PC2&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">abs</span><span class="p">()</span><span class="o">.</span><span class="n">sort_values</span><span class="p">(</span><span class="n">ascending</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span><span class="o">.</span><span class="n">index</span>
-        <span class="p">)</span>
-        <span class="k">if</span> <span class="s2">&quot;beta&quot;</span> <span class="ow">in</span> <span class="n">train_loadings</span><span class="o">.</span><span class="n">index</span><span class="p">:</span>
-            <span class="n">ranked_features</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;beta&quot;</span><span class="p">]</span> <span class="o">+</span> <span class="p">[</span>
-                <span class="n">feature</span> <span class="k">for</span> <span class="n">feature</span> <span class="ow">in</span> <span class="n">ranked_features</span> <span class="k">if</span> <span class="n">feature</span> <span class="o">!=</span> <span class="s2">&quot;beta&quot;</span>
-            <span class="p">]</span>
-        <span class="n">_</span><span class="p">,</span> <span class="n">_</span><span class="p">,</span> <span class="n">_</span><span class="p">,</span> <span class="n">state_colors_hex</span> <span class="o">=</span> <span class="n">get_biological_state_colors</span><span class="p">()</span>
-        <span class="n">ordered_states</span> <span class="o">=</span> <span class="p">[</span><span class="n">state</span><span class="o">.</span><span class="n">name</span> <span class="k">for</span> <span class="n">state</span> <span class="ow">in</span> <span class="n">MethylationStates</span><span class="p">]</span>
-        <span class="k">for</span> <span class="n">emission</span> <span class="ow">in</span> <span class="n">ranked_features</span><span class="p">:</span>
-            <span class="n">fig</span><span class="p">,</span> <span class="n">ax</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">subplots</span><span class="p">()</span>
-            <span class="n">plotted</span> <span class="o">=</span> <span class="kc">False</span>
-            <span class="k">for</span> <span class="n">state_name</span> <span class="ow">in</span> <span class="n">ordered_states</span><span class="p">:</span>
-                <span class="n">df</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">train_joint</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span>
-                    <span class="bp">self</span><span class="o">.</span><span class="n">train_joint</span><span class="p">[</span><span class="s2">&quot;kmeans_state_display&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">eq</span><span class="p">(</span><span class="n">state_name</span><span class="p">)</span>
-                <span class="p">]</span>
-                <span class="k">if</span> <span class="n">df</span><span class="o">.</span><span class="n">empty</span><span class="p">:</span>
-                    <span class="k">continue</span>
-                <span class="n">df</span><span class="p">[</span><span class="n">emission</span><span class="p">]</span><span class="o">.</span><span class="n">hist</span><span class="p">(</span>
-                    <span class="n">bins</span><span class="o">=</span><span class="mi">50</span><span class="p">,</span>
-                    <span class="n">alpha</span><span class="o">=</span><span class="mf">0.5</span><span class="p">,</span>
-                    <span class="n">label</span><span class="o">=</span><span class="n">state_name</span><span class="p">,</span>
-                    <span class="n">color</span><span class="o">=</span><span class="n">state_colors_hex</span><span class="p">[</span><span class="n">MethylationStates</span><span class="p">[</span><span class="n">state_name</span><span class="p">]</span><span class="o">.</span><span class="n">value</span><span class="p">],</span>
-                    <span class="n">ax</span><span class="o">=</span><span class="n">ax</span><span class="p">,</span>
-                <span class="p">)</span>
-                <span class="n">plotted</span> <span class="o">=</span> <span class="kc">True</span>
-
-            <span class="k">if</span> <span class="ow">not</span> <span class="n">plotted</span><span class="p">:</span>
-                <span class="n">plt</span><span class="o">.</span><span class="n">close</span><span class="p">(</span><span class="n">fig</span><span class="p">)</span>
-                <span class="k">continue</span>
-
-            <span class="n">ax</span><span class="o">.</span><span class="n">set_xlabel</span><span class="p">(</span><span class="n">emission</span><span class="p">)</span>
-            <span class="n">ax</span><span class="o">.</span><span class="n">set_ylabel</span><span class="p">(</span><span class="s2">&quot;Count&quot;</span><span class="p">)</span>
-            <span class="n">ax</span><span class="o">.</span><span class="n">set_title</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Distribution of </span><span class="si">{</span><span class="n">emission</span><span class="si">}</span><span class="s2"> by KMeans State&quot;</span><span class="p">)</span>
-            <span class="n">ax</span><span class="o">.</span><span class="n">legend</span><span class="p">()</span>
-            <span class="n">fig</span><span class="o">.</span><span class="n">tight_layout</span><span class="p">()</span>
-            <span class="k">if</span> <span class="n">show_plots</span><span class="p">:</span>
-                <span class="n">plt</span><span class="o">.</span><span class="n">show</span><span class="p">()</span>
-            <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">out_dir</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
-                <span class="n">fig</span><span class="o">.</span><span class="n">savefig</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">out_dir</span><span class="si">}</span><span class="s2">/feature_distribution_</span><span class="si">{</span><span class="n">emission</span><span class="si">}</span><span class="s2">.png&quot;</span><span class="p">)</span>
-            <span class="n">plt</span><span class="o">.</span><span class="n">close</span><span class="p">(</span><span class="n">fig</span><span class="p">)</span></div>
-
-
 <div class="viewcode-block" id="MethylStateAnalyzer.define_states_by_rules_param">
 <a class="viewcode-back" href="../../generated/methylseg.MethylStateAnalyzer.html#methylseg.MethylStateAnalyzer.define_states_by_rules_param">[docs]</a>
-    <span class="k">def</span> <span class="nf">define_states_by_rules_param</span><span class="p">(</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">define_states_by_rules_param</span><span class="p">(</span>
         <span class="bp">self</span><span class="p">,</span>
         <span class="n">meth_emissions</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">,</span>
         <span class="n">beta_low_max</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span>
@@ -331,7 +294,7 @@
 
 <div class="viewcode-block" id="MethylStateAnalyzer.evaluate_rules_against_kmeans">
 <a class="viewcode-back" href="../../generated/methylseg.MethylStateAnalyzer.html#methylseg.MethylStateAnalyzer.evaluate_rules_against_kmeans">[docs]</a>
-    <span class="k">def</span> <span class="nf">evaluate_rules_against_kmeans</span><span class="p">(</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">evaluate_rules_against_kmeans</span><span class="p">(</span>
         <span class="bp">self</span><span class="p">,</span>
         <span class="n">meth_emissions</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">,</span>
         <span class="n">kmeans_labels</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
@@ -339,12 +302,23 @@
     <span class="p">):</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Apply rule-based states and compare to KMeans labels.</span>
-<span class="sd">        Returns (metrics_dict, rule_labels_array).</span>
 
-<span class="sd">        rule_params must contain:</span>
-<span class="sd">          - beta_low_max</span>
-<span class="sd">          - beta_high_min</span>
-<span class="sd">          - pmd_cutoffs (dict[label -&gt; {&#39;int_min&#39;,&#39;std_max&#39;,&#39;high_max&#39;,&#39;low_max&#39;}])</span>
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        meth_emissions</span>
+<span class="sd">            Emission table to label with the supplied rule parameters.</span>
+<span class="sd">        kmeans_labels</span>
+<span class="sd">            Reference KMeans labels aligned to ``meth_emissions``.</span>
+<span class="sd">        rule_params</span>
+<span class="sd">            Keyword arguments forwarded to ``define_states_by_rules_param``.</span>
+<span class="sd">            Expected keys are ``beta_low_max``, ``beta_high_min``, and</span>
+<span class="sd">            ``pmd_cutoffs``.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        tuple</span>
+<span class="sd">            ``(metrics_dict, rule_labels_array)`` comparing the supplied</span>
+<span class="sd">            KMeans labels against the derived rule-based labels.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="n">y_true</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">kmeans_labels</span><span class="p">)</span>
         <span class="n">y_pred</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">define_states_by_rules_param</span><span class="p">(</span><span class="n">meth_emissions</span><span class="p">,</span> <span class="o">**</span><span class="n">rule_params</span><span class="p">)</span>
@@ -380,7 +354,7 @@
     <span class="c1"># TODO: improve the rules definition logic to improve accuracy when based against k-means, e.g. by adding interaction terms or more complex combinations of stats across windows.</span>
 <div class="viewcode-block" id="MethylStateAnalyzer.optimize_rule_params_random">
 <a class="viewcode-back" href="../../generated/methylseg.MethylStateAnalyzer.html#methylseg.MethylStateAnalyzer.optimize_rule_params_random">[docs]</a>
-    <span class="k">def</span> <span class="nf">optimize_rule_params_random</span><span class="p">(</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">optimize_rule_params_random</span><span class="p">(</span>
         <span class="bp">self</span><span class="p">,</span>
         <span class="n">n_iter</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">500</span><span class="p">,</span>
         <span class="n">score_key</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;F1_macro&quot;</span><span class="p">,</span>
@@ -425,7 +399,7 @@
             <span class="p">}</span>
 
         <span class="c1"># Helper: sample a valid param set</span>
-        <span class="k">def</span> <span class="nf">sample_params</span><span class="p">():</span>
+        <span class="k">def</span><span class="w"> </span><span class="nf">sample_params</span><span class="p">():</span>
             <span class="k">while</span> <span class="kc">True</span><span class="p">:</span>
                 <span class="n">beta_low_max</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">rng</span><span class="o">.</span><span class="n">uniform</span><span class="p">(</span><span class="o">*</span><span class="n">param_distributions</span><span class="p">[</span><span class="s2">&quot;beta_low_max&quot;</span><span class="p">]))</span>
                 <span class="n">beta_high_min</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span>
@@ -449,7 +423,7 @@
                     <span class="s2">&quot;pmd_cutoffs&quot;</span><span class="p">:</span> <span class="n">pmd_cutoffs</span><span class="p">,</span>
                 <span class="p">}</span>
 
-        <span class="k">def</span> <span class="nf">flatten_rule_params</span><span class="p">(</span><span class="n">params</span><span class="p">:</span> <span class="nb">dict</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">:</span>
+        <span class="k">def</span><span class="w"> </span><span class="nf">flatten_rule_params</span><span class="p">(</span><span class="n">params</span><span class="p">:</span> <span class="nb">dict</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">:</span>
             <span class="n">out</span> <span class="o">=</span> <span class="p">{</span>
                 <span class="s2">&quot;beta_low_max&quot;</span><span class="p">:</span> <span class="n">params</span><span class="p">[</span><span class="s2">&quot;beta_low_max&quot;</span><span class="p">],</span>
                 <span class="s2">&quot;beta_high_min&quot;</span><span class="p">:</span> <span class="n">params</span><span class="p">[</span><span class="s2">&quot;beta_high_min&quot;</span><span class="p">],</span>
@@ -509,7 +483,7 @@
 
 <div class="viewcode-block" id="MethylStateAnalyzer.define_states_by_rules">
 <a class="viewcode-back" href="../../generated/methylseg.MethylStateAnalyzer.html#methylseg.MethylStateAnalyzer.define_states_by_rules">[docs]</a>
-    <span class="k">def</span> <span class="nf">define_states_by_rules</span><span class="p">(</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">define_states_by_rules</span><span class="p">(</span>
         <span class="bp">self</span><span class="p">,</span> <span class="n">sample_info</span><span class="p">:</span> <span class="n">SampleInfo</span><span class="p">,</span> <span class="n">chrom</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">sample_emissions</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span> <span class="o">=</span> <span class="kc">None</span>
     <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
@@ -555,7 +529,7 @@
         <span class="k">return</span> <span class="n">states_by_rules</span></div>
 
 
-    <span class="k">def</span> <span class="nf">__set_from_config</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">state_cfg</span><span class="p">:</span> <span class="nb">dict</span> <span class="o">|</span> <span class="kc">None</span><span class="p">):</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">__set_from_config</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">state_cfg</span><span class="p">:</span> <span class="nb">dict</span> <span class="o">|</span> <span class="kc">None</span><span class="p">):</span>
         <span class="k">if</span> <span class="n">state_cfg</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
             <span class="n">cutoffs</span> <span class="o">=</span> <span class="n">state_cfg</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">set_state_cutoffs</span><span class="p">(</span>
@@ -566,9 +540,20 @@
 
 <div class="viewcode-block" id="MethylStateAnalyzer.set_state_cutoffs_from_yaml">
 <a class="viewcode-back" href="../../generated/methylseg.MethylStateAnalyzer.html#methylseg.MethylStateAnalyzer.set_state_cutoffs_from_yaml">[docs]</a>
-    <span class="k">def</span> <span class="nf">set_state_cutoffs_from_yaml</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">yaml_file</span><span class="p">:</span> <span class="nb">str</span><span class="p">):</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">set_state_cutoffs_from_yaml</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">yaml_file</span><span class="p">:</span> <span class="nb">str</span><span class="p">):</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Load rule cutoffs from a YAML file written by ``MethylSegConfig``.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        yaml_file</span>
+<span class="sd">            Path to a serialized methylseg YAML config file.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        None</span>
+<span class="sd">            Updates ``state_cutoffs`` and the manual-cutoff flag from the YAML</span>
+<span class="sd">            contents.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="n">config</span> <span class="o">=</span> <span class="n">MethylSegConfig</span><span class="o">.</span><span class="n">from_yaml</span><span class="p">(</span><span class="n">yaml_file</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">__set_from_config</span><span class="p">(</span><span class="n">config</span><span class="o">.</span><span class="n">get_state_cutoffs</span><span class="p">())</span>
@@ -579,7 +564,7 @@
 
 <div class="viewcode-block" id="MethylStateAnalyzer.set_state_cutoffs">
 <a class="viewcode-back" href="../../generated/methylseg.MethylStateAnalyzer.html#methylseg.MethylStateAnalyzer.set_state_cutoffs">[docs]</a>
-    <span class="k">def</span> <span class="nf">set_state_cutoffs</span><span class="p">(</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">set_state_cutoffs</span><span class="p">(</span>
         <span class="bp">self</span><span class="p">,</span>
         <span class="n">beta_low_max</span><span class="p">:</span> <span class="nb">float</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
         <span class="n">beta_high_min</span><span class="p">:</span> <span class="nb">float</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
@@ -588,12 +573,22 @@
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Simple manual state cutoff setter with clean pythonic defaults.</span>
 
-<span class="sd">        - If user does not provide pmd_cutoffs, defaults are used:</span>
-<span class="sd">            int_min = 0.56</span>
-<span class="sd">            std_max = 0.264</span>
-<span class="sd">            high_max = 0.246</span>
-<span class="sd">            low_max = 0.246</span>
-<span class="sd">        - Defaults apply to every window given in assigner.window_specs</span>
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        beta_low_max</span>
+<span class="sd">            Upper beta threshold for the low-methylation state. Uses the</span>
+<span class="sd">            package default when omitted.</span>
+<span class="sd">        beta_high_min</span>
+<span class="sd">            Lower beta threshold for the high-methylation state. Uses the</span>
+<span class="sd">            package default when omitted.</span>
+<span class="sd">        pmd_cutoffs</span>
+<span class="sd">            Optional per-window PMD cutoff mapping. Missing values fall back to</span>
+<span class="sd">            the package defaults for every configured window.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        None</span>
+<span class="sd">            Stores the resolved cutoff dictionary on the analyzer.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="n">int_min_default</span> <span class="o">=</span> <span class="mf">0.56</span>
         <span class="n">std_max_default</span> <span class="o">=</span> <span class="mf">0.264</span>
@@ -629,7 +624,7 @@
 
 <div class="viewcode-block" id="MethylStateAnalyzer.pretty_print_rules">
 <a class="viewcode-back" href="../../generated/methylseg.MethylStateAnalyzer.html#methylseg.MethylStateAnalyzer.pretty_print_rules">[docs]</a>
-    <span class="k">def</span> <span class="nf">pretty_print_rules</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">pretty_print_rules</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Print the active rule-based state definitions in a compact form.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
@@ -673,7 +668,7 @@
 
 <div class="viewcode-block" id="MethylStateAnalyzer.evaluate_clustering_concordance">
 <a class="viewcode-back" href="../../generated/methylseg.MethylStateAnalyzer.html#methylseg.MethylStateAnalyzer.evaluate_clustering_concordance">[docs]</a>
-    <span class="k">def</span> <span class="nf">evaluate_clustering_concordance</span><span class="p">(</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">evaluate_clustering_concordance</span><span class="p">(</span>
         <span class="bp">self</span><span class="p">,</span>
         <span class="n">use_train_data</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
         <span class="n">sample_info</span><span class="p">:</span> <span class="n">SampleInfo</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
@@ -681,6 +676,21 @@
     <span class="p">):</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Evaluate rule-based labels against KMeans cluster labels as ground truth.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        use_train_data</span>
+<span class="sd">            If ``True``, compare cached training labels. Otherwise, generate</span>
+<span class="sd">            labels for ``sample_info``.</span>
+<span class="sd">        sample_info</span>
+<span class="sd">            Sample to evaluate when ``use_train_data`` is ``False``.</span>
+<span class="sd">        chrom</span>
+<span class="sd">            Optional chromosome restriction for non-training evaluation.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        pandas.DataFrame</span>
+<span class="sd">            Confusion matrix comparing KMeans labels to rule-based labels.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">if</span> <span class="ow">not</span> <span class="nb">hasattr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="s2">&quot;state_cutoffs&quot;</span><span class="p">):</span>
             <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
@@ -736,77 +746,10 @@
         <span class="k">return</span> <span class="n">cm_df</span></div>
 
 
-<div class="viewcode-block" id="MethylStateAnalyzer.plot_interactive_beta_by_label">
-<a class="viewcode-back" href="../../generated/methylseg.MethylStateAnalyzer.html#methylseg.MethylStateAnalyzer.plot_interactive_beta_by_label">[docs]</a>
-    <span class="k">def</span> <span class="nf">plot_interactive_beta_by_label</span><span class="p">(</span>
-        <span class="bp">self</span><span class="p">,</span>
-        <span class="n">label_type</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;kmeans&quot;</span><span class="p">,</span>
-        <span class="n">use_train_data</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
-        <span class="n">chrom</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
-        <span class="n">sample_info</span><span class="p">:</span> <span class="n">SampleInfo</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
-        <span class="n">sample_info_removed</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
-        <span class="n">x_col</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;CpG_beg&quot;</span><span class="p">,</span>
-        <span class="n">y_col</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;beta&quot;</span><span class="p">,</span>
-        <span class="n">label_title</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
-        <span class="n">show_plot</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
-        <span class="n">max_points</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">120_000</span><span class="p">,</span>
-        <span class="n">color_pmd_only</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
-        <span class="n">color_regions_df</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
-    <span class="p">):</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">        Backward-compatible wrapper for interactive analyzer-owned label plots.</span>
-
-<span class="sd">        Parameters</span>
-<span class="sd">        ----------</span>
-<span class="sd">        label_type</span>
-<span class="sd">            Label source to visualize, typically ``&quot;kmeans&quot;`` or</span>
-<span class="sd">            ``&quot;rule_based&quot;``.</span>
-<span class="sd">        use_train_data</span>
-<span class="sd">            If ``True``, plot cached training labels instead of a new sample.</span>
-<span class="sd">        chrom</span>
-<span class="sd">            Optional chromosome restriction when plotting a new sample.</span>
-<span class="sd">        sample_info</span>
-<span class="sd">            Sample to analyze when ``use_train_data`` is ``False``.</span>
-<span class="sd">        sample_info_removed</span>
-<span class="sd">            Optional table of filtered CpGs to overlay as removed points.</span>
-<span class="sd">        x_col, y_col</span>
-<span class="sd">            Probe-level columns used for the scatter plot axes.</span>
-<span class="sd">        label_title</span>
-<span class="sd">            Legend title override.</span>
-<span class="sd">        show_plot</span>
-<span class="sd">            If ``True``, display the plot immediately.</span>
-<span class="sd">        max_points</span>
-<span class="sd">            Maximum number of probe rows to render in the interactive scatter.</span>
-<span class="sd">        color_pmd_only, color_regions_df</span>
-<span class="sd">            Legacy overlay controls translated into ``overlay_regions_df``.</span>
-
-<span class="sd">        Returns</span>
-<span class="sd">        -------</span>
-<span class="sd">        plotly.graph_objects.Figure</span>
-<span class="sd">            Interactive scatter plot returned by ``plot_labels``.</span>
-<span class="sd">        &quot;&quot;&quot;</span>
-        <span class="n">overlay_regions_df</span><span class="p">,</span> <span class="n">overlay_style</span> <span class="o">=</span> <span class="n">resolve_overlay_plot_args</span><span class="p">(</span>
-            <span class="n">color_pmd_only</span><span class="o">=</span><span class="n">color_pmd_only</span><span class="p">,</span>
-            <span class="n">color_regions_df</span><span class="o">=</span><span class="n">color_regions_df</span><span class="p">,</span>
-        <span class="p">)</span>
-        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">plot_labels</span><span class="p">(</span>
-            <span class="n">sample_info</span><span class="o">=</span><span class="kc">None</span> <span class="k">if</span> <span class="n">use_train_data</span> <span class="k">else</span> <span class="n">sample_info</span><span class="p">,</span>
-            <span class="n">chrom</span><span class="o">=</span><span class="n">chrom</span><span class="p">,</span>
-            <span class="n">sample_info_removed</span><span class="o">=</span><span class="n">sample_info_removed</span><span class="p">,</span>
-            <span class="n">label_source</span><span class="o">=</span><span class="n">label_type</span><span class="p">,</span>
-            <span class="n">overlay_regions_df</span><span class="o">=</span><span class="n">overlay_regions_df</span><span class="p">,</span>
-            <span class="n">x_col</span><span class="o">=</span><span class="n">x_col</span><span class="p">,</span>
-            <span class="n">y_col</span><span class="o">=</span><span class="n">y_col</span><span class="p">,</span>
-            <span class="n">label_title</span><span class="o">=</span><span class="n">label_title</span><span class="p">,</span>
-            <span class="n">show_plot</span><span class="o">=</span><span class="n">show_plot</span><span class="p">,</span>
-            <span class="n">max_points</span><span class="o">=</span><span class="n">max_points</span><span class="p">,</span>
-            <span class="n">overlay_style</span><span class="o">=</span><span class="n">overlay_style</span><span class="p">,</span>
-        <span class="p">)</span></div>
-
-
+    <span class="c1">#TODO: remove this so that analyzer is only used for the rule-based approach</span>
 <div class="viewcode-block" id="MethylStateAnalyzer.plot_labels">
 <a class="viewcode-back" href="../../generated/methylseg.MethylStateAnalyzer.html#methylseg.MethylStateAnalyzer.plot_labels">[docs]</a>
-    <span class="k">def</span> <span class="nf">plot_labels</span><span class="p">(</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">plot_labels</span><span class="p">(</span>
         <span class="bp">self</span><span class="p">,</span>
         <span class="n">sample_info</span><span class="p">:</span> <span class="n">SampleInfo</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
         <span class="n">chrom</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
@@ -816,15 +759,53 @@
         <span class="n">overlay_style</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;state&quot;</span><span class="p">,</span>
         <span class="n">region_start</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
         <span class="n">region_end</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
-        <span class="n">region_chrom</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
         <span class="n">x_col</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;CpG_beg&quot;</span><span class="p">,</span>
         <span class="n">y_col</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;beta&quot;</span><span class="p">,</span>
         <span class="n">label_title</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
         <span class="n">show_plot</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
         <span class="n">max_points</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">120_000</span><span class="p">,</span>
+        <span class="n">state_colors</span><span class="p">:</span> <span class="nb">dict</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
     <span class="p">):</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Plot genomic-position vs beta for analyzer-owned labels.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        sample_info</span>
+<span class="sd">            Sample to analyze. When omitted, uses the cached training data.</span>
+<span class="sd">        chrom</span>
+<span class="sd">            Optional chromosome restriction for sample-level plotting.</span>
+<span class="sd">        sample_info_removed</span>
+<span class="sd">            Optional table of CpGs removed during preprocessing to show as a</span>
+<span class="sd">            background layer.</span>
+<span class="sd">        label_source</span>
+<span class="sd">            Label family to plot, either ``&quot;kmeans&quot;`` or ``&quot;rule_based&quot;``.</span>
+<span class="sd">        overlay_regions_df</span>
+<span class="sd">            Optional region table used to recolor points by overlapping</span>
+<span class="sd">            intervals.</span>
+<span class="sd">        overlay_style</span>
+<span class="sd">            Overlay mode, either ``&quot;state&quot;`` or ``&quot;highlight&quot;``.</span>
+<span class="sd">        region_start</span>
+<span class="sd">            Optional genomic start coordinate for x-axis zooming.</span>
+<span class="sd">        region_end</span>
+<span class="sd">            Optional genomic end coordinate for x-axis zooming.</span>
+<span class="sd">        x_col</span>
+<span class="sd">            Probe-level column used for the x-axis.</span>
+<span class="sd">        y_col</span>
+<span class="sd">            Probe-level column used for the y-axis.</span>
+<span class="sd">        label_title</span>
+<span class="sd">            Optional legend title override.</span>
+<span class="sd">        show_plot</span>
+<span class="sd">            If ``True``, display the Plotly figure immediately.</span>
+<span class="sd">        max_points</span>
+<span class="sd">            Maximum number of plotted points before downsampling.</span>
+<span class="sd">        state_colors</span>
+<span class="sd">            Optional biological-state color overrides.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        plotly.graph_objects.Figure</span>
+<span class="sd">            Interactive beta scatter plot for the requested labels.</span>
 
 <span class="sd">        Region args only zoom the x-axis viewport; they do not create a</span>
 <span class="sd">        highlight overlay unless one is passed explicitly.</span>
@@ -888,6 +869,7 @@
             <span class="n">show_plot</span><span class="o">=</span><span class="n">show_plot</span><span class="p">,</span>
             <span class="n">max_points</span><span class="o">=</span><span class="n">max_points</span><span class="p">,</span>
             <span class="n">overlay_regions_df</span><span class="o">=</span><span class="n">overlay_regions_df</span><span class="p">,</span>
+            <span class="n">state_colors</span><span class="o">=</span><span class="n">state_colors</span><span class="p">,</span>
             <span class="n">overlay_style</span><span class="o">=</span><span class="p">(</span>
                 <span class="n">resolved_overlay_style</span>
                 <span class="k">if</span> <span class="n">overlay_regions_df</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span>
@@ -895,7 +877,6 @@
             <span class="p">),</span>
             <span class="n">region_start</span><span class="o">=</span><span class="n">region_start</span><span class="p">,</span>
             <span class="n">region_end</span><span class="o">=</span><span class="n">region_end</span><span class="p">,</span>
-            <span class="n">region_chrom</span><span class="o">=</span><span class="n">region_chrom</span><span class="p">,</span>
         <span class="p">)</span></div>
 </div>
 

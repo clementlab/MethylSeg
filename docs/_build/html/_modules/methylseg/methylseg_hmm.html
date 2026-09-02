@@ -5,16 +5,16 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>methylseg.methylseg_hmm &mdash; methylseg 0.1.0 documentation</title>
-      <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=80d5e7a1" />
+  <title>methylseg.methylseg_hmm &mdash; methylseg 0.1.4 documentation</title>
+      <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=b86133f3" />
       <link rel="stylesheet" type="text/css" href="../../_static/css/theme.css?v=9edc463e" />
 
   
       <script src="../../_static/jquery.js?v=5d32c60e"></script>
       <script src="../../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
-      <script src="../../_static/documentation_options.js?v=01f34227"></script>
-      <script src="../../_static/doctools.js?v=9bcbadda"></script>
-      <script src="../../_static/sphinx_highlight.js?v=dc90522c"></script>
+      <script src="../../_static/documentation_options.js?v=fd825880"></script>
+      <script src="../../_static/doctools.js?v=fd6eb6e6"></script>
+      <script src="../../_static/sphinx_highlight.js?v=6ffebe34"></script>
       <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
     <script src="../../_static/js/theme.js"></script>
     <link rel="index" title="Index" href="../../genindex.html" />
@@ -42,10 +42,13 @@
         </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
               <p class="caption" role="heading"><span class="caption-text">Contents</span></p>
 <ul>
+<li class="toctree-l1"><a class="reference internal" href="../../api.html">API Reference</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../full_pipeline.html">Full Pipeline And Outputs</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../input_format.html">Input Format</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../installation.html">Installation</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../quickstart.html">Quickstart</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../api.html">API Reference</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../tutorials.html">Tutorial Notebook</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../segmentation_methods.html">Segmentation Methods</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../tutorials.html">Example Notebooks</a></li>
 </ul>
 
         </div>
@@ -75,15 +78,15 @@
   <h1>Source code for methylseg.methylseg_hmm</h1><div class="highlight"><pre>
 <span></span><span class="sd">&quot;&quot;&quot;Hidden Markov Model backends used by the methylseg segmentor.&quot;&quot;&quot;</span>
 
-<span class="kn">import</span> <span class="nn">warnings</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">warnings</span>
 
-<span class="kn">from</span> <span class="nn">typing</span> <span class="kn">import</span> <span class="n">List</span><span class="p">,</span> <span class="n">Optional</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">List</span><span class="p">,</span> <span class="n">Optional</span>
 
-<span class="kn">import</span> <span class="nn">cthmm</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">cthmm</span>
 
-<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
 
-<span class="kn">from</span> <span class="nn">hmmlearn</span> <span class="kn">import</span> <span class="n">hmm</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">hmmlearn</span><span class="w"> </span><span class="kn">import</span> <span class="n">hmm</span>
 
 <span class="n">warnings</span><span class="o">.</span><span class="n">filterwarnings</span><span class="p">(</span>
     <span class="s2">&quot;ignore&quot;</span><span class="p">,</span> <span class="n">message</span><span class="o">=</span><span class="s2">&quot;divide by zero encountered in log&quot;</span><span class="p">,</span> <span class="n">module</span><span class="o">=</span><span class="s2">&quot;cthmm&quot;</span>
@@ -92,18 +95,26 @@
 
 <div class="viewcode-block" id="MethylSegHMM">
 <a class="viewcode-back" href="../../generated/methylseg.MethylSegHMM.html#methylseg.MethylSegHMM">[docs]</a>
-<span class="k">class</span> <span class="nc">MethylSegHMM</span><span class="p">:</span>
+<span class="k">class</span><span class="w"> </span><span class="nc">MethylSegHMM</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;Abstract base class for methylseg HMM backends.&quot;&quot;&quot;</span>
 
 <div class="viewcode-block" id="MethylSegHMM.__init__">
 <a class="viewcode-back" href="../../generated/methylseg.MethylSegHMM.html#methylseg.MethylSegHMM.__init__">[docs]</a>
-    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">n_states</span><span class="p">:</span> <span class="nb">int</span><span class="p">):</span>
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">n_states</span><span class="p">:</span> <span class="nb">int</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Initialize an abstract HMM backend.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        n_states</span>
+<span class="sd">            Number of hidden methylation states the backend will model.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">(</span><span class="s2">&quot;MethylSegHMM is an abstract class&quot;</span><span class="p">)</span></div>
 
 
 <div class="viewcode-block" id="MethylSegHMM.fit">
 <a class="viewcode-back" href="../../generated/methylseg.MethylSegHMM.html#methylseg.MethylSegHMM.fit">[docs]</a>
-    <span class="k">def</span> <span class="nf">fit</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">emissions</span><span class="p">,</span> <span class="n">sample_info</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">chrom</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">fit</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">emissions</span><span class="p">,</span> <span class="n">sample_info</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">chrom</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Fit backend-specific HMM parameters on the provided emissions.</span>
 
@@ -123,14 +134,14 @@
 
 <div class="viewcode-block" id="MethylSegHMM.create_model">
 <a class="viewcode-back" href="../../generated/methylseg.MethylSegHMM.html#methylseg.MethylSegHMM.create_model">[docs]</a>
-    <span class="k">def</span> <span class="nf">create_model</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">create_model</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Instantiate and initialize the backend-specific HMM object.&quot;&quot;&quot;</span>
         <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">(</span><span class="s2">&quot;fit method not implemented&quot;</span><span class="p">)</span></div>
 
 
 <div class="viewcode-block" id="MethylSegHMM.predict">
 <a class="viewcode-back" href="../../generated/methylseg.MethylSegHMM.html#methylseg.MethylSegHMM.predict">[docs]</a>
-    <span class="k">def</span> <span class="nf">predict</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">emissions</span><span class="p">):</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">predict</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">emissions</span><span class="p">):</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Decode hidden states for the supplied emissions.</span>
 
@@ -149,7 +160,7 @@
 
 <div class="viewcode-block" id="MethylSegHMM.format_fit">
 <a class="viewcode-back" href="../../generated/methylseg.MethylSegHMM.html#methylseg.MethylSegHMM.format_fit">[docs]</a>
-    <span class="k">def</span> <span class="nf">format_fit</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">emissions</span><span class="p">):</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">format_fit</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">emissions</span><span class="p">):</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Convert raw emissions into the representation expected by ``fit``.</span>
 
@@ -163,7 +174,7 @@
 
 <div class="viewcode-block" id="MethylSegHMM.format_predict">
 <a class="viewcode-back" href="../../generated/methylseg.MethylSegHMM.html#methylseg.MethylSegHMM.format_predict">[docs]</a>
-    <span class="k">def</span> <span class="nf">format_predict</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">emissions</span><span class="p">):</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">format_predict</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">emissions</span><span class="p">):</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Convert raw emissions into the representation expected by ``predict``.</span>
 
@@ -178,47 +189,107 @@
 
 
 <span class="c1"># TODO implement and test custom DAHMM to test speed and performance against CTHMM</span>
-<span class="k">class</span> <span class="nc">DAMethylSegHMM</span><span class="p">(</span><span class="n">MethylSegHMM</span><span class="p">):</span>
+<span class="k">class</span><span class="w"> </span><span class="nc">DAMethylSegHMM</span><span class="p">(</span><span class="n">MethylSegHMM</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;Placeholder for an alternative HMM implementation that is not yet built.&quot;&quot;&quot;</span>
 
-    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">n_states</span><span class="p">:</span> <span class="nb">int</span><span class="p">):</span>
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">n_states</span><span class="p">:</span> <span class="nb">int</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Initialize the unimplemented DA HMM placeholder.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        n_states</span>
+<span class="sd">            Number of hidden methylation states the backend would model.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">(</span><span class="s2">&quot;DAMethylSegHMM is not implemented&quot;</span><span class="p">)</span>
 
-    <span class="k">def</span> <span class="nf">fit</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">emissions</span><span class="p">,</span> <span class="n">sample_info</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">chrom</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">fit</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">emissions</span><span class="p">,</span> <span class="n">sample_info</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">chrom</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Placeholder method for the not-yet-implemented DA backend.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        emissions</span>
+<span class="sd">            Observation sequence or feature matrix prepared for the DA backend.</span>
+<span class="sd">        sample_info</span>
+<span class="sd">            Optional sample metadata for API compatibility.</span>
+<span class="sd">        chrom</span>
+<span class="sd">            Optional chromosome label for API compatibility.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">(</span><span class="s2">&quot;fit method not implemented&quot;</span><span class="p">)</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">create_model</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Placeholder method for the not-yet-implemented DA backend.&quot;&quot;&quot;</span>
         <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">(</span><span class="s2">&quot;fit method not implemented&quot;</span><span class="p">)</span>
 
-    <span class="k">def</span> <span class="nf">create_model</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Placeholder method for the not-yet-implemented DA backend.&quot;&quot;&quot;</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">predict</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">emissions</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Placeholder method for the not-yet-implemented DA backend.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        emissions</span>
+<span class="sd">            Observation sequence or feature matrix prepared for prediction.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        numpy.ndarray</span>
+<span class="sd">            Placeholder hidden-state assignments once this backend is</span>
+<span class="sd">            implemented.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">(</span><span class="s2">&quot;fit method not implemented&quot;</span><span class="p">)</span>
 
-    <span class="k">def</span> <span class="nf">predict</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">emissions</span><span class="p">):</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Placeholder method for the not-yet-implemented DA backend.&quot;&quot;&quot;</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">format_fit</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">emissions</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Placeholder method for the not-yet-implemented DA backend.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        emissions</span>
+<span class="sd">            Raw observation labels or features.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">(</span><span class="s2">&quot;fit method not implemented&quot;</span><span class="p">)</span>
 
-    <span class="k">def</span> <span class="nf">format_fit</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">emissions</span><span class="p">):</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Placeholder method for the not-yet-implemented DA backend.&quot;&quot;&quot;</span>
-        <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">(</span><span class="s2">&quot;fit method not implemented&quot;</span><span class="p">)</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">format_predict</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">emissions</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Placeholder method for the not-yet-implemented DA backend.</span>
 
-    <span class="k">def</span> <span class="nf">format_predict</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">emissions</span><span class="p">):</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Placeholder method for the not-yet-implemented DA backend.&quot;&quot;&quot;</span>
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        emissions</span>
+<span class="sd">            Raw observation labels or features.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">(</span><span class="s2">&quot;fit method not implemented&quot;</span><span class="p">)</span>
 
 
 <div class="viewcode-block" id="MultinomialSegHMM">
 <a class="viewcode-back" href="../../generated/methylseg.MultinomialSegHMM.html#methylseg.MultinomialSegHMM">[docs]</a>
-<span class="k">class</span> <span class="nc">MultinomialSegHMM</span><span class="p">(</span><span class="n">MethylSegHMM</span><span class="p">):</span>
+<span class="k">class</span><span class="w"> </span><span class="nc">MultinomialSegHMM</span><span class="p">(</span><span class="n">MethylSegHMM</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;Discrete multinomial HMM over categorical methylation state labels.&quot;&quot;&quot;</span>
 
 <div class="viewcode-block" id="MultinomialSegHMM.__init__">
 <a class="viewcode-back" href="../../generated/methylseg.MultinomialSegHMM.html#methylseg.MultinomialSegHMM.__init__">[docs]</a>
-    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span>
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span>
         <span class="bp">self</span><span class="p">,</span>
         <span class="n">n_states</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
         <span class="n">random_state</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">42</span><span class="p">,</span>
         <span class="n">n_iter</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">30</span><span class="p">,</span>
         <span class="n">alpha</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">0.7</span><span class="p">,</span>
     <span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Initialize a multinomial HMM for discrete state observations.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        n_states</span>
+<span class="sd">            Number of hidden and observed categorical states.</span>
+<span class="sd">        random_state</span>
+<span class="sd">            Random seed passed to the underlying HMM implementation.</span>
+<span class="sd">        n_iter</span>
+<span class="sd">            Maximum number of expectation-maximization iterations.</span>
+<span class="sd">        alpha</span>
+<span class="sd">            Compatibility smoothing parameter retained for this backend.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">random_state</span> <span class="o">=</span> <span class="n">random_state</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">n_states</span> <span class="o">=</span> <span class="n">n_states</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">n_iter</span> <span class="o">=</span> <span class="n">n_iter</span>
@@ -228,7 +299,7 @@
 
 <div class="viewcode-block" id="MultinomialSegHMM.create_model">
 <a class="viewcode-back" href="../../generated/methylseg.MultinomialSegHMM.html#methylseg.MultinomialSegHMM.create_model">[docs]</a>
-    <span class="k">def</span> <span class="nf">create_model</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">create_model</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Create the underlying ``hmmlearn.MultinomialHMM`` instance.&quot;&quot;&quot;</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">hmm_model</span> <span class="o">=</span> <span class="n">hmm</span><span class="o">.</span><span class="n">MultinomialHMM</span><span class="p">(</span>
             <span class="n">n_components</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">n_states</span><span class="p">,</span>
@@ -239,7 +310,7 @@
 
 <div class="viewcode-block" id="MultinomialSegHMM.format_fit">
 <a class="viewcode-back" href="../../generated/methylseg.MultinomialSegHMM.html#methylseg.MultinomialSegHMM.format_fit">[docs]</a>
-    <span class="k">def</span> <span class="nf">format_fit</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">emissions</span><span class="p">):</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">format_fit</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">emissions</span><span class="p">):</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        One-hot encode discrete state labels for multinomial fitting.</span>
 
@@ -258,14 +329,26 @@
 
 <div class="viewcode-block" id="MultinomialSegHMM.format_predict">
 <a class="viewcode-back" href="../../generated/methylseg.MultinomialSegHMM.html#methylseg.MultinomialSegHMM.format_predict">[docs]</a>
-    <span class="k">def</span> <span class="nf">format_predict</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">emissions</span><span class="p">):</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Format discrete labels for prediction using the fit representation.&quot;&quot;&quot;</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">format_predict</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">emissions</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Format discrete labels for prediction using the fit representation.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        emissions</span>
+<span class="sd">            Integer state labels in ``[0, n_states)``.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        numpy.ndarray</span>
+<span class="sd">            One-hot encoded matrix with shape ``(n_observations, n_states)``.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">format_fit</span><span class="p">(</span><span class="n">emissions</span><span class="p">)</span></div>
 
 
 <div class="viewcode-block" id="MultinomialSegHMM.fit">
 <a class="viewcode-back" href="../../generated/methylseg.MultinomialSegHMM.html#methylseg.MultinomialSegHMM.fit">[docs]</a>
-    <span class="k">def</span> <span class="nf">fit</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">emissions</span><span class="p">,</span> <span class="n">sample_info</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">chrom</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">fit</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">emissions</span><span class="p">,</span> <span class="n">sample_info</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">chrom</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Fit the multinomial HMM on discrete state observations.</span>
 
@@ -287,7 +370,7 @@
 
 <div class="viewcode-block" id="MultinomialSegHMM.predict">
 <a class="viewcode-back" href="../../generated/methylseg.MultinomialSegHMM.html#methylseg.MultinomialSegHMM.predict">[docs]</a>
-    <span class="k">def</span> <span class="nf">predict</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">emissions</span><span class="p">):</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">predict</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">emissions</span><span class="p">):</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Predict hidden states for discrete observations.</span>
 
@@ -311,7 +394,7 @@
 
 <div class="viewcode-block" id="StickyCategoricalMethylSegHMM">
 <a class="viewcode-back" href="../../generated/methylseg.StickyCategoricalMethylSegHMM.html#methylseg.StickyCategoricalMethylSegHMM">[docs]</a>
-<span class="k">class</span> <span class="nc">StickyCategoricalMethylSegHMM</span><span class="p">(</span><span class="n">MethylSegHMM</span><span class="p">):</span>
+<span class="k">class</span><span class="w"> </span><span class="nc">StickyCategoricalMethylSegHMM</span><span class="p">(</span><span class="n">MethylSegHMM</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;Categorical HMM with strong self-transition priors for smoother segments.&quot;&quot;&quot;</span>
 
     <span class="n">DEFAULT_STAY_PROB</span> <span class="o">=</span> <span class="mf">0.99995</span>
@@ -320,7 +403,7 @@
 
 <div class="viewcode-block" id="StickyCategoricalMethylSegHMM.__init__">
 <a class="viewcode-back" href="../../generated/methylseg.StickyCategoricalMethylSegHMM.html#methylseg.StickyCategoricalMethylSegHMM.__init__">[docs]</a>
-    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span>
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span>
         <span class="bp">self</span><span class="p">,</span>
         <span class="n">n_states</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
         <span class="n">random_state</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">42</span><span class="p">,</span>
@@ -330,6 +413,27 @@
         <span class="n">transition_prior_strength</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="n">TRANSITION_PRIOR_STRENGTH</span><span class="p">,</span>
         <span class="n">fit_transitions</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
     <span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Initialize a sticky categorical HMM.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        n_states</span>
+<span class="sd">            Number of hidden and observed categorical states.</span>
+<span class="sd">        random_state</span>
+<span class="sd">            Random seed passed to the underlying HMM implementation.</span>
+<span class="sd">        n_iter</span>
+<span class="sd">            Maximum number of expectation-maximization iterations.</span>
+<span class="sd">        stay_prob</span>
+<span class="sd">            Initial self-transition probability for each hidden state.</span>
+<span class="sd">        emission_mismatch_prob</span>
+<span class="sd">            Probability mass assigned to nonmatching observed states.</span>
+<span class="sd">        transition_prior_strength</span>
+<span class="sd">            Weight of the sticky transition prior when transitions are fitted.</span>
+<span class="sd">        fit_transitions</span>
+<span class="sd">            If ``True``, estimate transitions during fitting; otherwise retain</span>
+<span class="sd">            the initialized sticky transition matrix.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">if</span> <span class="ow">not</span> <span class="n">np</span><span class="o">.</span><span class="n">isfinite</span><span class="p">(</span><span class="n">stay_prob</span><span class="p">)</span> <span class="ow">or</span> <span class="ow">not</span> <span class="mi">0</span> <span class="o">&lt;=</span> <span class="n">stay_prob</span> <span class="o">&lt;=</span> <span class="mi">1</span><span class="p">:</span>
             <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
                 <span class="sa">f</span><span class="s2">&quot;stay_prob must be a finite value strictly between 0 and 1. &quot;</span>
@@ -361,7 +465,7 @@
 
 <div class="viewcode-block" id="StickyCategoricalMethylSegHMM.format_fit">
 <a class="viewcode-back" href="../../generated/methylseg.StickyCategoricalMethylSegHMM.html#methylseg.StickyCategoricalMethylSegHMM.format_fit">[docs]</a>
-    <span class="k">def</span> <span class="nf">format_fit</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">emissions</span><span class="p">):</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">format_fit</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">emissions</span><span class="p">):</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Reshape integer categorical observations for ``CategoricalHMM``.</span>
 
@@ -381,20 +485,46 @@
 
 <div class="viewcode-block" id="StickyCategoricalMethylSegHMM.format_predict">
 <a class="viewcode-back" href="../../generated/methylseg.StickyCategoricalMethylSegHMM.html#methylseg.StickyCategoricalMethylSegHMM.format_predict">[docs]</a>
-    <span class="k">def</span> <span class="nf">format_predict</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">emissions</span><span class="p">):</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Format categorical observations for prediction.&quot;&quot;&quot;</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">format_predict</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">emissions</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Format categorical observations for prediction.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        emissions</span>
+<span class="sd">            Integer observation labels in ``[0, n_states)``.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        numpy.ndarray</span>
+<span class="sd">            Column vector with one categorical code per observation.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">format_fit</span><span class="p">(</span><span class="n">emissions</span><span class="p">)</span></div>
 
 
 <div class="viewcode-block" id="StickyCategoricalMethylSegHMM.make_sticky_transmat">
 <a class="viewcode-back" href="../../generated/methylseg.StickyCategoricalMethylSegHMM.html#methylseg.StickyCategoricalMethylSegHMM.make_sticky_transmat">[docs]</a>
-    <span class="k">def</span> <span class="nf">make_sticky_transmat</span><span class="p">(</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">make_sticky_transmat</span><span class="p">(</span>
         <span class="bp">self</span><span class="p">,</span>
         <span class="n">n_states</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
         <span class="n">stay_prob</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">float</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
     <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Build a &#39;sticky&#39; transition matrix.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        n_states</span>
+<span class="sd">            Optional number of hidden states. When omitted, uses</span>
+<span class="sd">            ``self.n_states``.</span>
+<span class="sd">        stay_prob</span>
+<span class="sd">            Optional diagonal self-transition probability. When omitted, uses</span>
+<span class="sd">            ``self.stay_prob``.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        numpy.ndarray</span>
+<span class="sd">            Square transition matrix whose rows sum to one.</span>
 
 <span class="sd">        stay_prob controls the diagonal self-transition probability for every</span>
 <span class="sd">        state. Remaining mass is shared uniformly across off-diagonal entries.</span>
@@ -416,7 +546,7 @@
 
 <div class="viewcode-block" id="StickyCategoricalMethylSegHMM.make_emissionprob">
 <a class="viewcode-back" href="../../generated/methylseg.StickyCategoricalMethylSegHMM.html#methylseg.StickyCategoricalMethylSegHMM.make_emissionprob">[docs]</a>
-    <span class="k">def</span> <span class="nf">make_emissionprob</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">make_emissionprob</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Build the near-identity emission matrix used by the sticky HMM.</span>
 
@@ -441,7 +571,7 @@
 
 <div class="viewcode-block" id="StickyCategoricalMethylSegHMM.create_model">
 <a class="viewcode-back" href="../../generated/methylseg.StickyCategoricalMethylSegHMM.html#methylseg.StickyCategoricalMethylSegHMM.create_model">[docs]</a>
-    <span class="k">def</span> <span class="nf">create_model</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">create_model</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Create and initialize the sticky categorical HMM backend.&quot;&quot;&quot;</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">prior_trans</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">make_sticky_transmat</span><span class="p">()</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">hmm_model</span> <span class="o">=</span> <span class="n">hmm</span><span class="o">.</span><span class="n">CategoricalHMM</span><span class="p">(</span>
@@ -462,7 +592,7 @@
 
 <div class="viewcode-block" id="StickyCategoricalMethylSegHMM.fit">
 <a class="viewcode-back" href="../../generated/methylseg.StickyCategoricalMethylSegHMM.html#methylseg.StickyCategoricalMethylSegHMM.fit">[docs]</a>
-    <span class="k">def</span> <span class="nf">fit</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">emissions</span><span class="p">,</span> <span class="n">sample_info</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">chrom</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">fit</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">emissions</span><span class="p">,</span> <span class="n">sample_info</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">chrom</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Fit transition probabilities when ``fit_transitions`` is enabled.</span>
 
@@ -485,7 +615,7 @@
 
 <div class="viewcode-block" id="StickyCategoricalMethylSegHMM.predict">
 <a class="viewcode-back" href="../../generated/methylseg.StickyCategoricalMethylSegHMM.html#methylseg.StickyCategoricalMethylSegHMM.predict">[docs]</a>
-    <span class="k">def</span> <span class="nf">predict</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">emissions</span><span class="p">):</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">predict</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">emissions</span><span class="p">):</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Predict smoothed hidden states from categorical observations.</span>
 
@@ -509,7 +639,7 @@
 
 <div class="viewcode-block" id="GaussianMethylSegHMM">
 <a class="viewcode-back" href="../../generated/methylseg.GaussianMethylSegHMM.html#methylseg.GaussianMethylSegHMM">[docs]</a>
-<span class="k">class</span> <span class="nc">GaussianMethylSegHMM</span><span class="p">(</span><span class="n">MethylSegHMM</span><span class="p">):</span>
+<span class="k">class</span><span class="w"> </span><span class="nc">GaussianMethylSegHMM</span><span class="p">(</span><span class="n">MethylSegHMM</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;Gaussian HMM for continuous emission vectors such as PCA features.&quot;&quot;&quot;</span>
 
     <span class="n">TRANSITION_FLOOR</span> <span class="o">=</span> <span class="mf">1e-6</span>
@@ -517,7 +647,7 @@
 
 <div class="viewcode-block" id="GaussianMethylSegHMM.__init__">
 <a class="viewcode-back" href="../../generated/methylseg.GaussianMethylSegHMM.html#methylseg.GaussianMethylSegHMM.__init__">[docs]</a>
-    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span>
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span>
         <span class="bp">self</span><span class="p">,</span>
         <span class="n">n_states</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
         <span class="n">random_state</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">42</span><span class="p">,</span>
@@ -527,6 +657,27 @@
         <span class="n">init_params</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;&quot;</span><span class="p">,</span>
         <span class="n">params</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;stmc&quot;</span><span class="p">,</span>
     <span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Initialize a Gaussian HMM for continuous emission features.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        n_states</span>
+<span class="sd">            Number of hidden methylation states.</span>
+<span class="sd">        random_state</span>
+<span class="sd">            Random seed passed to the underlying HMM implementation.</span>
+<span class="sd">        n_iter</span>
+<span class="sd">            Maximum number of expectation-maximization iterations.</span>
+<span class="sd">        tol</span>
+<span class="sd">            Convergence tolerance for expectation-maximization.</span>
+<span class="sd">        covariance_type</span>
+<span class="sd">            Covariance parameterization; currently only ``&quot;diag&quot;`` is</span>
+<span class="sd">            supported.</span>
+<span class="sd">        init_params</span>
+<span class="sd">            ``hmmlearn`` parameter codes to initialize automatically.</span>
+<span class="sd">        params</span>
+<span class="sd">            ``hmmlearn`` parameter codes to update during fitting.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">if</span> <span class="n">covariance_type</span> <span class="o">!=</span> <span class="s2">&quot;diag&quot;</span><span class="p">:</span>
             <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
                 <span class="s2">&quot;GaussianMethylSegHMM currently supports only covariance_type=&#39;diag&#39;.&quot;</span>
@@ -543,7 +694,7 @@
 
 <div class="viewcode-block" id="GaussianMethylSegHMM.create_model">
 <a class="viewcode-back" href="../../generated/methylseg.GaussianMethylSegHMM.html#methylseg.GaussianMethylSegHMM.create_model">[docs]</a>
-    <span class="k">def</span> <span class="nf">create_model</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">create_model</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Create the underlying ``hmmlearn.GaussianHMM`` instance.&quot;&quot;&quot;</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">hmm_model</span> <span class="o">=</span> <span class="n">hmm</span><span class="o">.</span><span class="n">GaussianHMM</span><span class="p">(</span>
             <span class="n">n_components</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">n_states</span><span class="p">,</span>
@@ -558,7 +709,7 @@
 
 <div class="viewcode-block" id="GaussianMethylSegHMM.format_fit">
 <a class="viewcode-back" href="../../generated/methylseg.GaussianMethylSegHMM.html#methylseg.GaussianMethylSegHMM.format_fit">[docs]</a>
-    <span class="k">def</span> <span class="nf">format_fit</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">emissions</span><span class="p">):</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">format_fit</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">emissions</span><span class="p">):</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Validate and coerce continuous emissions into a 2-D float matrix.</span>
 
@@ -584,12 +735,25 @@
 
 <div class="viewcode-block" id="GaussianMethylSegHMM.format_predict">
 <a class="viewcode-back" href="../../generated/methylseg.GaussianMethylSegHMM.html#methylseg.GaussianMethylSegHMM.format_predict">[docs]</a>
-    <span class="k">def</span> <span class="nf">format_predict</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">emissions</span><span class="p">):</span>
-<span class="w">        </span><span class="sd">&quot;&quot;&quot;Format continuous emission features for prediction.&quot;&quot;&quot;</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">format_predict</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">emissions</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Format continuous emission features for prediction.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        emissions</span>
+<span class="sd">            Continuous emission features with shape</span>
+<span class="sd">            ``(n_observations, n_features)``.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        numpy.ndarray</span>
+<span class="sd">            Float64 feature matrix ready for Gaussian HMM decoding.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">format_fit</span><span class="p">(</span><span class="n">emissions</span><span class="p">)</span></div>
 
 
-    <span class="k">def</span> <span class="nf">_get_sequence_start_indices</span><span class="p">(</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">_get_sequence_start_indices</span><span class="p">(</span>
         <span class="bp">self</span><span class="p">,</span>
         <span class="n">n_observations</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
         <span class="n">lengths</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">List</span><span class="p">[</span><span class="nb">int</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
@@ -610,7 +774,7 @@
             <span class="n">starts</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">offset</span><span class="p">)</span>
         <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">starts</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">int</span><span class="p">)</span>
 
-    <span class="k">def</span> <span class="nf">_get_valid_transition_mask</span><span class="p">(</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">_get_valid_transition_mask</span><span class="p">(</span>
         <span class="bp">self</span><span class="p">,</span>
         <span class="n">n_observations</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
         <span class="n">lengths</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">List</span><span class="p">[</span><span class="nb">int</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
@@ -630,7 +794,7 @@
 
 <div class="viewcode-block" id="GaussianMethylSegHMM.initialize_from_kmeans">
 <a class="viewcode-back" href="../../generated/methylseg.GaussianMethylSegHMM.html#methylseg.GaussianMethylSegHMM.initialize_from_kmeans">[docs]</a>
-    <span class="k">def</span> <span class="nf">initialize_from_kmeans</span><span class="p">(</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">initialize_from_kmeans</span><span class="p">(</span>
         <span class="bp">self</span><span class="p">,</span>
         <span class="n">X_scaled</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span>
         <span class="n">km_labels</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span>
@@ -715,7 +879,7 @@
 
 <div class="viewcode-block" id="GaussianMethylSegHMM.fit">
 <a class="viewcode-back" href="../../generated/methylseg.GaussianMethylSegHMM.html#methylseg.GaussianMethylSegHMM.fit">[docs]</a>
-    <span class="k">def</span> <span class="nf">fit</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">emissions</span><span class="p">,</span> <span class="n">sample_info</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">chrom</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">fit</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">emissions</span><span class="p">,</span> <span class="n">sample_info</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">chrom</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Fit the Gaussian HMM on continuous emission features.</span>
 
@@ -737,7 +901,7 @@
 
 <div class="viewcode-block" id="GaussianMethylSegHMM.predict">
 <a class="viewcode-back" href="../../generated/methylseg.GaussianMethylSegHMM.html#methylseg.GaussianMethylSegHMM.predict">[docs]</a>
-    <span class="k">def</span> <span class="nf">predict</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">emissions</span><span class="p">):</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">predict</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">emissions</span><span class="p">):</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Predict hidden states from continuous emission features.</span>
 
@@ -761,13 +925,13 @@
 
 <div class="viewcode-block" id="CTMethylSegHMM">
 <a class="viewcode-back" href="../../generated/methylseg.CTMethylSegHMM.html#methylseg.CTMethylSegHMM">[docs]</a>
-<span class="k">class</span> <span class="nc">CTMethylSegHMM</span><span class="p">(</span><span class="n">MethylSegHMM</span><span class="p">):</span>
+<span class="k">class</span><span class="w"> </span><span class="nc">CTMethylSegHMM</span><span class="p">(</span><span class="n">MethylSegHMM</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;Continuous-time HMM backend for sparsely spaced CpGs along a chromosome.&quot;&quot;&quot;</span>
 
 
 <div class="viewcode-block" id="CTMethylSegHMM.__init__">
 <a class="viewcode-back" href="../../generated/methylseg.CTMethylSegHMM.html#methylseg.CTMethylSegHMM.__init__">[docs]</a>
-    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span>
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span>
         <span class="bp">self</span><span class="p">,</span>
         <span class="n">n_states</span><span class="p">,</span>
         <span class="n">n_emissions</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">4</span><span class="p">,</span>
@@ -778,6 +942,28 @@
         <span class="n">random_state</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">42</span><span class="p">,</span>
         <span class="n">algorithm</span><span class="o">=</span><span class="s2">&quot;forward-backward&quot;</span><span class="p">,</span>
     <span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Initialize a continuous-time HMM for unevenly spaced CpGs.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        n_states</span>
+<span class="sd">            Number of hidden methylation states.</span>
+<span class="sd">        n_emissions</span>
+<span class="sd">            Number of discrete observed emission categories.</span>
+<span class="sd">        holding_time_guess</span>
+<span class="sd">            Initial genomic holding-time scale in base pairs.</span>
+<span class="sd">        time_scale</span>
+<span class="sd">            Multiplier applied to genomic time intervals.</span>
+<span class="sd">        max_iter</span>
+<span class="sd">            Maximum fitting iterations for the continuous-time backend.</span>
+<span class="sd">        tol</span>
+<span class="sd">            Convergence tolerance for continuous-time fitting.</span>
+<span class="sd">        random_state</span>
+<span class="sd">            Random seed passed to the continuous-time backend.</span>
+<span class="sd">        algorithm</span>
+<span class="sd">            Fitting algorithm supported by the continuous-time backend.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">random_state</span> <span class="o">=</span> <span class="n">random_state</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">n_states</span> <span class="o">=</span> <span class="n">n_states</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">n_emissions</span> <span class="o">=</span> <span class="n">n_emissions</span>
@@ -790,7 +976,7 @@
 
 <div class="viewcode-block" id="CTMethylSegHMM.create_model">
 <a class="viewcode-back" href="../../generated/methylseg.CTMethylSegHMM.html#methylseg.CTMethylSegHMM.create_model">[docs]</a>
-    <span class="k">def</span> <span class="nf">create_model</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">create_model</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Create the continuous-time HMM with a default near-identity emission model.&quot;&quot;&quot;</span>
         <span class="n">eps</span> <span class="o">=</span> <span class="mf">0.02</span>  <span class="c1"># mislabel rate</span>
 
@@ -809,7 +995,7 @@
 
 <div class="viewcode-block" id="CTMethylSegHMM.format_fit">
 <a class="viewcode-back" href="../../generated/methylseg.CTMethylSegHMM.html#methylseg.CTMethylSegHMM.format_fit">[docs]</a>
-    <span class="k">def</span> <span class="nf">format_fit</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">emissions</span><span class="p">):</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">format_fit</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">emissions</span><span class="p">):</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Pair observed states with genomic coordinates for CT-HMM fitting.</span>
 
@@ -831,7 +1017,7 @@
 
 <div class="viewcode-block" id="CTMethylSegHMM.format_predict">
 <a class="viewcode-back" href="../../generated/methylseg.CTMethylSegHMM.html#methylseg.CTMethylSegHMM.format_predict">[docs]</a>
-    <span class="k">def</span> <span class="nf">format_predict</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">emissions</span><span class="p">):</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">format_predict</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">emissions</span><span class="p">):</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Pair observed states with genomic coordinates for CT-HMM decoding.</span>
 
@@ -852,7 +1038,7 @@
 
 <div class="viewcode-block" id="CTMethylSegHMM.fit">
 <a class="viewcode-back" href="../../generated/methylseg.CTMethylSegHMM.html#methylseg.CTMethylSegHMM.fit">[docs]</a>
-    <span class="k">def</span> <span class="nf">fit</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">emissions</span><span class="p">,</span> <span class="n">sample_info</span><span class="p">,</span> <span class="n">chrom</span><span class="p">):</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">fit</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">emissions</span><span class="p">,</span> <span class="n">sample_info</span><span class="p">,</span> <span class="n">chrom</span><span class="p">):</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Fit the continuous-time HMM using CpG coordinates as observation times.</span>
 
@@ -887,7 +1073,7 @@
 
 <div class="viewcode-block" id="CTMethylSegHMM.predict">
 <a class="viewcode-back" href="../../generated/methylseg.CTMethylSegHMM.html#methylseg.CTMethylSegHMM.predict">[docs]</a>
-    <span class="k">def</span> <span class="nf">predict</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">emissions</span><span class="p">):</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">predict</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">emissions</span><span class="p">):</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Decode hidden states with the configured continuous-time algorithm.</span>
 

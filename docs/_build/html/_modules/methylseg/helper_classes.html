@@ -5,16 +5,16 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>methylseg.helper_classes &mdash; methylseg 0.1.0 documentation</title>
-      <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=80d5e7a1" />
+  <title>methylseg.helper_classes &mdash; methylseg 0.1.4 documentation</title>
+      <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=b86133f3" />
       <link rel="stylesheet" type="text/css" href="../../_static/css/theme.css?v=9edc463e" />
 
   
       <script src="../../_static/jquery.js?v=5d32c60e"></script>
       <script src="../../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
-      <script src="../../_static/documentation_options.js?v=01f34227"></script>
-      <script src="../../_static/doctools.js?v=9bcbadda"></script>
-      <script src="../../_static/sphinx_highlight.js?v=dc90522c"></script>
+      <script src="../../_static/documentation_options.js?v=fd825880"></script>
+      <script src="../../_static/doctools.js?v=fd6eb6e6"></script>
+      <script src="../../_static/sphinx_highlight.js?v=6ffebe34"></script>
       <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
     <script src="../../_static/js/theme.js"></script>
     <link rel="index" title="Index" href="../../genindex.html" />
@@ -42,10 +42,13 @@
         </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
               <p class="caption" role="heading"><span class="caption-text">Contents</span></p>
 <ul>
+<li class="toctree-l1"><a class="reference internal" href="../../api.html">API Reference</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../full_pipeline.html">Full Pipeline And Outputs</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../input_format.html">Input Format</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../installation.html">Installation</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../quickstart.html">Quickstart</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../api.html">API Reference</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../tutorials.html">Tutorial Notebook</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../segmentation_methods.html">Segmentation Methods</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../tutorials.html">Example Notebooks</a></li>
 </ul>
 
         </div>
@@ -75,18 +78,18 @@
   <h1>Source code for methylseg.helper_classes</h1><div class="highlight"><pre>
 <span></span><span class="sd">&quot;&quot;&quot;Shared enums, data containers, and input-preparation helpers for methylseg.&quot;&quot;&quot;</span>
 
-<span class="kn">import</span> <span class="nn">os</span>
-<span class="kn">from</span> <span class="nn">dataclasses</span> <span class="kn">import</span> <span class="n">dataclass</span>
-<span class="kn">from</span> <span class="nn">enum</span> <span class="kn">import</span> <span class="n">Enum</span>
-<span class="kn">from</span> <span class="nn">pathlib</span> <span class="kn">import</span> <span class="n">Path</span>
-<span class="kn">from</span> <span class="nn">typing</span> <span class="kn">import</span> <span class="n">List</span><span class="p">,</span> <span class="n">Optional</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">os</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">dataclasses</span><span class="w"> </span><span class="kn">import</span> <span class="n">dataclass</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">enum</span><span class="w"> </span><span class="kn">import</span> <span class="n">Enum</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">pathlib</span><span class="w"> </span><span class="kn">import</span> <span class="n">Path</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">List</span><span class="p">,</span> <span class="n">Optional</span>
 
-<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
-<span class="kn">import</span> <span class="nn">pandas</span> <span class="k">as</span> <span class="nn">pd</span>
-<span class="kn">from</span> <span class="nn">sklearn.cluster</span> <span class="kn">import</span> <span class="n">KMeans</span>
-<span class="kn">from</span> <span class="nn">sklearn.decomposition</span> <span class="kn">import</span> <span class="n">PCA</span>
-<span class="kn">from</span> <span class="nn">sklearn.impute</span> <span class="kn">import</span> <span class="n">SimpleImputer</span>
-<span class="kn">from</span> <span class="nn">sklearn.preprocessing</span> <span class="kn">import</span> <span class="n">StandardScaler</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">pandas</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">pd</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">sklearn.cluster</span><span class="w"> </span><span class="kn">import</span> <span class="n">KMeans</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">sklearn.decomposition</span><span class="w"> </span><span class="kn">import</span> <span class="n">PCA</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">sklearn.impute</span><span class="w"> </span><span class="kn">import</span> <span class="n">SimpleImputer</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">sklearn.preprocessing</span><span class="w"> </span><span class="kn">import</span> <span class="n">StandardScaler</span>
 
 <span class="n">CODE_DIR</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="vm">__file__</span><span class="p">)</span><span class="o">.</span><span class="n">resolve</span><span class="p">()</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">parent</span>
 <span class="n">DATA_DIR</span> <span class="o">=</span> <span class="n">CODE_DIR</span> <span class="o">/</span> <span class="s2">&quot;data&quot;</span>
@@ -94,11 +97,11 @@
 <span class="n">CANONICAL_AUTOSOMES</span> <span class="o">=</span> <span class="nb">tuple</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;chr</span><span class="si">{</span><span class="n">i</span><span class="si">}</span><span class="s2">&quot;</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">23</span><span class="p">))</span>
 
 
-<span class="k">class</span> <span class="nc">MethylEnum</span><span class="p">(</span><span class="n">Enum</span><span class="p">):</span>
+<span class="k">class</span><span class="w"> </span><span class="nc">MethylEnum</span><span class="p">(</span><span class="n">Enum</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;Base class for methylseg enums with case-insensitive string parsing.&quot;&quot;&quot;</span>
 
     <span class="nd">@classmethod</span>
-    <span class="k">def</span> <span class="nf">from_string</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">s</span><span class="p">:</span> <span class="nb">str</span><span class="p">):</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">from_string</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">s</span><span class="p">:</span> <span class="nb">str</span><span class="p">):</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Parse a string or scalar value into an enum member.</span>
 
@@ -131,7 +134,7 @@
             <span class="sa">f</span><span class="s2">&quot;Valid options are: </span><span class="si">{</span><span class="p">[</span><span class="n">m</span><span class="o">.</span><span class="n">name</span><span class="w"> </span><span class="k">for</span><span class="w"> </span><span class="n">m</span><span class="w"> </span><span class="ow">in</span><span class="w"> </span><span class="bp">cls</span><span class="p">]</span><span class="si">}</span><span class="s2">&quot;</span>
         <span class="p">)</span>
 
-    <span class="k">def</span> <span class="fm">__eq__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">other</span><span class="p">):</span>
+    <span class="k">def</span><span class="w"> </span><span class="fm">__eq__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">other</span><span class="p">):</span>
         <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">other</span><span class="p">,</span> <span class="nb">str</span><span class="p">):</span>
             <span class="k">try</span><span class="p">:</span>
                 <span class="n">other</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="vm">__class__</span><span class="o">.</span><span class="n">from_string</span><span class="p">(</span><span class="n">other</span><span class="p">)</span>
@@ -141,12 +144,12 @@
 
     <span class="fm">__hash__</span> <span class="o">=</span> <span class="n">Enum</span><span class="o">.</span><span class="fm">__hash__</span>
 
-    <span class="k">def</span> <span class="fm">__str__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+    <span class="k">def</span><span class="w"> </span><span class="fm">__str__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">name</span>
 
 
 <span class="nd">@dataclass</span>
-<span class="k">class</span> <span class="nc">KMeansMethylationModel</span><span class="p">:</span>
+<span class="k">class</span><span class="w"> </span><span class="nc">KMeansMethylationModel</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;Container for the trained clustering model and its preprocessing steps.&quot;&quot;&quot;</span>
 
     <span class="n">kmeans</span><span class="p">:</span> <span class="n">KMeans</span>
@@ -161,7 +164,7 @@
 
 <div class="viewcode-block" id="MethylStateAssignmentMethod">
 <a class="viewcode-back" href="../../generated/methylseg.MethylStateAssignmentMethod.html#methylseg.MethylStateAssignmentMethod">[docs]</a>
-<span class="k">class</span> <span class="nc">MethylStateAssignmentMethod</span><span class="p">(</span><span class="n">MethylEnum</span><span class="p">):</span>
+<span class="k">class</span><span class="w"> </span><span class="nc">MethylStateAssignmentMethod</span><span class="p">(</span><span class="n">MethylEnum</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;Strategies for mapping emissions to biological methylation states.&quot;&quot;&quot;</span>
 
     <span class="n">DEFINITION</span> <span class="o">=</span> <span class="s2">&quot;definition&quot;</span>
@@ -172,7 +175,7 @@
 
 <div class="viewcode-block" id="HMMType">
 <a class="viewcode-back" href="../../generated/methylseg.HMMType.html#methylseg.HMMType">[docs]</a>
-<span class="k">class</span> <span class="nc">HMMType</span><span class="p">(</span><span class="n">MethylEnum</span><span class="p">):</span>
+<span class="k">class</span><span class="w"> </span><span class="nc">HMMType</span><span class="p">(</span><span class="n">MethylEnum</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;Supported HMM model types for segmentation.&quot;&quot;&quot;</span>
 
     <span class="n">CT</span> <span class="o">=</span> <span class="s2">&quot;continuous-time&quot;</span>
@@ -184,7 +187,7 @@
 
 <div class="viewcode-block" id="HMMObservationMode">
 <a class="viewcode-back" href="../../generated/methylseg.HMMObservationMode.html#methylseg.HMMObservationMode">[docs]</a>
-<span class="k">class</span> <span class="nc">HMMObservationMode</span><span class="p">(</span><span class="n">MethylEnum</span><span class="p">):</span>
+<span class="k">class</span><span class="w"> </span><span class="nc">HMMObservationMode</span><span class="p">(</span><span class="n">MethylEnum</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;Observation representations supported by the downstream HMM segmentor.&quot;&quot;&quot;</span>
 
     <span class="n">DISCRETE_STATES</span> <span class="o">=</span> <span class="s2">&quot;discrete_states&quot;</span>
@@ -196,7 +199,7 @@
 <div class="viewcode-block" id="SampleInfo">
 <a class="viewcode-back" href="../../generated/methylseg.SampleInfo.html#methylseg.SampleInfo">[docs]</a>
 <span class="nd">@dataclass</span>
-<span class="k">class</span> <span class="nc">SampleInfo</span><span class="p">:</span>
+<span class="k">class</span><span class="w"> </span><span class="nc">SampleInfo</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Simple container for sample metadata and prepared methylation rows.</span>
 
@@ -214,16 +217,16 @@
     <span class="n">resolution</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span>
 
     <span class="nd">@classmethod</span>
-    <span class="k">def</span> <span class="nf">__from_tsv__</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">sample_name</span><span class="p">,</span> <span class="n">file_name</span><span class="p">,</span> <span class="n">sep</span><span class="o">=</span><span class="s2">&quot;</span><span class="se">\t</span><span class="s2">&quot;</span><span class="p">):</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">__from_tsv__</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">sample_name</span><span class="p">,</span> <span class="n">file_name</span><span class="p">,</span> <span class="n">sep</span><span class="o">=</span><span class="s2">&quot;</span><span class="se">\t</span><span class="s2">&quot;</span><span class="p">):</span>
         <span class="n">meth_data</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">read_csv</span><span class="p">(</span><span class="n">file_name</span><span class="p">,</span> <span class="n">sep</span><span class="o">=</span><span class="n">sep</span><span class="p">)</span>
 
         <span class="k">return</span> <span class="bp">cls</span><span class="p">(</span><span class="n">sample_id</span><span class="o">=</span><span class="n">sample_name</span><span class="p">,</span> <span class="n">meth_data</span><span class="o">=</span><span class="n">meth_data</span><span class="p">)</span>
 
-    <span class="k">def</span> <span class="nf">__to_tsv__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">out_dir</span><span class="p">,</span> <span class="n">sep</span><span class="o">=</span><span class="s2">&quot;</span><span class="se">\t</span><span class="s2">&quot;</span><span class="p">):</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">__to_tsv__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">out_dir</span><span class="p">,</span> <span class="n">sep</span><span class="o">=</span><span class="s2">&quot;</span><span class="se">\t</span><span class="s2">&quot;</span><span class="p">):</span>
         <span class="n">out_file</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">out_dir</span><span class="p">,</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">sample_id</span><span class="si">}</span><span class="s2">.tsv&quot;</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">meth_data</span><span class="o">.</span><span class="n">to_csv</span><span class="p">(</span><span class="n">out_file</span><span class="p">,</span> <span class="n">sep</span><span class="o">=</span><span class="n">sep</span><span class="p">,</span> <span class="n">index</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
 
-    <span class="k">def</span> <span class="nf">__post_init__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">__post_init__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="n">required_cols</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&quot;CpG_chrm&quot;</span><span class="p">,</span> <span class="s2">&quot;CpG_beg&quot;</span><span class="p">,</span> <span class="s2">&quot;CpG_end&quot;</span><span class="p">,</span> <span class="s2">&quot;beta&quot;</span><span class="p">}</span>
         <span class="k">if</span> <span class="ow">not</span> <span class="n">required_cols</span><span class="o">.</span><span class="n">issubset</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">meth_data</span><span class="o">.</span><span class="n">columns</span><span class="p">):</span>
             <span class="n">missing</span> <span class="o">=</span> <span class="n">required_cols</span> <span class="o">-</span> <span class="nb">set</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">meth_data</span><span class="o">.</span><span class="n">columns</span><span class="p">)</span>
@@ -242,7 +245,7 @@
 
 <div class="viewcode-block" id="MethylDataPrep">
 <a class="viewcode-back" href="../../generated/methylseg.MethylDataPrep.html#methylseg.MethylDataPrep">[docs]</a>
-<span class="k">class</span> <span class="nc">MethylDataPrep</span><span class="p">:</span>
+<span class="k">class</span><span class="w"> </span><span class="nc">MethylDataPrep</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;Normalize methylation input tables into the canonical ``SampleInfo`` schema.&quot;&quot;&quot;</span>
 
     <span class="n">REQUIRED_COLUMNS</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;CpG_chrm&quot;</span><span class="p">,</span> <span class="s2">&quot;CpG_beg&quot;</span><span class="p">,</span> <span class="s2">&quot;CpG_end&quot;</span><span class="p">,</span> <span class="s2">&quot;beta&quot;</span><span class="p">]</span>
@@ -268,43 +271,51 @@
 
 <div class="viewcode-block" id="MethylDataPrep.__init__">
 <a class="viewcode-back" href="../../generated/methylseg.MethylDataPrep.html#methylseg.MethylDataPrep.__init__">[docs]</a>
-    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span>
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span>
         <span class="bp">self</span><span class="p">,</span>
         <span class="n">meth_file</span><span class="p">,</span>
         <span class="n">sample_id</span><span class="p">,</span>
         <span class="n">resolution</span><span class="o">=</span><span class="s2">&quot;auto&quot;</span><span class="p">,</span>
         <span class="n">min_coverage</span><span class="o">=</span><span class="mi">10</span><span class="p">,</span>
         <span class="n">remove_low_coverage_like_cpgs</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+        <span class="n">chunk_size</span><span class="o">=</span><span class="mi">1_000_000</span><span class="p">,</span>
+        <span class="n">retain_removed_rows</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
     <span class="p">):</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Initialize methylation-table preparation for one sample.</span>
+
 <span class="sd">        Parameters</span>
 <span class="sd">        ----------</span>
-<span class="sd">        meth_file : str or Path</span>
-<span class="sd">            Path to methylation data file.</span>
-<span class="sd">        sample_id : str</span>
-<span class="sd">            Unique identifier for the sample.</span>
-<span class="sd">        resolution : str, default=&quot;auto&quot;</span>
-<span class="sd">            Format of the methylation data. Valid options are:</span>
-<span class="sd">            - &quot;auto&quot;: Automatically detect format</span>
-<span class="sd">            - &quot;wgbs&quot;: Whole-genome bisulfite sequencing format</span>
-<span class="sd">            - &quot;450k&quot;: Illumina 450k array format</span>
-<span class="sd">            - &quot;27k&quot;: Illumina 27k array format</span>
-<span class="sd">            - &quot;850k&quot;: Illumina 850k array format</span>
-<span class="sd">        min_coverage : int, default=5</span>
+<span class="sd">        meth_file</span>
+<span class="sd">            Path to the methylation data file.</span>
+<span class="sd">        sample_id</span>
+<span class="sd">            Unique identifier for the prepared sample.</span>
+<span class="sd">        resolution</span>
+<span class="sd">            Methylation data format: ``&quot;auto&quot;``, ``&quot;wgbs&quot;``, ``&quot;450k&quot;``,</span>
+<span class="sd">            ``&quot;27k&quot;``, or ``&quot;850k&quot;``.</span>
+<span class="sd">        min_coverage</span>
 <span class="sd">            Minimum coverage threshold for WGBS data.</span>
-<span class="sd">        remove_low_coverage_like_cpgs : bool, default=False</span>
-<span class="sd">            If True, remove CpGs with beta values commonly produced by very</span>
+<span class="sd">        remove_low_coverage_like_cpgs</span>
+<span class="sd">            If ``True``, remove CpGs with beta values commonly produced by very</span>
 <span class="sd">            low coverage counts, such as 0.0, 0.25, 0.33, 0.5, 0.66/0.67,</span>
 <span class="sd">            0.75, and 1.0.</span>
+<span class="sd">        chunk_size</span>
+<span class="sd">            Number of rows to read at a time when processing large files.</span>
+<span class="sd">        retain_removed_rows</span>
+<span class="sd">            If ``True``, retain removed rows in a separate DataFrame for</span>
+<span class="sd">            downstream analysis. Otherwise, discard them.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
+
         <span class="bp">self</span><span class="o">.</span><span class="n">meth_file</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">meth_file</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">sample_id</span> <span class="o">=</span> <span class="n">sample_id</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">resolution</span> <span class="o">=</span> <span class="n">resolution</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">min_coverage</span> <span class="o">=</span> <span class="n">min_coverage</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">remove_low_coverage_like_cpgs</span> <span class="o">=</span> <span class="n">remove_low_coverage_like_cpgs</span></div>
+        <span class="bp">self</span><span class="o">.</span><span class="n">remove_low_coverage_like_cpgs</span> <span class="o">=</span> <span class="n">remove_low_coverage_like_cpgs</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">chunk_size</span> <span class="o">=</span> <span class="n">chunk_size</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">retain_removed_rows</span> <span class="o">=</span> <span class="n">retain_removed_rows</span></div>
 
 
-    <span class="k">def</span> <span class="nf">_looks_like_header_row</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">row_values</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">_looks_like_header_row</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">row_values</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
         <span class="n">normalized</span> <span class="o">=</span> <span class="p">[</span><span class="nb">str</span><span class="p">(</span><span class="n">v</span><span class="p">)</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="k">for</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">row_values</span><span class="p">]</span>
         <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">normalized</span><span class="p">)</span> <span class="o">&lt;</span> <span class="mi">4</span><span class="p">:</span>
             <span class="k">return</span> <span class="kc">False</span>
@@ -332,16 +343,18 @@
                 <span class="k">return</span> <span class="kc">True</span>
 
         <span class="k">return</span> <span class="kc">False</span>
-    
-    <span class="k">def</span> <span class="nf">_is_microarray_format</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_is_microarray_format</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">resolution</span> <span class="ow">in</span> <span class="p">{</span><span class="s2">&quot;450k&quot;</span><span class="p">,</span> <span class="s2">&quot;27k&quot;</span><span class="p">,</span> <span class="s2">&quot;850k&quot;</span><span class="p">}:</span>
             <span class="k">return</span> <span class="kc">True</span>
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">resolution</span> <span class="o">==</span> <span class="s2">&quot;wgbs&quot;</span><span class="p">:</span>
             <span class="k">return</span> <span class="kc">False</span>
         <span class="k">else</span><span class="p">:</span>
-            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Unsupported resolution for format inference: </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">resolution</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                <span class="sa">f</span><span class="s2">&quot;Unsupported resolution for format inference: </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">resolution</span><span class="si">}</span><span class="s2">&quot;</span>
+            <span class="p">)</span>
 
-    <span class="k">def</span> <span class="nf">_promote_header_row</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">df</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">:</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">_promote_header_row</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">df</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">:</span>
         <span class="k">if</span> <span class="n">df</span><span class="o">.</span><span class="n">empty</span> <span class="ow">or</span> <span class="ow">not</span> <span class="nb">all</span><span class="p">(</span><span class="nb">isinstance</span><span class="p">(</span><span class="n">col</span><span class="p">,</span> <span class="nb">int</span><span class="p">)</span> <span class="k">for</span> <span class="n">col</span> <span class="ow">in</span> <span class="n">df</span><span class="o">.</span><span class="n">columns</span><span class="p">):</span>
             <span class="k">return</span> <span class="n">df</span>
         <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">_looks_like_header_row</span><span class="p">(</span><span class="n">df</span><span class="o">.</span><span class="n">iloc</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">tolist</span><span class="p">()):</span>
@@ -351,7 +364,7 @@
         <span class="n">df</span><span class="o">.</span><span class="n">columns</span> <span class="o">=</span> <span class="n">df</span><span class="o">.</span><span class="n">iloc</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">tolist</span><span class="p">()</span>
         <span class="k">return</span> <span class="n">df</span><span class="o">.</span><span class="n">iloc</span><span class="p">[</span><span class="mi">1</span><span class="p">:]</span><span class="o">.</span><span class="n">reset_index</span><span class="p">(</span><span class="n">drop</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
 
-    <span class="k">def</span> <span class="nf">_normalize_column_names</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">df</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">:</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">_normalize_column_names</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">df</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">:</span>
         <span class="n">df</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_promote_header_row</span><span class="p">(</span><span class="n">df</span><span class="p">)</span>
 
         <span class="k">if</span> <span class="nb">all</span><span class="p">(</span><span class="nb">isinstance</span><span class="p">(</span><span class="n">col</span><span class="p">,</span> <span class="nb">int</span><span class="p">)</span> <span class="k">for</span> <span class="n">col</span> <span class="ow">in</span> <span class="n">df</span><span class="o">.</span><span class="n">columns</span><span class="p">):</span>
@@ -396,14 +409,14 @@
             <span class="n">df</span> <span class="o">=</span> <span class="n">df</span><span class="o">.</span><span class="n">rename</span><span class="p">(</span><span class="n">columns</span><span class="o">=</span><span class="n">rename_map</span><span class="p">)</span>
         <span class="k">return</span> <span class="n">df</span>
 
-    <span class="k">def</span> <span class="nf">_attach_input_row_index</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">df</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">:</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">_attach_input_row_index</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">df</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">:</span>
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">INPUT_ROW_INDEX_COL</span> <span class="ow">in</span> <span class="n">df</span><span class="o">.</span><span class="n">columns</span><span class="p">:</span>
             <span class="k">return</span> <span class="n">df</span>
         <span class="n">df</span> <span class="o">=</span> <span class="n">df</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
         <span class="n">df</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">INPUT_ROW_INDEX_COL</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">df</span><span class="p">),</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">int64</span><span class="p">)</span>
         <span class="k">return</span> <span class="n">df</span>
 
-    <span class="k">def</span> <span class="nf">_format_removed_dataframe</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">df</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">:</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">_format_removed_dataframe</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">df</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">:</span>
         <span class="n">removed_df</span> <span class="o">=</span> <span class="n">df</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
         <span class="n">columns</span> <span class="o">=</span> <span class="p">[</span><span class="n">col</span> <span class="k">for</span> <span class="n">col</span> <span class="ow">in</span> <span class="n">removed_df</span><span class="o">.</span><span class="n">columns</span> <span class="k">if</span> <span class="n">col</span> <span class="o">!=</span> <span class="bp">self</span><span class="o">.</span><span class="n">INPUT_ROW_INDEX_COL</span><span class="p">]</span>
         <span class="k">if</span> <span class="n">removed_df</span><span class="o">.</span><span class="n">empty</span><span class="p">:</span>
@@ -421,7 +434,7 @@
         <span class="n">removed_df</span><span class="o">.</span><span class="n">index</span><span class="o">.</span><span class="n">name</span> <span class="o">=</span> <span class="s2">&quot;input_row_index&quot;</span>
         <span class="k">return</span> <span class="n">removed_df</span><span class="o">.</span><span class="n">sort_index</span><span class="p">()</span>
 
-    <span class="k">def</span> <span class="nf">_finalize_dataframe</span><span class="p">(</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">_finalize_dataframe</span><span class="p">(</span>
         <span class="bp">self</span><span class="p">,</span> <span class="n">df</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span>
     <span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">,</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">]:</span>
         <span class="n">df</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_attach_input_row_index</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_normalize_column_names</span><span class="p">(</span><span class="n">df</span><span class="p">))</span>
@@ -456,79 +469,342 @@
         <span class="p">)</span>
         <span class="k">return</span> <span class="n">filtered_df</span><span class="p">,</span> <span class="n">removed_df</span>
 
-    <span class="k">def</span> <span class="nf">_load_wgbs</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">,</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">]:</span>
-        <span class="n">df</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">read_csv</span><span class="p">(</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">meth_file</span><span class="p">,</span>
-            <span class="n">sep</span><span class="o">=</span><span class="s2">&quot;</span><span class="se">\t</span><span class="s2">&quot;</span><span class="p">,</span>
-            <span class="n">header</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
-            <span class="n">low_memory</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
-            <span class="n">compression</span><span class="o">=</span><span class="s2">&quot;gzip&quot;</span> <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">meth_file</span><span class="o">.</span><span class="n">suffix</span> <span class="ow">in</span> <span class="p">{</span><span class="s2">&quot;.gz&quot;</span><span class="p">,</span> <span class="s2">&quot;.gzip&quot;</span><span class="p">}</span> <span class="k">else</span> <span class="kc">None</span><span class="p">,</span>
-        <span class="p">)</span>
-        <span class="n">df</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_promote_header_row</span><span class="p">(</span><span class="n">df</span><span class="p">)</span>
-        <span class="k">if</span> <span class="n">df</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">==</span> <span class="mi">4</span><span class="p">:</span>
-            <span class="c1">#default to 450k-like format if only 4 columns are present</span>
-            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_load_450k</span><span class="p">()</span>
-        <span class="k">if</span> <span class="n">df</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">&lt;</span> <span class="mi">5</span><span class="p">:</span>
-            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
-                <span class="sa">f</span><span class="s2">&quot;Expected at least 5 columns for WGBS input: </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">meth_file</span><span class="si">}</span><span class="s2">&quot;</span>
-            <span class="p">)</span>
-        <span class="k">if</span> <span class="nb">all</span><span class="p">(</span><span class="nb">isinstance</span><span class="p">(</span><span class="n">col</span><span class="p">,</span> <span class="nb">int</span><span class="p">)</span> <span class="k">for</span> <span class="n">col</span> <span class="ow">in</span> <span class="n">df</span><span class="o">.</span><span class="n">columns</span><span class="p">):</span>
-            <span class="n">df</span><span class="o">.</span><span class="n">columns</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;CpG_chrm&quot;</span><span class="p">,</span> <span class="s2">&quot;CpG_beg&quot;</span><span class="p">,</span> <span class="s2">&quot;CpG_end&quot;</span><span class="p">,</span> <span class="s2">&quot;meth&quot;</span><span class="p">,</span> <span class="s2">&quot;coverage&quot;</span><span class="p">]</span>
-        <span class="k">else</span><span class="p">:</span>
-            <span class="n">df</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_normalize_column_names</span><span class="p">(</span><span class="n">df</span><span class="p">)</span>
-        <span class="n">df</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_attach_input_row_index</span><span class="p">(</span><span class="n">df</span><span class="p">)</span>
-        <span class="n">df</span><span class="p">[</span><span class="s2">&quot;meth&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">to_numeric</span><span class="p">(</span><span class="n">df</span><span class="p">[</span><span class="s2">&quot;meth&quot;</span><span class="p">],</span> <span class="n">errors</span><span class="o">=</span><span class="s2">&quot;raise&quot;</span><span class="p">)</span>
-        <span class="n">df</span><span class="p">[</span><span class="s2">&quot;coverage&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">to_numeric</span><span class="p">(</span><span class="n">df</span><span class="p">[</span><span class="s2">&quot;coverage&quot;</span><span class="p">],</span> <span class="n">errors</span><span class="o">=</span><span class="s2">&quot;raise&quot;</span><span class="p">)</span>
-        <span class="n">df</span><span class="p">[</span><span class="s2">&quot;beta&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">df</span><span class="p">[</span><span class="s2">&quot;meth&quot;</span><span class="p">]</span> <span class="o">/</span> <span class="n">df</span><span class="p">[</span><span class="s2">&quot;coverage&quot;</span><span class="p">]</span>
-        <span class="n">coverage_mask</span> <span class="o">=</span> <span class="n">df</span><span class="p">[</span><span class="s2">&quot;coverage&quot;</span><span class="p">]</span> <span class="o">&gt;=</span> <span class="bp">self</span><span class="o">.</span><span class="n">min_coverage</span>
-        <span class="n">coverage_removed_df</span> <span class="o">=</span> <span class="n">df</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="o">~</span><span class="n">coverage_mask</span><span class="p">]</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
-        <span class="n">filtered_df</span><span class="p">,</span> <span class="n">low_coverage_removed_df</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_finalize_dataframe</span><span class="p">(</span>
-            <span class="n">df</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">coverage_mask</span><span class="p">]</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
-        <span class="p">)</span>
-        <span class="n">removed_frames</span> <span class="o">=</span> <span class="p">[</span>
-            <span class="n">removed_df</span>
-            <span class="k">for</span> <span class="n">removed_df</span> <span class="ow">in</span> <span class="p">(</span><span class="n">coverage_removed_df</span><span class="p">,</span> <span class="n">low_coverage_removed_df</span><span class="p">)</span>
-            <span class="k">if</span> <span class="ow">not</span> <span class="n">removed_df</span><span class="o">.</span><span class="n">empty</span>
-        <span class="p">]</span>
-        <span class="n">removed_df</span> <span class="o">=</span> <span class="p">(</span>
-            <span class="n">pd</span><span class="o">.</span><span class="n">concat</span><span class="p">(</span><span class="n">removed_frames</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">sort</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
-            <span class="k">if</span> <span class="n">removed_frames</span>
-            <span class="k">else</span> <span class="n">df</span><span class="o">.</span><span class="n">iloc</span><span class="p">[</span><span class="mi">0</span><span class="p">:</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
-        <span class="p">)</span>
-        <span class="k">return</span> <span class="n">filtered_df</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_format_removed_dataframe</span><span class="p">(</span><span class="n">removed_df</span><span class="p">)</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">_check_concat_memory</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">retained_bytes</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
+        <span class="n">processed_rows</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
+        <span class="n">chunk_number</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Raise before concatenation is likely to exhaust available memory.&quot;&quot;&quot;</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="kn">import</span><span class="w"> </span><span class="nn">psutil</span>
+        <span class="k">except</span> <span class="ne">ImportError</span><span class="p">:</span>
+            <span class="k">return</span>
 
-    <span class="k">def</span> <span class="nf">_load_450k</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">,</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">]:</span>
-        <span class="n">df</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">read_csv</span><span class="p">(</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">meth_file</span><span class="p">,</span>
-            <span class="n">sep</span><span class="o">=</span><span class="s2">&quot;</span><span class="se">\t</span><span class="s2">&quot;</span><span class="p">,</span>
-            <span class="n">header</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
-            <span class="n">low_memory</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
-            <span class="n">compression</span><span class="o">=</span><span class="p">(</span>
-                <span class="s2">&quot;gzip&quot;</span> <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">meth_file</span><span class="o">.</span><span class="n">suffix</span> <span class="ow">in</span> <span class="p">{</span><span class="s2">&quot;.gz&quot;</span><span class="p">,</span> <span class="s2">&quot;.gzip&quot;</span><span class="p">}</span> <span class="k">else</span> <span class="s2">&quot;infer&quot;</span>
-            <span class="p">),</span>
-        <span class="p">)</span>
-        <span class="k">if</span> <span class="n">df</span><span class="o">.</span><span class="n">empty</span><span class="p">:</span>
-            <span class="k">return</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span>
-                <span class="n">columns</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">REQUIRED_COLUMNS</span>
-            <span class="p">),</span> <span class="bp">self</span><span class="o">.</span><span class="n">_format_removed_dataframe</span><span class="p">(</span>
-                <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span><span class="n">columns</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">REQUIRED_COLUMNS</span> <span class="o">+</span> <span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">INPUT_ROW_INDEX_COL</span><span class="p">])</span>
+        <span class="n">available</span> <span class="o">=</span> <span class="n">psutil</span><span class="o">.</span><span class="n">virtual_memory</span><span class="p">()</span><span class="o">.</span><span class="n">available</span>
+
+        <span class="c1"># Concatenation can temporarily require another copy of retained data.</span>
+        <span class="n">required_headroom</span> <span class="o">=</span> <span class="n">retained_bytes</span> <span class="o">+</span> <span class="mi">512</span> <span class="o">*</span> <span class="mi">1024</span><span class="o">**</span><span class="mi">2</span>
+
+        <span class="k">if</span> <span class="n">available</span> <span class="o">&lt;</span> <span class="n">required_headroom</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">MemoryError</span><span class="p">(</span>
+                <span class="s2">&quot;Insufficient memory to finish preparing this methylation file. &quot;</span>
+                <span class="sa">f</span><span class="s2">&quot;Stopped after chunk </span><span class="si">{</span><span class="n">chunk_number</span><span class="si">:</span><span class="s2">,</span><span class="si">}</span><span class="s2"> and &quot;</span>
+                <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">processed_rows</span><span class="si">:</span><span class="s2">,</span><span class="si">}</span><span class="s2"> input rows. Retained data currently uses &quot;</span>
+                <span class="sa">f</span><span class="s2">&quot;approximately </span><span class="si">{</span><span class="n">retained_bytes</span><span class="w"> </span><span class="o">/</span><span class="w"> </span><span class="mi">1024</span><span class="o">**</span><span class="mi">3</span><span class="si">:</span><span class="s2">.2f</span><span class="si">}</span><span class="s2"> GiB, with &quot;</span>
+                <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">available</span><span class="w"> </span><span class="o">/</span><span class="w"> </span><span class="mi">1024</span><span class="o">**</span><span class="mi">3</span><span class="si">:</span><span class="s2">.2f</span><span class="si">}</span><span class="s2"> GiB available. Consider reducing &quot;</span>
+                <span class="s2">&quot;chunk_size or setting retain_removed_rows=False.&quot;</span>
             <span class="p">)</span>
 
-        <span class="n">df</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_promote_header_row</span><span class="p">(</span><span class="n">df</span><span class="p">)</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">_load_wgbs</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">,</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">]:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Load and filter WGBS methylation data in chunks.</span>
 
-        <span class="k">if</span> <span class="n">df</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">&lt;</span> <span class="mi">4</span><span class="p">:</span>
-            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
-                <span class="sa">f</span><span class="s2">&quot;Expected at least 4 columns for 450k input: </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">meth_file</span><span class="si">}</span><span class="s2">&quot;</span>
-            <span class="p">)</span>
+<span class="sd">        The expected input columns are:</span>
 
-        <span class="n">df</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_normalize_column_names</span><span class="p">(</span><span class="n">df</span><span class="p">)</span>
-        <span class="n">filtered_df</span><span class="p">,</span> <span class="n">removed_df</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_finalize_dataframe</span><span class="p">(</span><span class="n">df</span><span class="p">)</span>
-        <span class="k">return</span> <span class="n">filtered_df</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_format_removed_dataframe</span><span class="p">(</span><span class="n">removed_df</span><span class="p">)</span>
+<span class="sd">        1. CpG chromosome</span>
+<span class="sd">        2. CpG start</span>
+<span class="sd">        3. CpG end</span>
+<span class="sd">        4. Methylated read count</span>
+<span class="sd">        5. Total coverage</span>
 
-    <span class="k">def</span> <span class="nf">_load_auto</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">,</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">]:</span>
+<span class="sd">        Files containing only four columns are treated as precomputed beta-value</span>
+<span class="sd">        files and passed to ``_load_450k()``.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        tuple[pandas.DataFrame, pandas.DataFrame]</span>
+<span class="sd">            The filtered canonical methylation table and the rows removed during</span>
+<span class="sd">            coverage or beta-value filtering.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">compression</span> <span class="o">=</span> <span class="s2">&quot;gzip&quot;</span> <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">meth_file</span><span class="o">.</span><span class="n">suffix</span> <span class="ow">in</span> <span class="p">{</span><span class="s2">&quot;.gz&quot;</span><span class="p">,</span> <span class="s2">&quot;.gzip&quot;</span><span class="p">}</span> <span class="k">else</span> <span class="s2">&quot;infer&quot;</span>
 
         <span class="k">try</span><span class="p">:</span>
-            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_load_450k</span><span class="p">()</span>
+            <span class="n">preview</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">read_csv</span><span class="p">(</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">meth_file</span><span class="p">,</span>
+                <span class="n">sep</span><span class="o">=</span><span class="s2">&quot;</span><span class="se">\t</span><span class="s2">&quot;</span><span class="p">,</span>
+                <span class="n">header</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+                <span class="n">nrows</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span>
+                <span class="n">compression</span><span class="o">=</span><span class="n">compression</span><span class="p">,</span>
+            <span class="p">)</span>
+        <span class="k">except</span> <span class="n">pd</span><span class="o">.</span><span class="n">errors</span><span class="o">.</span><span class="n">EmptyDataError</span><span class="p">:</span>
+            <span class="n">filtered_df</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span><span class="n">columns</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">REQUIRED_COLUMNS</span><span class="p">)</span>
+            <span class="n">removed_df</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span>
+                <span class="n">columns</span><span class="o">=</span><span class="p">[</span>
+                    <span class="s2">&quot;CpG_chrm&quot;</span><span class="p">,</span>
+                    <span class="s2">&quot;CpG_beg&quot;</span><span class="p">,</span>
+                    <span class="s2">&quot;CpG_end&quot;</span><span class="p">,</span>
+                    <span class="s2">&quot;meth&quot;</span><span class="p">,</span>
+                    <span class="s2">&quot;coverage&quot;</span><span class="p">,</span>
+                    <span class="s2">&quot;beta&quot;</span><span class="p">,</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">INPUT_ROW_INDEX_COL</span><span class="p">,</span>
+                <span class="p">]</span>
+            <span class="p">)</span>
+            <span class="k">return</span> <span class="n">filtered_df</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_format_removed_dataframe</span><span class="p">(</span><span class="n">removed_df</span><span class="p">)</span>
+
+        <span class="n">column_count</span> <span class="o">=</span> <span class="n">preview</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
+
+        <span class="k">if</span> <span class="n">column_count</span> <span class="o">==</span> <span class="mi">4</span><span class="p">:</span>
+            <span class="c1"># Four-column inputs already contain beta values.</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_load_microarray</span><span class="p">()</span>
+
+        <span class="k">if</span> <span class="n">column_count</span> <span class="o">&lt;</span> <span class="mi">5</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                <span class="s2">&quot;Expected at least 5 columns for WGBS input, &quot;</span>
+                <span class="sa">f</span><span class="s2">&quot;but found </span><span class="si">{</span><span class="n">column_count</span><span class="si">}</span><span class="s2">: </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">meth_file</span><span class="si">}</span><span class="s2">&quot;</span>
+            <span class="p">)</span>
+
+        <span class="n">has_header</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_looks_like_header_row</span><span class="p">(</span><span class="n">preview</span><span class="o">.</span><span class="n">iloc</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">tolist</span><span class="p">())</span>
+
+        <span class="n">columns</span> <span class="o">=</span> <span class="p">[</span>
+            <span class="s2">&quot;CpG_chrm&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;CpG_beg&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;CpG_end&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;meth&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;coverage&quot;</span><span class="p">,</span>
+        <span class="p">]</span>
+
+        <span class="n">reader</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">read_csv</span><span class="p">(</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">meth_file</span><span class="p">,</span>
+            <span class="n">sep</span><span class="o">=</span><span class="s2">&quot;</span><span class="se">\t</span><span class="s2">&quot;</span><span class="p">,</span>
+            <span class="n">header</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+            <span class="n">names</span><span class="o">=</span><span class="n">columns</span><span class="p">,</span>
+            <span class="n">usecols</span><span class="o">=</span><span class="nb">range</span><span class="p">(</span><span class="mi">5</span><span class="p">),</span>
+            <span class="n">skiprows</span><span class="o">=</span><span class="mi">1</span> <span class="k">if</span> <span class="n">has_header</span> <span class="k">else</span> <span class="kc">None</span><span class="p">,</span>
+            <span class="n">compression</span><span class="o">=</span><span class="n">compression</span><span class="p">,</span>
+            <span class="n">chunksize</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">chunk_size</span><span class="p">,</span>
+            <span class="n">dtype</span><span class="o">=</span><span class="p">{</span>
+                <span class="s2">&quot;CpG_chrm&quot;</span><span class="p">:</span> <span class="s2">&quot;string&quot;</span><span class="p">,</span>
+                <span class="s2">&quot;CpG_beg&quot;</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">int64</span><span class="p">,</span>
+                <span class="s2">&quot;CpG_end&quot;</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">int64</span><span class="p">,</span>
+                <span class="s2">&quot;meth&quot;</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">float64</span><span class="p">,</span>
+                <span class="s2">&quot;coverage&quot;</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">float64</span><span class="p">,</span>
+            <span class="p">},</span>
+        <span class="p">)</span>
+
+        <span class="n">filtered_chunks</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">]</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="n">removed_chunks</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">]</span> <span class="o">=</span> <span class="p">[]</span>
+
+        <span class="n">input_row_offset</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="n">retained_bytes</span> <span class="o">=</span> <span class="mi">0</span>
+
+        <span class="k">for</span> <span class="n">chunk_number</span><span class="p">,</span> <span class="n">chunk</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">reader</span><span class="p">,</span> <span class="n">start</span><span class="o">=</span><span class="mi">1</span><span class="p">):</span>
+            <span class="n">chunk_length</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">chunk</span><span class="p">)</span>
+
+            <span class="c1"># Preserve each row&#39;s original position in the input file.</span>
+            <span class="n">chunk</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">INPUT_ROW_INDEX_COL</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span>
+                <span class="n">input_row_offset</span><span class="p">,</span>
+                <span class="n">input_row_offset</span> <span class="o">+</span> <span class="n">chunk_length</span><span class="p">,</span>
+                <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">int64</span><span class="p">,</span>
+            <span class="p">)</span>
+            <span class="n">input_row_offset</span> <span class="o">+=</span> <span class="n">chunk_length</span>
+
+            <span class="c1"># Calculate beta values from methylated and total read counts.</span>
+            <span class="c1"># Coverage-zero rows will subsequently be removed by the coverage mask.</span>
+            <span class="k">with</span> <span class="n">np</span><span class="o">.</span><span class="n">errstate</span><span class="p">(</span><span class="n">divide</span><span class="o">=</span><span class="s2">&quot;ignore&quot;</span><span class="p">,</span> <span class="n">invalid</span><span class="o">=</span><span class="s2">&quot;ignore&quot;</span><span class="p">):</span>
+                <span class="n">chunk</span><span class="p">[</span><span class="s2">&quot;beta&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">chunk</span><span class="p">[</span><span class="s2">&quot;meth&quot;</span><span class="p">]</span> <span class="o">/</span> <span class="n">chunk</span><span class="p">[</span><span class="s2">&quot;coverage&quot;</span><span class="p">]</span>
+
+            <span class="n">coverage_mask</span> <span class="o">=</span> <span class="n">chunk</span><span class="p">[</span><span class="s2">&quot;coverage&quot;</span><span class="p">]</span> <span class="o">&gt;=</span> <span class="bp">self</span><span class="o">.</span><span class="n">min_coverage</span>
+
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">retain_removed_rows</span> <span class="ow">and</span> <span class="p">(</span><span class="o">~</span><span class="n">coverage_mask</span><span class="p">)</span><span class="o">.</span><span class="n">any</span><span class="p">():</span>
+                <span class="n">coverage_removed</span> <span class="o">=</span> <span class="n">chunk</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="o">~</span><span class="n">coverage_mask</span><span class="p">]</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+                <span class="n">removed_chunks</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">coverage_removed</span><span class="p">)</span>
+
+                <span class="n">retained_bytes</span> <span class="o">+=</span> <span class="n">coverage_removed</span><span class="o">.</span><span class="n">memory_usage</span><span class="p">(</span>
+                    <span class="n">index</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+                    <span class="n">deep</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+                <span class="p">)</span><span class="o">.</span><span class="n">sum</span><span class="p">()</span>
+
+            <span class="n">retained_chunk</span> <span class="o">=</span> <span class="n">chunk</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">coverage_mask</span><span class="p">]</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">remove_low_coverage_like_cpgs</span><span class="p">:</span>
+                <span class="n">low_coverage_like_mask</span> <span class="o">=</span> <span class="n">retained_chunk</span><span class="p">[</span><span class="s2">&quot;beta&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">isin</span><span class="p">(</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">LOW_COVERAGE_LIKE_BETA_VALUES</span>
+                <span class="p">)</span>
+
+                <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">retain_removed_rows</span> <span class="ow">and</span> <span class="n">low_coverage_like_mask</span><span class="o">.</span><span class="n">any</span><span class="p">():</span>
+                    <span class="n">beta_removed</span> <span class="o">=</span> <span class="n">retained_chunk</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">low_coverage_like_mask</span><span class="p">]</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+
+                    <span class="n">removed_chunks</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">beta_removed</span><span class="p">)</span>
+
+                    <span class="n">retained_bytes</span> <span class="o">+=</span> <span class="n">beta_removed</span><span class="o">.</span><span class="n">memory_usage</span><span class="p">(</span>
+                        <span class="n">index</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+                        <span class="n">deep</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+                    <span class="p">)</span><span class="o">.</span><span class="n">sum</span><span class="p">()</span>
+
+                <span class="n">retained_chunk</span> <span class="o">=</span> <span class="n">retained_chunk</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="o">~</span><span class="n">low_coverage_like_mask</span><span class="p">]</span>
+
+            <span class="n">filtered_chunk</span> <span class="o">=</span> <span class="n">retained_chunk</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span>
+                <span class="p">:,</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">REQUIRED_COLUMNS</span><span class="p">,</span>
+            <span class="p">]</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+
+            <span class="n">filtered_chunks</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">filtered_chunk</span><span class="p">)</span>
+
+            <span class="n">retained_bytes</span> <span class="o">+=</span> <span class="n">filtered_chunk</span><span class="o">.</span><span class="n">memory_usage</span><span class="p">(</span>
+                <span class="n">index</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+                <span class="n">deep</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+            <span class="p">)</span><span class="o">.</span><span class="n">sum</span><span class="p">()</span>
+
+            <span class="bp">self</span><span class="o">.</span><span class="n">_check_concat_memory</span><span class="p">(</span>
+                <span class="n">retained_bytes</span><span class="o">=</span><span class="n">retained_bytes</span><span class="p">,</span>
+                <span class="n">processed_rows</span><span class="o">=</span><span class="n">input_row_offset</span><span class="p">,</span>
+                <span class="n">chunk_number</span><span class="o">=</span><span class="n">chunk_number</span><span class="p">,</span>
+            <span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">filtered_chunks</span><span class="p">:</span>
+            <span class="n">filtered_df</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">concat</span><span class="p">(</span>
+                <span class="n">filtered_chunks</span><span class="p">,</span>
+                <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span>
+                <span class="n">ignore_index</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+                <span class="n">copy</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+            <span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">filtered_df</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span><span class="n">columns</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">REQUIRED_COLUMNS</span><span class="p">)</span>
+
+        <span class="n">removed_columns</span> <span class="o">=</span> <span class="p">[</span>
+            <span class="s2">&quot;CpG_chrm&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;CpG_beg&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;CpG_end&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;meth&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;coverage&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;beta&quot;</span><span class="p">,</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">INPUT_ROW_INDEX_COL</span><span class="p">,</span>
+        <span class="p">]</span>
+
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">retain_removed_rows</span> <span class="ow">and</span> <span class="n">removed_chunks</span><span class="p">:</span>
+            <span class="n">removed_df</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">concat</span><span class="p">(</span>
+                <span class="n">removed_chunks</span><span class="p">,</span>
+                <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span>
+                <span class="n">ignore_index</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+                <span class="n">copy</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+            <span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">removed_df</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span><span class="n">columns</span><span class="o">=</span><span class="n">removed_columns</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">filtered_df</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_format_removed_dataframe</span><span class="p">(</span><span class="n">removed_df</span><span class="p">)</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_load_microarray</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">,</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">]:</span>
+        <span class="n">compression</span> <span class="o">=</span> <span class="s2">&quot;gzip&quot;</span> <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">meth_file</span><span class="o">.</span><span class="n">suffix</span> <span class="ow">in</span> <span class="p">{</span><span class="s2">&quot;.gz&quot;</span><span class="p">,</span> <span class="s2">&quot;.gzip&quot;</span><span class="p">}</span> <span class="k">else</span> <span class="s2">&quot;infer&quot;</span>
+
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">preview</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">read_csv</span><span class="p">(</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">meth_file</span><span class="p">,</span>
+                <span class="n">sep</span><span class="o">=</span><span class="s2">&quot;</span><span class="se">\t</span><span class="s2">&quot;</span><span class="p">,</span>
+                <span class="n">header</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+                <span class="n">nrows</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span>
+                <span class="n">compression</span><span class="o">=</span><span class="n">compression</span><span class="p">,</span>
+            <span class="p">)</span>
+        <span class="k">except</span> <span class="n">pd</span><span class="o">.</span><span class="n">errors</span><span class="o">.</span><span class="n">EmptyDataError</span><span class="p">:</span>
+            <span class="n">filtered_df</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span><span class="n">columns</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">REQUIRED_COLUMNS</span><span class="p">)</span>
+            <span class="n">removed_df</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span>
+                <span class="n">columns</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">REQUIRED_COLUMNS</span> <span class="o">+</span> <span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">INPUT_ROW_INDEX_COL</span><span class="p">]</span>
+            <span class="p">)</span>
+            <span class="k">return</span> <span class="n">filtered_df</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_format_removed_dataframe</span><span class="p">(</span><span class="n">removed_df</span><span class="p">)</span>
+
+        <span class="n">column_count</span> <span class="o">=</span> <span class="n">preview</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
+
+        <span class="k">if</span> <span class="n">column_count</span> <span class="ow">not</span> <span class="ow">in</span> <span class="p">{</span><span class="mi">4</span><span class="p">,</span> <span class="mi">5</span><span class="p">}:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                <span class="s2">&quot;Expected 4 or 5 columns for microarray input, &quot;</span>
+                <span class="sa">f</span><span class="s2">&quot;but found </span><span class="si">{</span><span class="n">column_count</span><span class="si">}</span><span class="s2">: </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">meth_file</span><span class="si">}</span><span class="s2">&quot;</span>
+            <span class="p">)</span>
+
+        <span class="n">has_header</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_looks_like_header_row</span><span class="p">(</span><span class="n">preview</span><span class="o">.</span><span class="n">iloc</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">tolist</span><span class="p">())</span>
+
+        <span class="n">columns</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;CpG_chrm&quot;</span><span class="p">,</span> <span class="s2">&quot;CpG_beg&quot;</span><span class="p">,</span> <span class="s2">&quot;CpG_end&quot;</span><span class="p">,</span> <span class="s2">&quot;beta&quot;</span><span class="p">]</span>
+        <span class="k">if</span> <span class="n">column_count</span> <span class="o">==</span> <span class="mi">5</span><span class="p">:</span>
+            <span class="n">columns</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s2">&quot;probe&quot;</span><span class="p">)</span>
+
+        <span class="n">dtypes</span> <span class="o">=</span> <span class="p">{</span>
+            <span class="s2">&quot;CpG_chrm&quot;</span><span class="p">:</span> <span class="s2">&quot;string&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;CpG_beg&quot;</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">int64</span><span class="p">,</span>
+            <span class="s2">&quot;CpG_end&quot;</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">int64</span><span class="p">,</span>
+            <span class="s2">&quot;beta&quot;</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">float64</span><span class="p">,</span>
+        <span class="p">}</span>
+        <span class="k">if</span> <span class="n">column_count</span> <span class="o">==</span> <span class="mi">5</span><span class="p">:</span>
+            <span class="n">dtypes</span><span class="p">[</span><span class="s2">&quot;probe&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="s2">&quot;string&quot;</span>
+
+        <span class="n">reader</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">read_csv</span><span class="p">(</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">meth_file</span><span class="p">,</span>
+            <span class="n">sep</span><span class="o">=</span><span class="s2">&quot;</span><span class="se">\t</span><span class="s2">&quot;</span><span class="p">,</span>
+            <span class="n">header</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+            <span class="n">names</span><span class="o">=</span><span class="n">columns</span><span class="p">,</span>
+            <span class="n">usecols</span><span class="o">=</span><span class="nb">range</span><span class="p">(</span><span class="n">column_count</span><span class="p">),</span>
+            <span class="n">skiprows</span><span class="o">=</span><span class="mi">1</span> <span class="k">if</span> <span class="n">has_header</span> <span class="k">else</span> <span class="kc">None</span><span class="p">,</span>
+            <span class="n">compression</span><span class="o">=</span><span class="n">compression</span><span class="p">,</span>
+            <span class="n">chunksize</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">chunk_size</span><span class="p">,</span>
+            <span class="n">dtype</span><span class="o">=</span><span class="n">dtypes</span><span class="p">,</span>
+        <span class="p">)</span>
+
+        <span class="n">filtered_chunks</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="n">removed_chunks</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="n">input_row_offset</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="n">retained_bytes</span> <span class="o">=</span> <span class="mi">0</span>
+
+        <span class="k">for</span> <span class="n">chunk_number</span><span class="p">,</span> <span class="n">chunk</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">reader</span><span class="p">,</span> <span class="n">start</span><span class="o">=</span><span class="mi">1</span><span class="p">):</span>
+            <span class="n">chunk_length</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">chunk</span><span class="p">)</span>
+
+            <span class="n">chunk</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">INPUT_ROW_INDEX_COL</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span>
+                <span class="n">input_row_offset</span><span class="p">,</span>
+                <span class="n">input_row_offset</span> <span class="o">+</span> <span class="n">chunk_length</span><span class="p">,</span>
+                <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">int64</span><span class="p">,</span>
+            <span class="p">)</span>
+            <span class="n">input_row_offset</span> <span class="o">+=</span> <span class="n">chunk_length</span>
+
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">remove_low_coverage_like_cpgs</span><span class="p">:</span>
+                <span class="n">removal_mask</span> <span class="o">=</span> <span class="n">chunk</span><span class="p">[</span><span class="s2">&quot;beta&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">isin</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">LOW_COVERAGE_LIKE_BETA_VALUES</span><span class="p">)</span>
+
+                <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">retain_removed_rows</span> <span class="ow">and</span> <span class="n">removal_mask</span><span class="o">.</span><span class="n">any</span><span class="p">():</span>
+                    <span class="n">removed_chunk</span> <span class="o">=</span> <span class="n">chunk</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">removal_mask</span><span class="p">]</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+                    <span class="n">removed_chunks</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">removed_chunk</span><span class="p">)</span>
+                    <span class="n">retained_bytes</span> <span class="o">+=</span> <span class="n">removed_chunk</span><span class="o">.</span><span class="n">memory_usage</span><span class="p">(</span>
+                        <span class="n">index</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+                        <span class="n">deep</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+                    <span class="p">)</span><span class="o">.</span><span class="n">sum</span><span class="p">()</span>
+
+                <span class="n">chunk</span> <span class="o">=</span> <span class="n">chunk</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="o">~</span><span class="n">removal_mask</span><span class="p">]</span>
+
+            <span class="n">filtered_chunk</span> <span class="o">=</span> <span class="n">chunk</span><span class="o">.</span><span class="n">loc</span><span class="p">[:,</span> <span class="bp">self</span><span class="o">.</span><span class="n">REQUIRED_COLUMNS</span><span class="p">]</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+            <span class="n">filtered_chunks</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">filtered_chunk</span><span class="p">)</span>
+
+            <span class="n">retained_bytes</span> <span class="o">+=</span> <span class="n">filtered_chunk</span><span class="o">.</span><span class="n">memory_usage</span><span class="p">(</span>
+                <span class="n">index</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+                <span class="n">deep</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+            <span class="p">)</span><span class="o">.</span><span class="n">sum</span><span class="p">()</span>
+
+            <span class="bp">self</span><span class="o">.</span><span class="n">_check_concat_memory</span><span class="p">(</span>
+                <span class="n">retained_bytes</span><span class="o">=</span><span class="n">retained_bytes</span><span class="p">,</span>
+                <span class="n">processed_rows</span><span class="o">=</span><span class="n">input_row_offset</span><span class="p">,</span>
+                <span class="n">chunk_number</span><span class="o">=</span><span class="n">chunk_number</span><span class="p">,</span>
+            <span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">filtered_chunks</span><span class="p">:</span>
+            <span class="n">filtered_df</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">concat</span><span class="p">(</span>
+                <span class="n">filtered_chunks</span><span class="p">,</span>
+                <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span>
+                <span class="n">ignore_index</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+                <span class="n">copy</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+            <span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">filtered_df</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span><span class="n">columns</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">REQUIRED_COLUMNS</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">retain_removed_rows</span> <span class="ow">and</span> <span class="n">removed_chunks</span><span class="p">:</span>
+            <span class="n">removed_df</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">concat</span><span class="p">(</span>
+                <span class="n">removed_chunks</span><span class="p">,</span>
+                <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span>
+                <span class="n">ignore_index</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+                <span class="n">copy</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+            <span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">removed_df</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span><span class="n">columns</span><span class="o">=</span><span class="n">columns</span> <span class="o">+</span> <span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">INPUT_ROW_INDEX_COL</span><span class="p">])</span>
+
+        <span class="k">return</span> <span class="n">filtered_df</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_format_removed_dataframe</span><span class="p">(</span><span class="n">removed_df</span><span class="p">)</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_load_auto</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">,</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">]:</span>
+
+        <span class="k">try</span><span class="p">:</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_load_microarray</span><span class="p">()</span>
         <span class="k">except</span> <span class="ne">Exception</span><span class="p">:</span>
             <span class="k">pass</span>
 
@@ -536,7 +812,7 @@
 
 <div class="viewcode-block" id="MethylDataPrep.prepare_dataframe">
 <a class="viewcode-back" href="../../generated/methylseg.MethylDataPrep.html#methylseg.MethylDataPrep.prepare_dataframe">[docs]</a>
-    <span class="k">def</span> <span class="nf">prepare_dataframe</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">,</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">]:</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">prepare_dataframe</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">,</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">]:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Load and normalize the configured methylation file.</span>
 
@@ -555,8 +831,8 @@
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">resolution</span> <span class="o">==</span> <span class="s2">&quot;wgbs&quot;</span><span class="p">:</span>
             <span class="n">filtered_df</span><span class="p">,</span> <span class="n">removed_df</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_load_wgbs</span><span class="p">()</span>
-        <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">resolution</span> <span class="o">==</span> <span class="s2">&quot;450k&quot;</span><span class="p">:</span>
-            <span class="n">filtered_df</span><span class="p">,</span> <span class="n">removed_df</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_load_450k</span><span class="p">()</span>
+        <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">_is_microarray_format</span><span class="p">():</span>
+            <span class="n">filtered_df</span><span class="p">,</span> <span class="n">removed_df</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_load_microarray</span><span class="p">()</span>
         <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">resolution</span> <span class="o">==</span> <span class="s2">&quot;auto&quot;</span><span class="p">:</span>
             <span class="n">filtered_df</span><span class="p">,</span> <span class="n">removed_df</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_load_auto</span><span class="p">()</span>
         <span class="k">else</span><span class="p">:</span>
@@ -566,7 +842,7 @@
 
 <div class="viewcode-block" id="MethylDataPrep.prepare">
 <a class="viewcode-back" href="../../generated/methylseg.MethylDataPrep.html#methylseg.MethylDataPrep.prepare">[docs]</a>
-    <span class="k">def</span> <span class="nf">prepare</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="n">SampleInfo</span><span class="p">,</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">]:</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">prepare</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="n">SampleInfo</span><span class="p">,</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">]:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Prepare the methylation file and wrap it in ``SampleInfo``.</span>
 
@@ -590,7 +866,7 @@
 
 <div class="viewcode-block" id="MethylDataPrep.write_prepared_tsv">
 <a class="viewcode-back" href="../../generated/methylseg.MethylDataPrep.html#methylseg.MethylDataPrep.write_prepared_tsv">[docs]</a>
-    <span class="k">def</span> <span class="nf">write_prepared_tsv</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">out_file</span><span class="p">,</span> <span class="n">sep</span><span class="o">=</span><span class="s2">&quot;</span><span class="se">\t</span><span class="s2">&quot;</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Path</span><span class="p">:</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">write_prepared_tsv</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">out_file</span><span class="p">,</span> <span class="n">sep</span><span class="o">=</span><span class="s2">&quot;</span><span class="se">\t</span><span class="s2">&quot;</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Path</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Write the prepared methylation table to disk.</span>
 
@@ -617,7 +893,7 @@
 
 <div class="viewcode-block" id="MethylationStates">
 <a class="viewcode-back" href="../../generated/methylseg.MethylationStates.html#methylseg.MethylationStates">[docs]</a>
-<span class="k">class</span> <span class="nc">MethylationStates</span><span class="p">(</span><span class="n">MethylEnum</span><span class="p">):</span>
+<span class="k">class</span><span class="w"> </span><span class="nc">MethylationStates</span><span class="p">(</span><span class="n">MethylEnum</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;Canonical biological methylation states used throughout the package.&quot;&quot;&quot;</span>
 
     <span class="n">LOW</span> <span class="o">=</span> <span class="mi">0</span>
@@ -625,7 +901,7 @@
     <span class="n">INTERMEDIATE</span> <span class="o">=</span> <span class="mi">2</span>
     <span class="n">HIGH</span> <span class="o">=</span> <span class="mi">3</span>
 
-    <span class="k">def</span> <span class="fm">__lt__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">other</span><span class="p">):</span>
+    <span class="k">def</span><span class="w"> </span><span class="fm">__lt__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">other</span><span class="p">):</span>
         <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">other</span><span class="p">,</span> <span class="n">MethylationStates</span><span class="p">):</span>
             <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">value</span> <span class="o">&lt;</span> <span class="n">other</span><span class="o">.</span><span class="n">value</span>
         <span class="k">return</span> <span class="bp">NotImplemented</span>
@@ -633,7 +909,7 @@
 <div class="viewcode-block" id="MethylationStates.convert_to_numeric">
 <a class="viewcode-back" href="../../generated/methylseg.MethylationStates.html#methylseg.MethylationStates.convert_to_numeric">[docs]</a>
     <span class="nd">@staticmethod</span>
-    <span class="k">def</span> <span class="nf">convert_to_numeric</span><span class="p">(</span><span class="n">arr</span><span class="p">):</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">convert_to_numeric</span><span class="p">(</span><span class="n">arr</span><span class="p">):</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Convert methylation-state labels into integer codes.</span>
 

@@ -5,16 +5,16 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Index &mdash; methylseg 0.1.0 documentation</title>
-      <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=80d5e7a1" />
+  <title>Index &mdash; methylseg 0.1.4 documentation</title>
+      <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=b86133f3" />
       <link rel="stylesheet" type="text/css" href="_static/css/theme.css?v=9edc463e" />
 
   
       <script src="_static/jquery.js?v=5d32c60e"></script>
       <script src="_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
-      <script src="_static/documentation_options.js?v=01f34227"></script>
-      <script src="_static/doctools.js?v=9bcbadda"></script>
-      <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
+      <script src="_static/documentation_options.js?v=fd825880"></script>
+      <script src="_static/doctools.js?v=fd6eb6e6"></script>
+      <script src="_static/sphinx_highlight.js?v=6ffebe34"></script>
       <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
     <script src="_static/js/theme.js"></script>
     <link rel="index" title="Index" href="#" />
@@ -42,10 +42,13 @@
         </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
               <p class="caption" role="heading"><span class="caption-text">Contents</span></p>
 <ul>
+<li class="toctree-l1"><a class="reference internal" href="api.html">API Reference</a></li>
+<li class="toctree-l1"><a class="reference internal" href="full_pipeline.html">Full Pipeline And Outputs</a></li>
+<li class="toctree-l1"><a class="reference internal" href="input_format.html">Input Format</a></li>
 <li class="toctree-l1"><a class="reference internal" href="installation.html">Installation</a></li>
 <li class="toctree-l1"><a class="reference internal" href="quickstart.html">Quickstart</a></li>
-<li class="toctree-l1"><a class="reference internal" href="api.html">API Reference</a></li>
-<li class="toctree-l1"><a class="reference internal" href="tutorials.html">Tutorial Notebook</a></li>
+<li class="toctree-l1"><a class="reference internal" href="segmentation_methods.html">Segmentation Methods</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tutorials.html">Example Notebooks</a></li>
 </ul>
 
         </div>
@@ -419,14 +422,10 @@
         <li><a href="generated/methylseg.MethylStateAssigner.html#methylseg.MethylStateAssigner.plot_embedding">(methylseg.MethylStateAssigner method)</a>
 </li>
       </ul></li>
-      <li><a href="generated/methylseg.MethylStateAnalyzer.html#methylseg.MethylStateAnalyzer.plot_feature_distributions_by_kmeans_state">plot_feature_distributions_by_kmeans_state() (methylseg.MethylStateAnalyzer method)</a>
+      <li><a href="generated/methylseg.MethylStateAssigner.html#methylseg.MethylStateAssigner.plot_feature_distributions_by_kmeans_state">plot_feature_distributions_by_kmeans_state() (methylseg.MethylStateAssigner method)</a>
 </li>
       <li><a href="generated/methylseg.MethylSegmentor.html#methylseg.MethylSegmentor.plot_interactive_beta_by_label">plot_interactive_beta_by_label() (methylseg.MethylSegmentor method)</a>
-
-      <ul>
-        <li><a href="generated/methylseg.MethylStateAnalyzer.html#methylseg.MethylStateAnalyzer.plot_interactive_beta_by_label">(methylseg.MethylStateAnalyzer method)</a>
 </li>
-      </ul></li>
       <li><a href="generated/methylseg.MethylStateAssigner.html#methylseg.MethylStateAssigner.plot_kmeans_clusters">plot_kmeans_clusters() (methylseg.MethylStateAssigner method)</a>
 </li>
       <li><a href="generated/methylseg.MethylSegmentor.html#methylseg.MethylSegmentor.plot_labels">plot_labels() (methylseg.MethylSegmentor method)</a>
@@ -443,10 +442,10 @@
 </li>
       <li><a href="generated/methylseg.MethylStateAssigner.html#methylseg.MethylStateAssigner.plot_train_pca_clusters">plot_train_pca_clusters() (methylseg.MethylStateAssigner method)</a>
 </li>
-  </ul></td>
-  <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="generated/methylseg.MethylStateAssigner.html#methylseg.MethylStateAssigner.plot_training_embedding">plot_training_embedding() (methylseg.MethylStateAssigner method)</a>
 </li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="generated/methylseg.MethylStateAssigner.html#methylseg.MethylStateAssigner.plot_umap_clusters">plot_umap_clusters() (methylseg.MethylStateAssigner method)</a>
 </li>
       <li><a href="generated/methylseg.MethylationStates.html#methylseg.MethylationStates.PMD">PMD (methylseg.MethylationStates attribute)</a>
@@ -490,6 +489,8 @@
   </ul></td>
   <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="generated/methylseg.MethylStateAssigner.html#methylseg.MethylStateAssigner.resolve_feature_cols">resolve_feature_cols() (methylseg.MethylStateAssigner method)</a>
+</li>
+      <li><a href="generated/methylseg.MethylSegConfig.html#methylseg.MethylSegConfig.rewrite_artifact_paths">rewrite_artifact_paths() (methylseg.MethylSegConfig method)</a>
 </li>
       <li><a href="generated/methylseg.MethylSegPathway.html#methylseg.MethylSegPathway.run_on_all_chroms">run_on_all_chroms() (methylseg.MethylSegPathway method)</a>
 </li>

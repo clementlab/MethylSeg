@@ -188,30 +188,28 @@ class MethylDataPrep:
         retain_removed_rows=True,
     ):
         """
+        Initialize methylation-table preparation for one sample.
+
         Parameters
         ----------
-        meth_file : str or Path
-            Path to methylation data file.
-        sample_id : str
-            Unique identifier for the sample.
-        resolution : str, default="auto"
-            Format of the methylation data. Valid options are:
-            - "auto": Automatically detect format
-            - "wgbs": Whole-genome bisulfite sequencing format
-            - "450k": Illumina 450k array format
-            - "27k": Illumina 27k array format
-            - "850k": Illumina 850k array format
-        min_coverage : int, default=5
+        meth_file
+            Path to the methylation data file.
+        sample_id
+            Unique identifier for the prepared sample.
+        resolution
+            Methylation data format: ``"auto"``, ``"wgbs"``, ``"450k"``,
+            ``"27k"``, or ``"850k"``.
+        min_coverage
             Minimum coverage threshold for WGBS data.
-        remove_low_coverage_like_cpgs : bool, default=False
-            If True, remove CpGs with beta values commonly produced by very
+        remove_low_coverage_like_cpgs
+            If ``True``, remove CpGs with beta values commonly produced by very
             low coverage counts, such as 0.0, 0.25, 0.33, 0.5, 0.66/0.67,
             0.75, and 1.0.
-        chunk_size: int, default=1_000_000
+        chunk_size
             Number of rows to read at a time when processing large files.
-        retain_removed_rows: bool, default=True
-            If True, retain removed rows in a separate DataFrame for downstream
-            analysis. If False, removed rows will be discarded.
+        retain_removed_rows
+            If ``True``, retain removed rows in a separate DataFrame for
+            downstream analysis. Otherwise, discard them.
         """
 
         self.meth_file = Path(meth_file)

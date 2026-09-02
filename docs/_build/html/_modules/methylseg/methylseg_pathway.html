@@ -5,16 +5,16 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>methylseg.methylseg_pathway &mdash; methylseg 0.1.0 documentation</title>
-      <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=80d5e7a1" />
+  <title>methylseg.methylseg_pathway &mdash; methylseg 0.1.4 documentation</title>
+      <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=b86133f3" />
       <link rel="stylesheet" type="text/css" href="../../_static/css/theme.css?v=9edc463e" />
 
   
       <script src="../../_static/jquery.js?v=5d32c60e"></script>
       <script src="../../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
-      <script src="../../_static/documentation_options.js?v=01f34227"></script>
-      <script src="../../_static/doctools.js?v=9bcbadda"></script>
-      <script src="../../_static/sphinx_highlight.js?v=dc90522c"></script>
+      <script src="../../_static/documentation_options.js?v=fd825880"></script>
+      <script src="../../_static/doctools.js?v=fd6eb6e6"></script>
+      <script src="../../_static/sphinx_highlight.js?v=6ffebe34"></script>
       <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
     <script src="../../_static/js/theme.js"></script>
     <link rel="index" title="Index" href="../../genindex.html" />
@@ -42,10 +42,13 @@
         </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
               <p class="caption" role="heading"><span class="caption-text">Contents</span></p>
 <ul>
+<li class="toctree-l1"><a class="reference internal" href="../../api.html">API Reference</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../full_pipeline.html">Full Pipeline And Outputs</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../input_format.html">Input Format</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../installation.html">Installation</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../quickstart.html">Quickstart</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../api.html">API Reference</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../tutorials.html">Tutorial Notebook</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../segmentation_methods.html">Segmentation Methods</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../tutorials.html">Example Notebooks</a></li>
 </ul>
 
         </div>
@@ -75,25 +78,25 @@
   <h1>Source code for methylseg.methylseg_pathway</h1><div class="highlight"><pre>
 <span></span><span class="sd">&quot;&quot;&quot;Top-level workflow orchestration for preparing, training, segmenting, and exporting.&quot;&quot;&quot;</span>
 
-<span class="kn">from</span> <span class="nn">pathlib</span> <span class="kn">import</span> <span class="n">Path</span>
-<span class="kn">from</span> <span class="nn">typing</span> <span class="kn">import</span> <span class="n">List</span><span class="p">,</span> <span class="n">Optional</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">pathlib</span><span class="w"> </span><span class="kn">import</span> <span class="n">Path</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">List</span><span class="p">,</span> <span class="n">Optional</span>
 
-<span class="kn">import</span> <span class="nn">joblib</span>
-<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
-<span class="kn">import</span> <span class="nn">pandas</span> <span class="k">as</span> <span class="nn">pd</span>
-<span class="kn">import</span> <span class="nn">yaml</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">joblib</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">pandas</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">pd</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">yaml</span>
 
-<span class="kn">from</span> <span class="nn">.methyl_state_analyzer</span> <span class="kn">import</span> <span class="n">MethylStateAnalyzer</span>
-<span class="kn">from</span> <span class="nn">.methylseg_config</span> <span class="kn">import</span> <span class="n">MethylSegConfig</span>
-<span class="kn">from</span> <span class="nn">.methylseg_hmm</span> <span class="kn">import</span> <span class="p">(</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">.methyl_state_analyzer</span><span class="w"> </span><span class="kn">import</span> <span class="n">MethylStateAnalyzer</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">.methylseg_config</span><span class="w"> </span><span class="kn">import</span> <span class="n">MethylSegConfig</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">.methylseg_hmm</span><span class="w"> </span><span class="kn">import</span> <span class="p">(</span>
     <span class="n">CTMethylSegHMM</span><span class="p">,</span>
     <span class="n">GaussianMethylSegHMM</span><span class="p">,</span>
     <span class="n">MultinomialSegHMM</span><span class="p">,</span>
     <span class="n">StickyCategoricalMethylSegHMM</span><span class="p">,</span>
 <span class="p">)</span>
-<span class="kn">from</span> <span class="nn">.methyl_segmentor</span> <span class="kn">import</span> <span class="n">MethylSegmentor</span>
-<span class="kn">from</span> <span class="nn">.methyl_state_assigner</span> <span class="kn">import</span> <span class="n">MethylStateAssigner</span>
-<span class="kn">from</span> <span class="nn">.helper_classes</span> <span class="kn">import</span> <span class="p">(</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">.methyl_segmentor</span><span class="w"> </span><span class="kn">import</span> <span class="n">MethylSegmentor</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">.methyl_state_assigner</span><span class="w"> </span><span class="kn">import</span> <span class="n">MethylStateAssigner</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">.helper_classes</span><span class="w"> </span><span class="kn">import</span> <span class="p">(</span>
     <span class="n">FILES</span><span class="p">,</span>
     <span class="n">HMMObservationMode</span><span class="p">,</span>
     <span class="n">KMeansMethylationModel</span><span class="p">,</span>
@@ -103,19 +106,19 @@
     <span class="n">SampleInfo</span><span class="p">,</span>
     <span class="n">HMMType</span><span class="p">,</span>
 <span class="p">)</span>
-<span class="kn">from</span> <span class="nn">.data_manager</span> <span class="kn">import</span> <span class="n">download_data_files</span><span class="p">,</span> <span class="n">is_lfs_pointer</span>
-<span class="kn">from</span> <span class="nn">.utils</span> <span class="kn">import</span> <span class="n">resolve_region_overlay_df</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">.data_manager</span><span class="w"> </span><span class="kn">import</span> <span class="n">download_data_files</span><span class="p">,</span> <span class="n">is_lfs_pointer</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">.utils</span><span class="w"> </span><span class="kn">import</span> <span class="n">resolve_region_overlay_df</span>
 
 
 <div class="viewcode-block" id="MethylSegPathway">
 <a class="viewcode-back" href="../../generated/methylseg.MethylSegPathway.html#methylseg.MethylSegPathway">[docs]</a>
-<span class="k">class</span> <span class="nc">MethylSegPathway</span><span class="p">:</span>
+<span class="k">class</span><span class="w"> </span><span class="nc">MethylSegPathway</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;High-level API that coordinates preparation, training, and segmentation.&quot;&quot;&quot;</span>
 
 <div class="viewcode-block" id="MethylSegPathway.get_pretrained_model">
 <a class="viewcode-back" href="../../generated/methylseg.MethylSegPathway.html#methylseg.MethylSegPathway.get_pretrained_model">[docs]</a>
     <span class="nd">@classmethod</span>
-    <span class="k">def</span> <span class="nf">get_pretrained_model</span><span class="p">(</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">get_pretrained_model</span><span class="p">(</span>
         <span class="bp">cls</span><span class="p">,</span> <span class="n">out_dir</span><span class="p">,</span> <span class="n">resolution</span><span class="o">=</span><span class="s2">&quot;450k&quot;</span><span class="p">,</span> <span class="n">download_if_missing</span><span class="o">=</span><span class="kc">False</span>
     <span class="p">):</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
@@ -162,11 +165,11 @@
 <div class="viewcode-block" id="MethylSegPathway.prepare_sample_info">
 <a class="viewcode-back" href="../../generated/methylseg.MethylSegPathway.html#methylseg.MethylSegPathway.prepare_sample_info">[docs]</a>
     <span class="nd">@staticmethod</span>
-    <span class="k">def</span> <span class="nf">prepare_sample_info</span><span class="p">(</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">prepare_sample_info</span><span class="p">(</span>
         <span class="n">sample_name</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
         <span class="n">sample_file</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="n">Path</span><span class="p">,</span>
         <span class="n">resolution</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;auto&quot;</span><span class="p">,</span>
-        <span class="n">min_coverage</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">5</span><span class="p">,</span>
+        <span class="n">min_coverage</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">10</span><span class="p">,</span>
         <span class="n">remove_low_coverage_like_cpgs</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
     <span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="n">SampleInfo</span><span class="p">,</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">]:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
@@ -203,7 +206,7 @@
 <div class="viewcode-block" id="MethylSegPathway.subset_sample_info_by_chroms">
 <a class="viewcode-back" href="../../generated/methylseg.MethylSegPathway.html#methylseg.MethylSegPathway.subset_sample_info_by_chroms">[docs]</a>
     <span class="nd">@staticmethod</span>
-    <span class="k">def</span> <span class="nf">subset_sample_info_by_chroms</span><span class="p">(</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">subset_sample_info_by_chroms</span><span class="p">(</span>
         <span class="n">sample_info</span><span class="p">:</span> <span class="n">SampleInfo</span><span class="p">,</span>
         <span class="n">chroms</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">List</span><span class="p">[</span><span class="nb">str</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
     <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">SampleInfo</span><span class="p">:</span>
@@ -269,10 +272,9 @@
         <span class="p">)</span></div>
 
 
-    <span class="c1"># TODO: think about if train_sample* naming makes sense</span>
 <div class="viewcode-block" id="MethylSegPathway.__init__">
 <a class="viewcode-back" href="../../generated/methylseg.MethylSegPathway.html#methylseg.MethylSegPathway.__init__">[docs]</a>
-    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span>
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span>
         <span class="bp">self</span><span class="p">,</span>
         <span class="n">n_states</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">4</span><span class="p">,</span>
         <span class="n">int_low_cutoff</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">0.2</span><span class="p">,</span>
@@ -299,6 +301,63 @@
         <span class="n">merge_with_intermediate_gap_bp</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">100_000</span><span class="p">,</span>
         <span class="n">hmm_observation_mode</span><span class="p">:</span> <span class="n">HMMObservationMode</span> <span class="o">=</span> <span class="n">HMMObservationMode</span><span class="o">.</span><span class="n">DISCRETE_STATES</span><span class="p">,</span>
     <span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Initialize a complete methylation-state training and segmentation pathway.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        n_states</span>
+<span class="sd">            Number of biological methylation states to model.</span>
+<span class="sd">        int_low_cutoff</span>
+<span class="sd">            Upper beta cutoff used to identify low-intermediate states.</span>
+<span class="sd">        int_high_cutoff</span>
+<span class="sd">            Lower beta cutoff used to identify high-intermediate states.</span>
+<span class="sd">        high_cutoff</span>
+<span class="sd">            Beta cutoff used to identify highly methylated states.</span>
+<span class="sd">        window_specs</span>
+<span class="sd">            Optional ``(window_size_bp, label)`` specifications for regional</span>
+<span class="sd">            emission features. Defaults depend on sample resolution.</span>
+<span class="sd">        train_sample_info</span>
+<span class="sd">            Prepared training sample. Provide this or both file-based training</span>
+<span class="sd">            arguments.</span>
+<span class="sd">        train_sample_file</span>
+<span class="sd">            Path to a methylation table used to prepare the training sample.</span>
+<span class="sd">        train_sample_name</span>
+<span class="sd">            Sample identifier paired with ``train_sample_file``.</span>
+<span class="sd">        train_chroms</span>
+<span class="sd">            Optional chromosomes used when fitting the pathway.</span>
+<span class="sd">        max_cpg_per_chrom</span>
+<span class="sd">            Optional cap on CpGs retained per chromosome during training.</span>
+<span class="sd">        state_assignment_method</span>
+<span class="sd">            Method used to assign biological states from emission features.</span>
+<span class="sd">        out_dir</span>
+<span class="sd">            Directory for fitted artifacts, segment outputs, and plots.</span>
+<span class="sd">        random_state</span>
+<span class="sd">            Random seed used by trainable components.</span>
+<span class="sd">        cluster_space</span>
+<span class="sd">            Feature space used for KMeans clustering, such as ``&quot;pca&quot;``.</span>
+<span class="sd">        n_pca</span>
+<span class="sd">            Number of PCA components retained when PCA clustering is used.</span>
+<span class="sd">        hmm_type</span>
+<span class="sd">            HMM backend to construct. Defaults depend on sample resolution.</span>
+<span class="sd">        hmm_params</span>
+<span class="sd">            Optional backend-specific HMM configuration mapping.</span>
+<span class="sd">        min_region_length</span>
+<span class="sd">            Minimum genomic length in base pairs for retained regions.</span>
+<span class="sd">        min_region_cpgs</span>
+<span class="sd">            Minimum CpG count required for retained regions.</span>
+<span class="sd">        merge_gap_bp</span>
+<span class="sd">            Maximum gap in base pairs for merging adjacent same-state regions.</span>
+<span class="sd">        merge_with_intermediate</span>
+<span class="sd">            If ``True``, allow nearby compatible regions to merge across</span>
+<span class="sd">            intermediate-state intervals.</span>
+<span class="sd">        merge_with_intermediate_gap_bp</span>
+<span class="sd">            Maximum intermediate-state gap in base pairs permitted for that</span>
+<span class="sd">            merge operation.</span>
+<span class="sd">        hmm_observation_mode</span>
+<span class="sd">            Representation passed to the HMM, such as discrete states or</span>
+<span class="sd">            continuous emissions.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">window_specs</span> <span class="o">=</span> <span class="n">window_specs</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">n_states</span> <span class="o">=</span> <span class="n">n_states</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">int_low_cutoff</span> <span class="o">=</span> <span class="n">int_low_cutoff</span>
@@ -341,6 +400,10 @@
                     <span class="p">(</span><span class="mi">40_000</span><span class="p">,</span> <span class="s2">&quot;40kb&quot;</span><span class="p">),</span>
                     <span class="p">(</span><span class="mi">450_000</span><span class="p">,</span> <span class="s2">&quot;450kb&quot;</span><span class="p">),</span>
                 <span class="p">]</span>
+            <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">train_sample_info</span><span class="o">.</span><span class="n">resolution</span> <span class="ow">in</span> <span class="p">{</span><span class="s2">&quot;27k&quot;</span><span class="p">,</span> <span class="s2">&quot;850k&quot;</span><span class="p">}:</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Defaults for </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">train_sample_info</span><span class="o">.</span><span class="n">resolution</span><span class="si">}</span><span class="s2"> are not implemented.&quot;</span><span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Unsupported methylation resolution: </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">train_sample_info</span><span class="o">.</span><span class="n">resolution</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
         <span class="k">if</span> <span class="n">hmm_type</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
             <span class="n">hmm_type</span> <span class="o">=</span> <span class="p">(</span>
                 <span class="n">HMMType</span><span class="o">.</span><span class="n">STICKY</span>
@@ -432,7 +495,7 @@
 
 <div class="viewcode-block" id="MethylSegPathway.set_out_dir">
 <a class="viewcode-back" href="../../generated/methylseg.MethylSegPathway.html#methylseg.MethylSegPathway.set_out_dir">[docs]</a>
-    <span class="k">def</span> <span class="nf">set_out_dir</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">out_dir</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="n">Path</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">set_out_dir</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">out_dir</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="n">Path</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Update the output directory across the pathway and owned components.</span>
 
@@ -449,7 +512,7 @@
         <span class="bp">self</span><span class="o">.</span><span class="n">segmentor</span><span class="o">.</span><span class="n">out_dir</span> <span class="o">=</span> <span class="n">resolved_out_dir</span></div>
 
 
-    <span class="k">def</span> <span class="nf">_resolve_sample_info</span><span class="p">(</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">_resolve_sample_info</span><span class="p">(</span>
         <span class="bp">self</span><span class="p">,</span>
         <span class="n">sample_info</span><span class="p">:</span> <span class="n">SampleInfo</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
         <span class="n">sample_name</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
@@ -472,24 +535,21 @@
         <span class="p">)</span>
 
     <span class="nd">@staticmethod</span>
-    <span class="k">def</span> <span class="nf">_resolve_region_chrom</span><span class="p">(</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">_resolve_region_chrom</span><span class="p">(</span>
         <span class="n">sample_info</span><span class="p">:</span> <span class="n">SampleInfo</span><span class="p">,</span>
         <span class="n">chrom</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
-        <span class="n">region_chrom</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
     <span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
-        <span class="k">if</span> <span class="n">region_chrom</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
-            <span class="k">return</span> <span class="nb">str</span><span class="p">(</span><span class="n">region_chrom</span><span class="p">)</span>
         <span class="k">if</span> <span class="n">chrom</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
             <span class="k">return</span> <span class="nb">str</span><span class="p">(</span><span class="n">chrom</span><span class="p">)</span>
 
         <span class="n">chrom_values</span> <span class="o">=</span> <span class="n">sample_info</span><span class="o">.</span><span class="n">meth_data</span><span class="p">[</span><span class="s2">&quot;CpG_chrm&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">dropna</span><span class="p">()</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="nb">str</span><span class="p">)</span><span class="o">.</span><span class="n">unique</span><span class="p">()</span>
         <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">chrom_values</span><span class="p">)</span> <span class="o">!=</span> <span class="mi">1</span><span class="p">:</span>
             <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
-                <span class="s2">&quot;region_chrom must be provided when plotting multiple chromosomes.&quot;</span>
+                <span class="s2">&quot;chrom must be provided when plotting multiple chromosomes.&quot;</span>
             <span class="p">)</span>
         <span class="k">return</span> <span class="nb">str</span><span class="p">(</span><span class="n">chrom_values</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
 
-    <span class="k">def</span> <span class="nf">_resolve_overlay_regions</span><span class="p">(</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">_resolve_overlay_regions</span><span class="p">(</span>
         <span class="bp">self</span><span class="p">,</span>
         <span class="o">*</span><span class="p">,</span>
         <span class="n">sample_info</span><span class="p">:</span> <span class="n">SampleInfo</span><span class="p">,</span>
@@ -512,7 +572,6 @@
         <span class="n">resolved_chrom</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_resolve_region_chrom</span><span class="p">(</span>
             <span class="n">sample_info</span><span class="o">=</span><span class="n">sample_info</span><span class="p">,</span>
             <span class="n">chrom</span><span class="o">=</span><span class="n">chrom</span><span class="p">,</span>
-            <span class="n">region_chrom</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
         <span class="p">)</span>
         <span class="n">metadata_path</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_clean_region_metadata_path</span><span class="p">(</span>
             <span class="n">chrom</span><span class="o">=</span><span class="n">resolved_chrom</span><span class="p">,</span>
@@ -529,7 +588,7 @@
         <span class="k">return</span> <span class="n">clean_df</span><span class="p">,</span> <span class="s2">&quot;state&quot;</span>
 
     <span class="nd">@staticmethod</span>
-    <span class="k">def</span> <span class="nf">_resolve_artifact_path</span><span class="p">(</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">_resolve_artifact_path</span><span class="p">(</span>
         <span class="n">yaml_dir</span><span class="p">:</span> <span class="n">Path</span><span class="p">,</span>
         <span class="n">raw_path</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="n">Path</span><span class="p">,</span>
         <span class="n">field_name</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
@@ -545,14 +604,14 @@
         <span class="k">return</span> <span class="n">path</span>
 
     <span class="nd">@staticmethod</span>
-    <span class="k">def</span> <span class="nf">_relativize_artifact_path</span><span class="p">(</span><span class="n">base_dir</span><span class="p">:</span> <span class="n">Path</span><span class="p">,</span> <span class="n">path</span><span class="p">:</span> <span class="n">Path</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">_relativize_artifact_path</span><span class="p">(</span><span class="n">base_dir</span><span class="p">:</span> <span class="n">Path</span><span class="p">,</span> <span class="n">path</span><span class="p">:</span> <span class="n">Path</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
         <span class="k">try</span><span class="p">:</span>
             <span class="k">return</span> <span class="nb">str</span><span class="p">(</span><span class="n">path</span><span class="o">.</span><span class="n">relative_to</span><span class="p">(</span><span class="n">base_dir</span><span class="p">))</span>
         <span class="k">except</span> <span class="ne">ValueError</span><span class="p">:</span>
             <span class="k">return</span> <span class="nb">str</span><span class="p">(</span><span class="n">path</span><span class="p">)</span>
 
     <span class="nd">@staticmethod</span>
-    <span class="k">def</span> <span class="nf">_normalize_train_chroms</span><span class="p">(</span><span class="n">train_chroms</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span><span class="p">:</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">_normalize_train_chroms</span><span class="p">(</span><span class="n">train_chroms</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span><span class="p">:</span>
         <span class="k">if</span> <span class="n">train_chroms</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
             <span class="k">return</span> <span class="kc">None</span>
         <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">train_chroms</span><span class="p">,</span> <span class="nb">str</span><span class="p">):</span>
@@ -560,7 +619,7 @@
         <span class="k">return</span> <span class="p">[</span><span class="nb">str</span><span class="p">(</span><span class="n">chrom</span><span class="p">)</span> <span class="k">for</span> <span class="n">chrom</span> <span class="ow">in</span> <span class="n">train_chroms</span><span class="p">]</span>
 
     <span class="nd">@staticmethod</span>
-    <span class="k">def</span> <span class="nf">_normalize_window_specs</span><span class="p">(</span><span class="n">window_specs</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="nb">tuple</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="nb">str</span><span class="p">]]:</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">_normalize_window_specs</span><span class="p">(</span><span class="n">window_specs</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="nb">tuple</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="nb">str</span><span class="p">]]:</span>
         <span class="n">normalized_specs</span> <span class="o">=</span> <span class="p">[]</span>
         <span class="k">for</span> <span class="n">spec</span> <span class="ow">in</span> <span class="n">window_specs</span><span class="p">:</span>
             <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">spec</span><span class="p">,</span> <span class="p">(</span><span class="nb">list</span><span class="p">,</span> <span class="nb">tuple</span><span class="p">))</span> <span class="ow">or</span> <span class="nb">len</span><span class="p">(</span><span class="n">spec</span><span class="p">)</span> <span class="o">!=</span> <span class="mi">2</span><span class="p">:</span>
@@ -573,7 +632,7 @@
         <span class="k">return</span> <span class="n">normalized_specs</span>
 
     <span class="nd">@staticmethod</span>
-    <span class="k">def</span> <span class="nf">_validate_state_cutoffs</span><span class="p">(</span><span class="n">state_cutoffs</span><span class="p">:</span> <span class="nb">dict</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">:</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">_validate_state_cutoffs</span><span class="p">(</span><span class="n">state_cutoffs</span><span class="p">:</span> <span class="nb">dict</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">:</span>
         <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">state_cutoffs</span><span class="p">,</span> <span class="nb">dict</span><span class="p">):</span>
             <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;state_cutoffs must be a dictionary.&quot;</span><span class="p">)</span>
         <span class="n">required_top_level</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&quot;beta_low_max&quot;</span><span class="p">,</span> <span class="s2">&quot;beta_high_min&quot;</span><span class="p">,</span> <span class="s2">&quot;pmd_cutoffs&quot;</span><span class="p">}</span>
@@ -615,7 +674,7 @@
                 <span class="p">)</span>
         <span class="k">return</span> <span class="n">normalized_cutoffs</span>
 
-    <span class="k">def</span> <span class="nf">_init_hmm</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">_init_hmm</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">hmm_type</span><span class="p">,</span> <span class="nb">str</span><span class="p">):</span>
             <span class="k">try</span><span class="p">:</span>
                 <span class="bp">self</span><span class="o">.</span><span class="n">hmm_type</span> <span class="o">=</span> <span class="n">HMMType</span><span class="o">.</span><span class="n">from_string</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">hmm_type</span><span class="p">)</span>
@@ -652,7 +711,7 @@
 
 <div class="viewcode-block" id="MethylSegPathway.fit_pathway">
 <a class="viewcode-back" href="../../generated/methylseg.MethylSegPathway.html#methylseg.MethylSegPathway.fit_pathway">[docs]</a>
-    <span class="k">def</span> <span class="nf">fit_pathway</span><span class="p">(</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">fit_pathway</span><span class="p">(</span>
         <span class="bp">self</span><span class="p">,</span>
         <span class="n">force_optimize_rules</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
     <span class="p">):</span>
@@ -683,7 +742,7 @@
 
 <div class="viewcode-block" id="MethylSegPathway.generate_regions">
 <a class="viewcode-back" href="../../generated/methylseg.MethylSegPathway.html#methylseg.MethylSegPathway.generate_regions">[docs]</a>
-    <span class="k">def</span> <span class="nf">generate_regions</span><span class="p">(</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">generate_regions</span><span class="p">(</span>
         <span class="bp">self</span><span class="p">,</span>
         <span class="n">sample_info</span><span class="p">:</span> <span class="n">SampleInfo</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
         <span class="n">chrom</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;chr1&quot;</span><span class="p">,</span>
@@ -739,13 +798,13 @@
 
 
     <span class="nd">@staticmethod</span>
-    <span class="k">def</span> <span class="nf">_empty_regions_df</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">:</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">_empty_regions_df</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">:</span>
         <span class="k">return</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span>
             <span class="n">columns</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;CpG_chrm&quot;</span><span class="p">,</span> <span class="s2">&quot;start&quot;</span><span class="p">,</span> <span class="s2">&quot;end&quot;</span><span class="p">,</span> <span class="s2">&quot;avg_beta&quot;</span><span class="p">,</span> <span class="s2">&quot;probe_count&quot;</span><span class="p">,</span> <span class="s2">&quot;state&quot;</span><span class="p">]</span>
         <span class="p">)</span>
 
     <span class="nd">@staticmethod</span>
-    <span class="k">def</span> <span class="nf">_empty_clean_regions_df</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">:</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">_empty_clean_regions_df</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">:</span>
         <span class="k">return</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span>
             <span class="n">columns</span><span class="o">=</span><span class="p">[</span>
                 <span class="s2">&quot;CpG_chrm&quot;</span><span class="p">,</span>
@@ -763,7 +822,7 @@
         <span class="p">)</span>
 
     <span class="nd">@staticmethod</span>
-    <span class="k">def</span> <span class="nf">_clean_metadata_columns</span><span class="p">(</span><span class="n">state</span><span class="p">:</span> <span class="n">MethylationStates</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]:</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">_clean_metadata_columns</span><span class="p">(</span><span class="n">state</span><span class="p">:</span> <span class="n">MethylationStates</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]:</span>
         <span class="n">base_columns</span> <span class="o">=</span> <span class="p">[</span>
             <span class="s2">&quot;CpG_chrm&quot;</span><span class="p">,</span>
             <span class="s2">&quot;start&quot;</span><span class="p">,</span>
@@ -782,10 +841,10 @@
             <span class="p">]</span>
         <span class="k">return</span> <span class="n">base_columns</span>
 
-    <span class="k">def</span> <span class="nf">_clean_regions_dir</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Path</span><span class="p">:</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">_clean_regions_dir</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Path</span><span class="p">:</span>
         <span class="k">return</span> <span class="n">Path</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">out_dir</span><span class="p">)</span> <span class="o">/</span> <span class="s2">&quot;clean_regions&quot;</span>
 
-    <span class="k">def</span> <span class="nf">_resolve_clean_sample_id</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">sample_id</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">_resolve_clean_sample_id</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">sample_id</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
         <span class="k">if</span> <span class="n">sample_id</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
             <span class="k">return</span> <span class="nb">str</span><span class="p">(</span><span class="n">sample_id</span><span class="p">)</span>
         <span class="n">default_sample</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">segmentor</span><span class="p">,</span> <span class="s2">&quot;default_sample_info&quot;</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
@@ -796,7 +855,7 @@
             <span class="k">return</span> <span class="nb">str</span><span class="p">(</span><span class="n">train_sample</span><span class="o">.</span><span class="n">sample_id</span><span class="p">)</span>
         <span class="k">return</span> <span class="s2">&quot;sample&quot;</span>
 
-    <span class="k">def</span> <span class="nf">_clean_region_bed_path</span><span class="p">(</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">_clean_region_bed_path</span><span class="p">(</span>
         <span class="bp">self</span><span class="p">,</span>
         <span class="o">*</span><span class="p">,</span>
         <span class="n">chrom</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
@@ -807,7 +866,7 @@
             <span class="sa">f</span><span class="s2">&quot;segments_cleaned_</span><span class="si">{</span><span class="n">chrom</span><span class="si">}</span><span class="s2">_</span><span class="si">{</span><span class="n">sample_id</span><span class="si">}</span><span class="s2">_</span><span class="si">{</span><span class="n">state</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s2">.bed&quot;</span>
         <span class="p">)</span>
 
-    <span class="k">def</span> <span class="nf">_clean_region_metadata_path</span><span class="p">(</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">_clean_region_metadata_path</span><span class="p">(</span>
         <span class="bp">self</span><span class="p">,</span>
         <span class="o">*</span><span class="p">,</span>
         <span class="n">chrom</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
@@ -819,7 +878,7 @@
         <span class="p">)</span>
 
     <span class="nd">@staticmethod</span>
-    <span class="k">def</span> <span class="nf">_coerce_region_state</span><span class="p">(</span><span class="n">state</span><span class="p">:</span> <span class="n">MethylationStates</span> <span class="o">|</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">MethylationStates</span><span class="p">:</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">_coerce_region_state</span><span class="p">(</span><span class="n">state</span><span class="p">:</span> <span class="n">MethylationStates</span> <span class="o">|</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">MethylationStates</span><span class="p">:</span>
         <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">state</span><span class="p">,</span> <span class="n">MethylationStates</span><span class="p">):</span>
             <span class="k">return</span> <span class="n">state</span>
         <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">state</span><span class="p">,</span> <span class="nb">str</span><span class="p">):</span>
@@ -834,7 +893,7 @@
                 <span class="k">pass</span>
         <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Unknown methylation state: </span><span class="si">{</span><span class="n">state</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
 
-    <span class="k">def</span> <span class="nf">_merge_clean_region_records</span><span class="p">(</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">_merge_clean_region_records</span><span class="p">(</span>
         <span class="bp">self</span><span class="p">,</span>
         <span class="n">records</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">object</span><span class="p">]],</span>
         <span class="o">*</span><span class="p">,</span>
@@ -917,7 +976,7 @@
         <span class="p">)</span>
         <span class="k">return</span> <span class="n">merged_records</span>
 
-    <span class="k">def</span> <span class="nf">_build_state_records_with_intermediate</span><span class="p">(</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">_build_state_records_with_intermediate</span><span class="p">(</span>
         <span class="bp">self</span><span class="p">,</span>
         <span class="n">chrom_rows</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">object</span><span class="p">],</span>
         <span class="o">*</span><span class="p">,</span>
@@ -930,7 +989,7 @@
         <span class="n">expanded_records</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">object</span><span class="p">]]</span> <span class="o">=</span> <span class="p">[]</span>
         <span class="n">block_rows</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">object</span><span class="p">]</span> <span class="o">=</span> <span class="p">[]</span>
 
-        <span class="k">def</span> <span class="nf">flush_block</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="k">def</span><span class="w"> </span><span class="nf">flush_block</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
             <span class="k">nonlocal</span> <span class="n">block_rows</span>
             <span class="k">if</span> <span class="ow">not</span> <span class="n">block_rows</span><span class="p">:</span>
                 <span class="k">return</span>
@@ -995,7 +1054,7 @@
         <span class="n">flush_block</span><span class="p">()</span>
         <span class="k">return</span> <span class="n">expanded_records</span>
 
-    <span class="k">def</span> <span class="nf">_records_to_clean_state_df</span><span class="p">(</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">_records_to_clean_state_df</span><span class="p">(</span>
         <span class="bp">self</span><span class="p">,</span>
         <span class="n">records</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">object</span><span class="p">]],</span>
         <span class="o">*</span><span class="p">,</span>
@@ -1049,7 +1108,7 @@
 
 <div class="viewcode-block" id="MethylSegPathway.get_clean_regions">
 <a class="viewcode-back" href="../../generated/methylseg.MethylSegPathway.html#methylseg.MethylSegPathway.get_clean_regions">[docs]</a>
-    <span class="k">def</span> <span class="nf">get_clean_regions</span><span class="p">(</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">get_clean_regions</span><span class="p">(</span>
         <span class="bp">self</span><span class="p">,</span>
         <span class="n">regions_df</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
         <span class="n">merge_gap_bp</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
@@ -1335,7 +1394,7 @@
         <span class="k">return</span> <span class="n">summary_paths</span><span class="p">,</span> <span class="n">clean_dir</span></div>
 
 
-    <span class="k">def</span> <span class="nf">_normalize_regions_for_bed</span><span class="p">(</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">_normalize_regions_for_bed</span><span class="p">(</span>
         <span class="bp">self</span><span class="p">,</span>
         <span class="n">regions_df</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span> <span class="o">|</span> <span class="kc">None</span><span class="p">,</span>
     <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">:</span>
@@ -1352,7 +1411,7 @@
         <span class="p">)</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="nb">int</span><span class="p">)</span>
         <span class="k">return</span> <span class="n">normalized_df</span>
 
-    <span class="k">def</span> <span class="nf">_write_bed</span><span class="p">(</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">_write_bed</span><span class="p">(</span>
         <span class="bp">self</span><span class="p">,</span>
         <span class="n">regions_df</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span> <span class="o">|</span> <span class="kc">None</span><span class="p">,</span>
         <span class="n">out_path</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="n">Path</span><span class="p">,</span>
@@ -1364,7 +1423,7 @@
         <span class="n">bed_df</span><span class="o">.</span><span class="n">to_csv</span><span class="p">(</span><span class="n">out_path</span><span class="p">,</span> <span class="n">sep</span><span class="o">=</span><span class="s2">&quot;</span><span class="se">\t</span><span class="s2">&quot;</span><span class="p">,</span> <span class="n">header</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">index</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
         <span class="k">return</span> <span class="n">out_path</span>
 
-    <span class="k">def</span> <span class="nf">_get_state_regions</span><span class="p">(</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">_get_state_regions</span><span class="p">(</span>
         <span class="bp">self</span><span class="p">,</span>
         <span class="n">regions_df</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span> <span class="o">|</span> <span class="kc">None</span><span class="p">,</span>
         <span class="n">state</span><span class="p">:</span> <span class="n">MethylationStates</span><span class="p">,</span>
@@ -1377,7 +1436,7 @@
         <span class="n">state_mask</span> <span class="o">=</span> <span class="p">(</span><span class="n">normalized_df</span><span class="p">[</span><span class="s2">&quot;state&quot;</span><span class="p">]</span> <span class="o">==</span> <span class="n">state</span><span class="p">)</span> <span class="o">|</span> <span class="p">(</span><span class="n">state_names</span> <span class="o">==</span> <span class="n">state</span><span class="o">.</span><span class="n">name</span><span class="p">)</span>
         <span class="k">return</span> <span class="n">normalized_df</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">state_mask</span><span class="p">]</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
 
-    <span class="k">def</span> <span class="nf">_write_summary_files</span><span class="p">(</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">_write_summary_files</span><span class="p">(</span>
         <span class="bp">self</span><span class="p">,</span>
         <span class="n">raw_regions_df</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span> <span class="o">|</span> <span class="kc">None</span><span class="p">,</span>
         <span class="n">sample_id</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
@@ -1448,7 +1507,7 @@
 
         <span class="k">return</span> <span class="n">written_paths</span>
 
-    <span class="k">def</span> <span class="nf">_write_regions_by_chrom_and_state</span><span class="p">(</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">_write_regions_by_chrom_and_state</span><span class="p">(</span>
         <span class="bp">self</span><span class="p">,</span>
         <span class="n">regions_df</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">,</span>
         <span class="n">sample_id</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
@@ -1491,7 +1550,7 @@
 
 <div class="viewcode-block" id="MethylSegPathway.run_on_all_chroms">
 <a class="viewcode-back" href="../../generated/methylseg.MethylSegPathway.html#methylseg.MethylSegPathway.run_on_all_chroms">[docs]</a>
-    <span class="k">def</span> <span class="nf">run_on_all_chroms</span><span class="p">(</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">run_on_all_chroms</span><span class="p">(</span>
         <span class="bp">self</span><span class="p">,</span>
         <span class="n">sample_info</span><span class="p">:</span> <span class="n">SampleInfo</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
         <span class="n">chroms</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">List</span><span class="p">[</span><span class="nb">str</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
@@ -1603,7 +1662,7 @@
 
 <div class="viewcode-block" id="MethylSegPathway.run_pathway">
 <a class="viewcode-back" href="../../generated/methylseg.MethylSegPathway.html#methylseg.MethylSegPathway.run_pathway">[docs]</a>
-    <span class="k">def</span> <span class="nf">run_pathway</span><span class="p">(</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">run_pathway</span><span class="p">(</span>
         <span class="bp">self</span><span class="p">,</span>
         <span class="n">sample_info</span><span class="p">:</span> <span class="n">SampleInfo</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
         <span class="n">chroms</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">List</span><span class="p">[</span><span class="nb">str</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
@@ -1657,7 +1716,7 @@
 
 <div class="viewcode-block" id="MethylSegPathway.plot_labels">
 <a class="viewcode-back" href="../../generated/methylseg.MethylSegPathway.html#methylseg.MethylSegPathway.plot_labels">[docs]</a>
-    <span class="k">def</span> <span class="nf">plot_labels</span><span class="p">(</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">plot_labels</span><span class="p">(</span>
         <span class="bp">self</span><span class="p">,</span>
         <span class="o">*</span><span class="p">,</span>
         <span class="n">label_source</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;hmm&quot;</span><span class="p">,</span>
@@ -1669,23 +1728,67 @@
         <span class="n">use_cleaned_regions</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
         <span class="n">region_start</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
         <span class="n">region_end</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
-        <span class="n">region_chrom</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
         <span class="n">x_col</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;CpG_beg&quot;</span><span class="p">,</span>
         <span class="n">y_col</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;beta&quot;</span><span class="p">,</span>
         <span class="n">label_title</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
         <span class="n">show_plot</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
         <span class="n">max_points</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">120_000</span><span class="p">,</span>
+        <span class="n">state_colors</span><span class="p">:</span> <span class="nb">dict</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
     <span class="p">):</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Plot genomic labels for one chromosome with optional region overlays.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        label_source</span>
+<span class="sd">            Label family to plot: ``&quot;hmm&quot;``, ``&quot;kmeans&quot;``, or</span>
+<span class="sd">            ``&quot;rule_based&quot;``.</span>
+<span class="sd">        sample_info</span>
+<span class="sd">            Prepared sample to plot. When omitted, uses the pathway default</span>
+<span class="sd">            sample.</span>
+<span class="sd">        chrom</span>
+<span class="sd">            Chromosome to display for HMM plots, and optional restriction for</span>
+<span class="sd">            analyzer-owned labels.</span>
+<span class="sd">        sample_info_removed</span>
+<span class="sd">            Optional table of CpGs removed during preprocessing to show as a</span>
+<span class="sd">            background layer.</span>
+<span class="sd">        overlay_regions_df</span>
+<span class="sd">            Optional region table used to recolor points by overlapping</span>
+<span class="sd">            intervals.</span>
+<span class="sd">        overlay_state</span>
+<span class="sd">            Optional biological state whose cleaned regions should be loaded</span>
+<span class="sd">            when ``use_cleaned_regions`` is enabled.</span>
+<span class="sd">        use_cleaned_regions</span>
+<span class="sd">            If ``True``, load chromosome-local cleaned-region metadata from</span>
+<span class="sd">            disk for overlay plotting.</span>
+<span class="sd">        region_start</span>
+<span class="sd">            Optional genomic start coordinate for x-axis zooming.</span>
+<span class="sd">        region_end</span>
+<span class="sd">            Optional genomic end coordinate for x-axis zooming.</span>
+<span class="sd">        x_col</span>
+<span class="sd">            Probe-level column used for the x-axis.</span>
+<span class="sd">        y_col</span>
+<span class="sd">            Probe-level column used for the y-axis.</span>
+<span class="sd">        label_title</span>
+<span class="sd">            Optional legend title override.</span>
+<span class="sd">        show_plot</span>
+<span class="sd">            If ``True``, display the figure immediately.</span>
+<span class="sd">        max_points</span>
+<span class="sd">            Maximum number of plotted points before downsampling.</span>
+<span class="sd">        state_colors</span>
+<span class="sd">            Optional biological-state color overrides.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        plotly.graph_objects.Figure</span>
+<span class="sd">            Interactive beta scatter plot for the requested label source.</span>
 
 <span class="sd">        ``use_cleaned_regions=True`` is a read-only plotting mode. It loads the</span>
 <span class="sd">        prebuilt chromosome-local cleaned metadata TSV for ``overlay_state`` from</span>
 <span class="sd">        ``clean_regions/metadata_cleaned_{chrom}_{sample_id}_{STATE}.tsv``.</span>
 <span class="sd">        It does not generate cleaned regions on demand; call</span>
 <span class="sd">        ``get_clean_regions(..., chrom=...)`` first when you want cleaned</span>
-<span class="sd">        overlays. Region args only zoom the x-axis viewport for scatter plots;</span>
-<span class="sd">        they do not create an implicit highlight overlay.</span>
+<span class="sd">        overlays. Region args only zoom the x-axis viewport for scatter plots.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="n">resolved_sample_info</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_resolve_sample_info</span><span class="p">(</span><span class="n">sample_info</span><span class="o">=</span><span class="n">sample_info</span><span class="p">)</span>
         <span class="n">overlay_df</span><span class="p">,</span> <span class="n">overlay_style</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_resolve_overlay_regions</span><span class="p">(</span>
@@ -1698,6 +1801,8 @@
 
         <span class="n">label_source</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">label_source</span><span class="p">)</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span>
         <span class="k">if</span> <span class="n">label_source</span> <span class="o">==</span> <span class="s2">&quot;hmm&quot;</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">chrom</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;chrom is required when plotting HMM labels.&quot;</span><span class="p">)</span>
             <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">segmentor</span><span class="o">.</span><span class="n">plot_labels</span><span class="p">(</span>
                 <span class="n">sample_info</span><span class="o">=</span><span class="n">resolved_sample_info</span><span class="p">,</span>
                 <span class="n">chrom</span><span class="o">=</span><span class="n">chrom</span><span class="p">,</span>
@@ -1706,23 +1811,12 @@
                 <span class="n">overlay_style</span><span class="o">=</span><span class="n">overlay_style</span><span class="p">,</span>
                 <span class="n">region_start</span><span class="o">=</span><span class="n">region_start</span><span class="p">,</span>
                 <span class="n">region_end</span><span class="o">=</span><span class="n">region_end</span><span class="p">,</span>
-                <span class="n">region_chrom</span><span class="o">=</span><span class="p">(</span>
-                    <span class="bp">self</span><span class="o">.</span><span class="n">_resolve_region_chrom</span><span class="p">(</span>
-                        <span class="n">sample_info</span><span class="o">=</span><span class="n">resolved_sample_info</span><span class="p">,</span>
-                        <span class="n">chrom</span><span class="o">=</span><span class="n">chrom</span><span class="p">,</span>
-                        <span class="n">region_chrom</span><span class="o">=</span><span class="n">region_chrom</span><span class="p">,</span>
-                    <span class="p">)</span>
-                    <span class="k">if</span> <span class="nb">any</span><span class="p">(</span>
-                        <span class="n">value</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span>
-                        <span class="k">for</span> <span class="n">value</span> <span class="ow">in</span> <span class="p">(</span><span class="n">region_start</span><span class="p">,</span> <span class="n">region_end</span><span class="p">,</span> <span class="n">region_chrom</span><span class="p">)</span>
-                    <span class="p">)</span>
-                    <span class="k">else</span> <span class="kc">None</span>
-                <span class="p">),</span>
                 <span class="n">x_col</span><span class="o">=</span><span class="n">x_col</span><span class="p">,</span>
                 <span class="n">y_col</span><span class="o">=</span><span class="n">y_col</span><span class="p">,</span>
                 <span class="n">label_title</span><span class="o">=</span><span class="n">label_title</span> <span class="k">if</span> <span class="n">label_title</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="k">else</span> <span class="s2">&quot;HMM state&quot;</span><span class="p">,</span>
                 <span class="n">show_plot</span><span class="o">=</span><span class="n">show_plot</span><span class="p">,</span>
                 <span class="n">max_points</span><span class="o">=</span><span class="n">max_points</span><span class="p">,</span>
+                <span class="n">state_colors</span><span class="o">=</span><span class="n">state_colors</span><span class="p">,</span>
             <span class="p">)</span>
         <span class="k">if</span> <span class="n">label_source</span> <span class="ow">in</span> <span class="p">{</span><span class="s2">&quot;kmeans&quot;</span><span class="p">,</span> <span class="s2">&quot;rule_based&quot;</span><span class="p">}:</span>
             <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">analyzer</span><span class="o">.</span><span class="n">plot_labels</span><span class="p">(</span>
@@ -1734,23 +1828,12 @@
                 <span class="n">overlay_style</span><span class="o">=</span><span class="n">overlay_style</span><span class="p">,</span>
                 <span class="n">region_start</span><span class="o">=</span><span class="n">region_start</span><span class="p">,</span>
                 <span class="n">region_end</span><span class="o">=</span><span class="n">region_end</span><span class="p">,</span>
-                <span class="n">region_chrom</span><span class="o">=</span><span class="p">(</span>
-                    <span class="bp">self</span><span class="o">.</span><span class="n">_resolve_region_chrom</span><span class="p">(</span>
-                        <span class="n">sample_info</span><span class="o">=</span><span class="n">resolved_sample_info</span><span class="p">,</span>
-                        <span class="n">chrom</span><span class="o">=</span><span class="n">chrom</span><span class="p">,</span>
-                        <span class="n">region_chrom</span><span class="o">=</span><span class="n">region_chrom</span><span class="p">,</span>
-                    <span class="p">)</span>
-                    <span class="k">if</span> <span class="nb">any</span><span class="p">(</span>
-                        <span class="n">value</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span>
-                        <span class="k">for</span> <span class="n">value</span> <span class="ow">in</span> <span class="p">(</span><span class="n">region_start</span><span class="p">,</span> <span class="n">region_end</span><span class="p">,</span> <span class="n">region_chrom</span><span class="p">)</span>
-                    <span class="p">)</span>
-                    <span class="k">else</span> <span class="kc">None</span>
-                <span class="p">),</span>
                 <span class="n">x_col</span><span class="o">=</span><span class="n">x_col</span><span class="p">,</span>
                 <span class="n">y_col</span><span class="o">=</span><span class="n">y_col</span><span class="p">,</span>
                 <span class="n">label_title</span><span class="o">=</span><span class="n">label_title</span><span class="p">,</span>
                 <span class="n">show_plot</span><span class="o">=</span><span class="n">show_plot</span><span class="p">,</span>
                 <span class="n">max_points</span><span class="o">=</span><span class="n">max_points</span><span class="p">,</span>
+                <span class="n">state_colors</span><span class="o">=</span><span class="n">state_colors</span><span class="p">,</span>
             <span class="p">)</span>
 
         <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
@@ -1761,7 +1844,7 @@
 
 <div class="viewcode-block" id="MethylSegPathway.plot_embedding">
 <a class="viewcode-back" href="../../generated/methylseg.MethylSegPathway.html#methylseg.MethylSegPathway.plot_embedding">[docs]</a>
-    <span class="k">def</span> <span class="nf">plot_embedding</span><span class="p">(</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">plot_embedding</span><span class="p">(</span>
         <span class="bp">self</span><span class="p">,</span>
         <span class="o">*</span><span class="p">,</span>
         <span class="n">label_source</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;kmeans&quot;</span><span class="p">,</span>
@@ -1771,6 +1854,11 @@
         <span class="n">n_components</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">2</span><span class="p">,</span>
         <span class="n">top_n_loadings</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">5</span><span class="p">,</span>
         <span class="n">hexbin</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
+        <span class="n">hexbin_gridsize</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">60</span><span class="p">,</span>
+        <span class="n">hexbin_bins</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="nb">int</span> <span class="o">|</span> <span class="nb">list</span><span class="p">[</span><span class="nb">float</span><span class="p">]</span> <span class="o">|</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="s2">&quot;log&quot;</span><span class="p">,</span>
+        <span class="n">hexbin_mincnt</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="mi">1</span><span class="p">,</span>
+        <span class="n">hexbin_alpha</span><span class="p">:</span> <span class="nb">float</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">hexbin_linewidths</span><span class="p">:</span> <span class="nb">float</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
         <span class="n">interactive</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
         <span class="n">include_metrics</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
         <span class="n">include_biplot</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
@@ -1782,6 +1870,7 @@
         <span class="n">use_parallel</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
         <span class="n">show_plot</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
         <span class="n">force_resegment</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+        <span class="n">state_colors</span><span class="p">:</span> <span class="nb">dict</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
     <span class="p">):</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Plot PCA or UMAP embeddings for training or sample-level labels.</span>
@@ -1804,6 +1893,18 @@
 <span class="sd">            Number of PCA loading features to show in side tables and biplots.</span>
 <span class="sd">        hexbin</span>
 <span class="sd">            If ``True``, render 2-D PCA as hexbins instead of points.</span>
+<span class="sd">        hexbin_gridsize</span>
+<span class="sd">            Hexbin grid resolution for 2-D PCA hexbin plots.</span>
+<span class="sd">        hexbin_bins</span>
+<span class="sd">            Hexbin binning strategy for 2-D PCA hexbin plots, for example</span>
+<span class="sd">            ``&quot;log&quot;``, an integer bin count, explicit bin edges, or ``None``.</span>
+<span class="sd">        hexbin_mincnt</span>
+<span class="sd">            Minimum points required to draw a hexbin in 2-D PCA hexbin plots.</span>
+<span class="sd">            Use ``None`` to let matplotlib draw all bins.</span>
+<span class="sd">        hexbin_alpha</span>
+<span class="sd">            Optional global transparency multiplier for 2-D PCA hexbin plots.</span>
+<span class="sd">        hexbin_linewidths</span>
+<span class="sd">            Optional hexagon border width for 2-D PCA hexbin plots.</span>
 <span class="sd">        interactive</span>
 <span class="sd">            If ``True``, use interactive rendering when supported.</span>
 <span class="sd">        include_metrics</span>
@@ -1825,6 +1926,8 @@
 <span class="sd">        force_resegment</span>
 <span class="sd">            If ``True`` and ``label_source=&quot;hmm&quot;``, rerun segmentation before</span>
 <span class="sd">            plotting.</span>
+<span class="sd">        state_colors</span>
+<span class="sd">            Optional biological-state color overrides.</span>
 
 <span class="sd">        Returns</span>
 <span class="sd">        -------</span>
@@ -1838,6 +1941,11 @@
                 <span class="n">n_components</span><span class="o">=</span><span class="n">n_components</span><span class="p">,</span>
                 <span class="n">top_n_loadings</span><span class="o">=</span><span class="n">top_n_loadings</span><span class="p">,</span>
                 <span class="n">hexbin</span><span class="o">=</span><span class="n">hexbin</span><span class="p">,</span>
+                <span class="n">hexbin_gridsize</span><span class="o">=</span><span class="n">hexbin_gridsize</span><span class="p">,</span>
+                <span class="n">hexbin_bins</span><span class="o">=</span><span class="n">hexbin_bins</span><span class="p">,</span>
+                <span class="n">hexbin_mincnt</span><span class="o">=</span><span class="n">hexbin_mincnt</span><span class="p">,</span>
+                <span class="n">hexbin_alpha</span><span class="o">=</span><span class="n">hexbin_alpha</span><span class="p">,</span>
+                <span class="n">hexbin_linewidths</span><span class="o">=</span><span class="n">hexbin_linewidths</span><span class="p">,</span>
                 <span class="n">interactive</span><span class="o">=</span><span class="n">interactive</span><span class="p">,</span>
                 <span class="n">include_metrics</span><span class="o">=</span><span class="n">include_metrics</span><span class="p">,</span>
                 <span class="n">include_biplot</span><span class="o">=</span><span class="n">include_biplot</span><span class="p">,</span>
@@ -1848,6 +1956,7 @@
                 <span class="n">use_pca_features</span><span class="o">=</span><span class="n">use_pca_features</span><span class="p">,</span>
                 <span class="n">use_parallel</span><span class="o">=</span><span class="n">use_parallel</span><span class="p">,</span>
                 <span class="n">show_plot</span><span class="o">=</span><span class="n">show_plot</span><span class="p">,</span>
+                <span class="n">state_colors</span><span class="o">=</span><span class="n">state_colors</span><span class="p">,</span>
             <span class="p">)</span>
 
         <span class="n">resolved_sample_info</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_resolve_sample_info</span><span class="p">(</span><span class="n">sample_info</span><span class="o">=</span><span class="n">sample_info</span><span class="p">)</span>
@@ -1869,6 +1978,11 @@
                 <span class="n">n_components</span><span class="o">=</span><span class="n">n_components</span><span class="p">,</span>
                 <span class="n">top_n_loadings</span><span class="o">=</span><span class="n">top_n_loadings</span><span class="p">,</span>
                 <span class="n">hexbin</span><span class="o">=</span><span class="n">hexbin</span><span class="p">,</span>
+                <span class="n">hexbin_gridsize</span><span class="o">=</span><span class="n">hexbin_gridsize</span><span class="p">,</span>
+                <span class="n">hexbin_bins</span><span class="o">=</span><span class="n">hexbin_bins</span><span class="p">,</span>
+                <span class="n">hexbin_mincnt</span><span class="o">=</span><span class="n">hexbin_mincnt</span><span class="p">,</span>
+                <span class="n">hexbin_alpha</span><span class="o">=</span><span class="n">hexbin_alpha</span><span class="p">,</span>
+                <span class="n">hexbin_linewidths</span><span class="o">=</span><span class="n">hexbin_linewidths</span><span class="p">,</span>
                 <span class="n">interactive</span><span class="o">=</span><span class="n">interactive</span><span class="p">,</span>
                 <span class="n">include_metrics</span><span class="o">=</span><span class="n">include_metrics</span><span class="p">,</span>
                 <span class="n">include_biplot</span><span class="o">=</span><span class="n">include_biplot</span><span class="p">,</span>
@@ -1879,6 +1993,7 @@
                 <span class="n">use_pca_features</span><span class="o">=</span><span class="n">use_pca_features</span><span class="p">,</span>
                 <span class="n">use_parallel</span><span class="o">=</span><span class="n">use_parallel</span><span class="p">,</span>
                 <span class="n">show_plot</span><span class="o">=</span><span class="n">show_plot</span><span class="p">,</span>
+                <span class="n">state_colors</span><span class="o">=</span><span class="n">state_colors</span><span class="p">,</span>
             <span class="p">)</span>
 
         <span class="k">if</span> <span class="n">label_source</span> <span class="o">==</span> <span class="s2">&quot;hmm&quot;</span><span class="p">:</span>
@@ -1897,6 +2012,11 @@
                 <span class="n">n_components</span><span class="o">=</span><span class="n">n_components</span><span class="p">,</span>
                 <span class="n">top_n_loadings</span><span class="o">=</span><span class="n">top_n_loadings</span><span class="p">,</span>
                 <span class="n">hexbin</span><span class="o">=</span><span class="n">hexbin</span><span class="p">,</span>
+                <span class="n">hexbin_gridsize</span><span class="o">=</span><span class="n">hexbin_gridsize</span><span class="p">,</span>
+                <span class="n">hexbin_bins</span><span class="o">=</span><span class="n">hexbin_bins</span><span class="p">,</span>
+                <span class="n">hexbin_mincnt</span><span class="o">=</span><span class="n">hexbin_mincnt</span><span class="p">,</span>
+                <span class="n">hexbin_alpha</span><span class="o">=</span><span class="n">hexbin_alpha</span><span class="p">,</span>
+                <span class="n">hexbin_linewidths</span><span class="o">=</span><span class="n">hexbin_linewidths</span><span class="p">,</span>
                 <span class="n">interactive</span><span class="o">=</span><span class="n">interactive</span><span class="p">,</span>
                 <span class="n">include_metrics</span><span class="o">=</span><span class="n">include_metrics</span><span class="p">,</span>
                 <span class="n">include_biplot</span><span class="o">=</span><span class="n">include_biplot</span><span class="p">,</span>
@@ -1907,6 +2027,7 @@
                 <span class="n">use_pca_features</span><span class="o">=</span><span class="n">use_pca_features</span><span class="p">,</span>
                 <span class="n">use_parallel</span><span class="o">=</span><span class="n">use_parallel</span><span class="p">,</span>
                 <span class="n">show_plot</span><span class="o">=</span><span class="n">show_plot</span><span class="p">,</span>
+                <span class="n">state_colors</span><span class="o">=</span><span class="n">state_colors</span><span class="p">,</span>
             <span class="p">)</span>
 
         <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
@@ -1917,23 +2038,70 @@
 
 <div class="viewcode-block" id="MethylSegPathway.to_yaml">
 <a class="viewcode-back" href="../../generated/methylseg.MethylSegPathway.html#methylseg.MethylSegPathway.to_yaml">[docs]</a>
-    <span class="k">def</span> <span class="nf">to_yaml</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">yaml_path</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">include_learned</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">):</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">to_yaml</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">yaml_path</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+        <span class="n">include_learned</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
+        <span class="n">artifact_dir</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="n">Path</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="p">):</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Serialize pathway configuration and optionally learned artifacts.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        yaml_path</span>
+<span class="sd">            Destination YAML path.</span>
+<span class="sd">        include_learned</span>
+<span class="sd">            If ``True``, persist learned clustering artifacts and cached tables.</span>
+<span class="sd">        artifact_dir</span>
+<span class="sd">            Optional directory where learned artifacts should be written. When</span>
+<span class="sd">            provided, the YAML stores paths that resolve from ``yaml_path`` to</span>
+<span class="sd">            that dedicated artifact directory.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
-        <span class="n">MethylSegConfig</span><span class="o">.</span><span class="n">from_instance</span><span class="p">(</span>
+
+        <span class="n">yaml_path</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">yaml_path</span><span class="p">)</span>
+        <span class="n">yaml_dir</span> <span class="o">=</span> <span class="n">yaml_path</span><span class="o">.</span><span class="n">parent</span><span class="o">.</span><span class="n">resolve</span><span class="p">()</span>
+
+        <span class="n">resolved_artifact_dir</span> <span class="o">=</span> <span class="n">yaml_dir</span>
+        <span class="k">if</span> <span class="n">artifact_dir</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">resolved_artifact_dir</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">artifact_dir</span><span class="p">)</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">resolved_artifact_dir</span><span class="o">.</span><span class="n">is_absolute</span><span class="p">():</span>
+                <span class="n">resolved_artifact_dir</span> <span class="o">=</span> <span class="p">(</span><span class="n">yaml_dir</span> <span class="o">/</span> <span class="n">resolved_artifact_dir</span><span class="p">)</span><span class="o">.</span><span class="n">resolve</span><span class="p">()</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">resolved_artifact_dir</span> <span class="o">=</span> <span class="n">resolved_artifact_dir</span><span class="o">.</span><span class="n">resolve</span><span class="p">()</span>
+
+        <span class="n">config</span> <span class="o">=</span> <span class="n">MethylSegConfig</span><span class="o">.</span><span class="n">from_instance</span><span class="p">(</span>
             <span class="bp">self</span><span class="p">,</span>
-            <span class="n">out_dir</span><span class="o">=</span><span class="nb">str</span><span class="p">(</span><span class="n">Path</span><span class="p">(</span><span class="n">yaml_path</span><span class="p">)</span><span class="o">.</span><span class="n">parent</span><span class="p">),</span>
+            <span class="n">out_dir</span><span class="o">=</span><span class="nb">str</span><span class="p">(</span><span class="n">resolved_artifact_dir</span><span class="p">),</span>
             <span class="n">include_learned</span><span class="o">=</span><span class="n">include_learned</span><span class="p">,</span>
-        <span class="p">)</span><span class="o">.</span><span class="n">to_yaml</span><span class="p">(</span><span class="n">yaml_path</span><span class="p">)</span></div>
+        <span class="p">)</span>
+        <span class="k">if</span> <span class="n">resolved_artifact_dir</span> <span class="o">!=</span> <span class="n">yaml_dir</span><span class="p">:</span>
+            <span class="n">config</span><span class="o">.</span><span class="n">rewrite_artifact_paths</span><span class="p">(</span>
+                <span class="n">source_dir</span><span class="o">=</span><span class="n">resolved_artifact_dir</span><span class="p">,</span>
+                <span class="n">target_dir</span><span class="o">=</span><span class="n">yaml_dir</span><span class="p">,</span>
+            <span class="p">)</span>
+        <span class="n">config</span><span class="o">.</span><span class="n">to_yaml</span><span class="p">(</span><span class="n">yaml_path</span><span class="p">)</span></div>
 
 
 <div class="viewcode-block" id="MethylSegPathway.from_yaml">
 <a class="viewcode-back" href="../../generated/methylseg.MethylSegPathway.html#methylseg.MethylSegPathway.from_yaml">[docs]</a>
     <span class="nd">@classmethod</span>
-    <span class="k">def</span> <span class="nf">from_yaml</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">yaml_path</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">load_learned</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">):</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">from_yaml</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">yaml_path</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">load_learned</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">):</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Reconstruct MethylSegPathway from YAML file.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        yaml_path</span>
+<span class="sd">            Path to a serialized methylseg YAML configuration file.</span>
+<span class="sd">        load_learned</span>
+<span class="sd">            If ``True``, restore persisted learned models and cached artifacts</span>
+<span class="sd">            referenced by the YAML.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        MethylSegPathway</span>
+<span class="sd">            Reconstructed pathway configured from the YAML bundle.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">return</span> <span class="n">MethylSegConfig</span><span class="o">.</span><span class="n">from_yaml</span><span class="p">(</span><span class="n">yaml_path</span><span class="p">)</span><span class="o">.</span><span class="n">build_pathway</span><span class="p">(</span>
             <span class="n">load_learned</span><span class="o">=</span><span class="n">load_learned</span><span class="p">,</span>

@@ -41,6 +41,25 @@ class MethylSegmentor:
         out_dir=".",
         random_state: int = 42,
     ):
+        """
+        Initialize the segmentor with state-assignment and HMM backends.
+
+        Parameters
+        ----------
+        analyzer
+            State analyzer that prepares emissions and biological labels.
+        hmm_model
+            Configured HMM backend used to smooth state observations.
+        state_assignment_method
+            Strategy used to obtain state labels before segmentation.
+        hmm_observation_mode
+            Representation passed to the HMM, such as discrete states or
+            continuous emissions.
+        out_dir
+            Directory for segmentation artifacts and plot outputs.
+        random_state
+            Random seed used by stochastic segmentation operations.
+        """
         self.analyzer = analyzer
         self.hmm_model = hmm_model
         self.state_assignment_method = MethylStateAssignmentMethod(

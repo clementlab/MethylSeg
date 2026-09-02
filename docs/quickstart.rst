@@ -3,7 +3,9 @@ Quickstart
 
 The standard MethylSeg workflow trains a model on a prepared sample, generates
 regions, cleans them, and optionally plots the cleaned calls. See
-:doc:`input_format` before adapting this example to your own files.
+:doc:`input_format` before adapting this example to your own files, and see
+:doc:`segmentation_methods` for guidance on choosing between KMeans-based and
+rule-based state assignment before HMM smoothing.
 
 Train A WGBS Model
 ------------------

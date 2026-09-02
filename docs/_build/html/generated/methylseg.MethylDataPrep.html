@@ -6,16 +6,16 @@
   <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
 
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>methylseg.MethylDataPrep &mdash; methylseg 0.1.0 documentation</title>
-      <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=80d5e7a1" />
+  <title>methylseg.MethylDataPrep &mdash; methylseg 0.1.4 documentation</title>
+      <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=b86133f3" />
       <link rel="stylesheet" type="text/css" href="../_static/css/theme.css?v=9edc463e" />
 
   
       <script src="../_static/jquery.js?v=5d32c60e"></script>
       <script src="../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
-      <script src="../_static/documentation_options.js?v=01f34227"></script>
-      <script src="../_static/doctools.js?v=9bcbadda"></script>
-      <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
+      <script src="../_static/documentation_options.js?v=fd825880"></script>
+      <script src="../_static/doctools.js?v=fd6eb6e6"></script>
+      <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
       <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
     <script src="../_static/js/theme.js"></script>
     <link rel="index" title="Index" href="../genindex.html" />
@@ -45,8 +45,6 @@
         </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
               <p class="caption" role="heading"><span class="caption-text">Contents</span></p>
 <ul class="current">
-<li class="toctree-l1"><a class="reference internal" href="../installation.html">Installation</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../quickstart.html">Quickstart</a></li>
 <li class="toctree-l1 current"><a class="reference internal" href="../api.html">API Reference</a><ul class="current">
 <li class="toctree-l2 current"><a class="reference internal" href="../api.html#workflow-objects">Workflow objects</a><ul class="current">
 <li class="toctree-l3"><a class="reference internal" href="methylseg.MethylSegPathway.html">methylseg.MethylSegPathway</a></li>
@@ -66,7 +64,12 @@
 <li class="toctree-l2"><a class="reference internal" href="../api.html#utility-helpers">Utility helpers</a></li>
 </ul>
 </li>
-<li class="toctree-l1"><a class="reference internal" href="../tutorials.html">Tutorial Notebook</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../full_pipeline.html">Full Pipeline And Outputs</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../input_format.html">Input Format</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../installation.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../quickstart.html">Quickstart</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../segmentation_methods.html">Segmentation Methods</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../tutorials.html">Example Notebooks</a></li>
 </ul>
 
         </div>
@@ -98,27 +101,27 @@
 <h1>methylseg.MethylDataPrep<a class="headerlink" href="#methylseg-methyldataprep" title="Link to this heading"></a></h1>
 <dl class="py class">
 <dt class="sig sig-object py" id="methylseg.MethylDataPrep">
-<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">methylseg.</span></span><span class="sig-name descname"><span class="pre">MethylDataPrep</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">meth_file</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">sample_id</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">resolution</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'auto'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">min_coverage</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">10</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">remove_low_coverage_like_cpgs</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/methylseg/helper_classes.html#MethylDataPrep"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#methylseg.MethylDataPrep" title="Link to this definition"></a></dt>
+<span class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></span><span class="sig-prename descclassname"><span class="pre">methylseg.</span></span><span class="sig-name descname"><span class="pre">MethylDataPrep</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">meth_file</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">sample_id</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">resolution</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'auto'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">min_coverage</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">10</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">remove_low_coverage_like_cpgs</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">chunk_size</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1000000</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">retain_removed_rows</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/methylseg/helper_classes.html#MethylDataPrep"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#methylseg.MethylDataPrep" title="Link to this definition"></a></dt>
 <dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
 <p>Normalize methylation input tables into the canonical <code class="docutils literal notranslate"><span class="pre">SampleInfo</span></code> schema.</p>
 <dl class="py method">
 <dt class="sig sig-object py" id="methylseg.MethylDataPrep.__init__">
-<span class="sig-name descname"><span class="pre">__init__</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">meth_file</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">sample_id</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">resolution</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'auto'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">min_coverage</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">10</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">remove_low_coverage_like_cpgs</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/methylseg/helper_classes.html#MethylDataPrep.__init__"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#methylseg.MethylDataPrep.__init__" title="Link to this definition"></a></dt>
-<dd><dl class="field-list simple">
+<span class="sig-name descname"><span class="pre">__init__</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">meth_file</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">sample_id</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">resolution</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'auto'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">min_coverage</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">10</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">remove_low_coverage_like_cpgs</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">chunk_size</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1000000</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">retain_removed_rows</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/methylseg/helper_classes.html#MethylDataPrep.__init__"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#methylseg.MethylDataPrep.__init__" title="Link to this definition"></a></dt>
+<dd><p>Initialize methylation-table preparation for one sample.</p>
+<dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
-<li><p><strong>meth_file</strong> (<em>str</em><em> or </em><em>Path</em>) – Path to methylation data file.</p></li>
-<li><p><strong>sample_id</strong> (<em>str</em>) – Unique identifier for the sample.</p></li>
-<li><p><strong>resolution</strong> (<em>str</em><em>, </em><em>default=&quot;auto&quot;</em>) – Format of the methylation data. Valid options are:
-- “auto”: Automatically detect format
-- “wgbs”: Whole-genome bisulfite sequencing format
-- “450k”: Illumina 450k array format
-- “27k”: Illumina 27k array format
-- “850k”: Illumina 850k array format</p></li>
-<li><p><strong>min_coverage</strong> (<em>int</em><em>, </em><em>default=5</em>) – Minimum coverage threshold for WGBS data.</p></li>
-<li><p><strong>remove_low_coverage_like_cpgs</strong> (<em>bool</em><em>, </em><em>default=False</em>) – If True, remove CpGs with beta values commonly produced by very
+<li><p><strong>meth_file</strong> – Path to the methylation data file.</p></li>
+<li><p><strong>sample_id</strong> – Unique identifier for the prepared sample.</p></li>
+<li><p><strong>resolution</strong> – Methylation data format: <code class="docutils literal notranslate"><span class="pre">&quot;auto&quot;</span></code>, <code class="docutils literal notranslate"><span class="pre">&quot;wgbs&quot;</span></code>, <code class="docutils literal notranslate"><span class="pre">&quot;450k&quot;</span></code>,
+<code class="docutils literal notranslate"><span class="pre">&quot;27k&quot;</span></code>, or <code class="docutils literal notranslate"><span class="pre">&quot;850k&quot;</span></code>.</p></li>
+<li><p><strong>min_coverage</strong> – Minimum coverage threshold for WGBS data.</p></li>
+<li><p><strong>remove_low_coverage_like_cpgs</strong> – If <code class="docutils literal notranslate"><span class="pre">True</span></code>, remove CpGs with beta values commonly produced by very
 low coverage counts, such as 0.0, 0.25, 0.33, 0.5, 0.66/0.67,
 0.75, and 1.0.</p></li>
+<li><p><strong>chunk_size</strong> – Number of rows to read at a time when processing large files.</p></li>
+<li><p><strong>retain_removed_rows</strong> – If <code class="docutils literal notranslate"><span class="pre">True</span></code>, retain removed rows in a separate DataFrame for
+downstream analysis. Otherwise, discard them.</p></li>
 </ul>
 </dd>
 </dl>
@@ -128,7 +131,7 @@ low coverage counts, such as 0.0, 0.25, 0.33, 0.5, 0.66/0.67,
 <table class="autosummary longtable docutils align-default">
 <tbody>
 <tr class="row-odd"><td><p><a class="reference internal" href="#methylseg.MethylDataPrep.__init__" title="methylseg.MethylDataPrep.__init__"><code class="xref py py-obj docutils literal notranslate"><span class="pre">__init__</span></code></a>(meth_file, sample_id[, resolution, ...])</p></td>
-<td><p></p></td>
+<td><p>Initialize methylation-table preparation for one sample.</p></td>
 </tr>
 <tr class="row-even"><td><p><a class="reference internal" href="#methylseg.MethylDataPrep.prepare" title="methylseg.MethylDataPrep.prepare"><code class="xref py py-obj docutils literal notranslate"><span class="pre">prepare</span></code></a>()</p></td>
 <td><p>Prepare the methylation file and wrap it in <code class="docutils literal notranslate"><span class="pre">SampleInfo</span></code>.</p></td>
@@ -163,27 +166,27 @@ low coverage counts, such as 0.0, 0.25, 0.33, 0.5, 0.66/0.67,
 </table>
 <dl class="py attribute">
 <dt class="sig sig-object py" id="methylseg.MethylDataPrep.REQUIRED_COLUMNS">
-<span class="sig-name descname"><span class="pre">REQUIRED_COLUMNS</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">['CpG_chrm',</span> <span class="pre">'CpG_beg',</span> <span class="pre">'CpG_end',</span> <span class="pre">'beta']</span></em><a class="headerlink" href="#methylseg.MethylDataPrep.REQUIRED_COLUMNS" title="Link to this definition"></a></dt>
+<span class="sig-name descname"><span class="pre">REQUIRED_COLUMNS</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">['CpG_chrm',</span> <span class="pre">'CpG_beg',</span> <span class="pre">'CpG_end',</span> <span class="pre">'beta']</span></span><a class="headerlink" href="#methylseg.MethylDataPrep.REQUIRED_COLUMNS" title="Link to this definition"></a></dt>
 <dd></dd></dl>
 
 <dl class="py attribute">
 <dt class="sig sig-object py" id="methylseg.MethylDataPrep.INPUT_ROW_INDEX_COL">
-<span class="sig-name descname"><span class="pre">INPUT_ROW_INDEX_COL</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">'__input_row_index__'</span></em><a class="headerlink" href="#methylseg.MethylDataPrep.INPUT_ROW_INDEX_COL" title="Link to this definition"></a></dt>
+<span class="sig-name descname"><span class="pre">INPUT_ROW_INDEX_COL</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">'__input_row_index__'</span></span><a class="headerlink" href="#methylseg.MethylDataPrep.INPUT_ROW_INDEX_COL" title="Link to this definition"></a></dt>
 <dd></dd></dl>
 
 <dl class="py attribute">
 <dt class="sig sig-object py" id="methylseg.MethylDataPrep.LOW_COVERAGE_LIKE_BETA_VALUES">
-<span class="sig-name descname"><span class="pre">LOW_COVERAGE_LIKE_BETA_VALUES</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">frozenset({0.0,</span> <span class="pre">0.25,</span> <span class="pre">0.33,</span> <span class="pre">0.5,</span> <span class="pre">0.66,</span> <span class="pre">0.67,</span> <span class="pre">0.75,</span> <span class="pre">1.0})</span></em><a class="headerlink" href="#methylseg.MethylDataPrep.LOW_COVERAGE_LIKE_BETA_VALUES" title="Link to this definition"></a></dt>
+<span class="sig-name descname"><span class="pre">LOW_COVERAGE_LIKE_BETA_VALUES</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">frozenset({0.0,</span> <span class="pre">0.25,</span> <span class="pre">0.33,</span> <span class="pre">0.5,</span> <span class="pre">0.66,</span> <span class="pre">0.67,</span> <span class="pre">0.75,</span> <span class="pre">1.0})</span></span><a class="headerlink" href="#methylseg.MethylDataPrep.LOW_COVERAGE_LIKE_BETA_VALUES" title="Link to this definition"></a></dt>
 <dd></dd></dl>
 
 <dl class="py attribute">
 <dt class="sig sig-object py" id="methylseg.MethylDataPrep.COMMON_ALIASES">
-<span class="sig-name descname"><span class="pre">COMMON_ALIASES</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">{'CpG_beg':</span> <span class="pre">['CpG_beg',</span> <span class="pre">'start',</span> <span class="pre">'pos',</span> <span class="pre">'position'],</span> <span class="pre">'CpG_chrm':</span> <span class="pre">['CpG_chrm',</span> <span class="pre">'chrom',</span> <span class="pre">'chr',</span> <span class="pre">'chromosome'],</span> <span class="pre">'CpG_end':</span> <span class="pre">['CpG_end',</span> <span class="pre">'end',</span> <span class="pre">'stop'],</span> <span class="pre">'beta':</span> <span class="pre">['beta',</span> <span class="pre">'meth_beta',</span> <span class="pre">'methylation',</span> <span class="pre">'meth_percent']}</span></em><a class="headerlink" href="#methylseg.MethylDataPrep.COMMON_ALIASES" title="Link to this definition"></a></dt>
+<span class="sig-name descname"><span class="pre">COMMON_ALIASES</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">{'CpG_beg':</span> <span class="pre">['CpG_beg',</span> <span class="pre">'start',</span> <span class="pre">'pos',</span> <span class="pre">'position'],</span> <span class="pre">'CpG_chrm':</span> <span class="pre">['CpG_chrm',</span> <span class="pre">'chrom',</span> <span class="pre">'chr',</span> <span class="pre">'chromosome'],</span> <span class="pre">'CpG_end':</span> <span class="pre">['CpG_end',</span> <span class="pre">'end',</span> <span class="pre">'stop'],</span> <span class="pre">'beta':</span> <span class="pre">['beta',</span> <span class="pre">'meth_beta',</span> <span class="pre">'methylation',</span> <span class="pre">'meth_percent']}</span></span><a class="headerlink" href="#methylseg.MethylDataPrep.COMMON_ALIASES" title="Link to this definition"></a></dt>
 <dd></dd></dl>
 
 <dl class="py attribute">
 <dt class="sig sig-object py" id="methylseg.MethylDataPrep.HEADER_ALIASES">
-<span class="sig-name descname"><span class="pre">HEADER_ALIASES</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">{'CpG_beg':</span> <span class="pre">{'cpg_beg',</span> <span class="pre">'pos',</span> <span class="pre">'position',</span> <span class="pre">'start'},</span> <span class="pre">'CpG_chrm':</span> <span class="pre">{'chr',</span> <span class="pre">'chrom',</span> <span class="pre">'chromosome',</span> <span class="pre">'cpg_chrm'},</span> <span class="pre">'CpG_end':</span> <span class="pre">{'cpg_end',</span> <span class="pre">'end',</span> <span class="pre">'stop'},</span> <span class="pre">'beta':</span> <span class="pre">{'beta',</span> <span class="pre">'meth_beta',</span> <span class="pre">'meth_percent',</span> <span class="pre">'methylation'},</span> <span class="pre">'coverage':</span> <span class="pre">{'cov',</span> <span class="pre">'coverage',</span> <span class="pre">'depth',</span> <span class="pre">'total_reads'},</span> <span class="pre">'meth':</span> <span class="pre">{'meth',</span> <span class="pre">'methylated',</span> <span class="pre">'methylated_reads'},</span> <span class="pre">'probe':</span> <span class="pre">{'cpg',</span> <span class="pre">'cpg_id',</span> <span class="pre">'probe',</span> <span class="pre">'probe_id'}}</span></em><a class="headerlink" href="#methylseg.MethylDataPrep.HEADER_ALIASES" title="Link to this definition"></a></dt>
+<span class="sig-name descname"><span class="pre">HEADER_ALIASES</span></span><span class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">{'CpG_beg':</span> <span class="pre">{'cpg_beg',</span> <span class="pre">'pos',</span> <span class="pre">'position',</span> <span class="pre">'start'},</span> <span class="pre">'CpG_chrm':</span> <span class="pre">{'chr',</span> <span class="pre">'chrom',</span> <span class="pre">'chromosome',</span> <span class="pre">'cpg_chrm'},</span> <span class="pre">'CpG_end':</span> <span class="pre">{'cpg_end',</span> <span class="pre">'end',</span> <span class="pre">'stop'},</span> <span class="pre">'beta':</span> <span class="pre">{'beta',</span> <span class="pre">'meth_beta',</span> <span class="pre">'meth_percent',</span> <span class="pre">'methylation'},</span> <span class="pre">'coverage':</span> <span class="pre">{'cov',</span> <span class="pre">'coverage',</span> <span class="pre">'depth',</span> <span class="pre">'total_reads'},</span> <span class="pre">'meth':</span> <span class="pre">{'meth',</span> <span class="pre">'methylated',</span> <span class="pre">'methylated_reads'},</span> <span class="pre">'probe':</span> <span class="pre">{'cpg',</span> <span class="pre">'cpg_id',</span> <span class="pre">'probe',</span> <span class="pre">'probe_id'}}</span></span><a class="headerlink" href="#methylseg.MethylDataPrep.HEADER_ALIASES" title="Link to this definition"></a></dt>
 <dd></dd></dl>
 
 <dl class="py method">

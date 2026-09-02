@@ -183,7 +183,6 @@ class MethylSegPathway:
             meth_data=filtered_meth_data,
         )
 
-    # TODO: think about if train_sample* naming makes sense
     def __init__(
         self,
         n_states: int = 4,
@@ -211,6 +210,63 @@ class MethylSegPathway:
         merge_with_intermediate_gap_bp: int = 100_000,
         hmm_observation_mode: HMMObservationMode = HMMObservationMode.DISCRETE_STATES,
     ):
+        """
+        Initialize a complete methylation-state training and segmentation pathway.
+
+        Parameters
+        ----------
+        n_states
+            Number of biological methylation states to model.
+        int_low_cutoff
+            Upper beta cutoff used to identify low-intermediate states.
+        int_high_cutoff
+            Lower beta cutoff used to identify high-intermediate states.
+        high_cutoff
+            Beta cutoff used to identify highly methylated states.
+        window_specs
+            Optional ``(window_size_bp, label)`` specifications for regional
+            emission features. Defaults depend on sample resolution.
+        train_sample_info
+            Prepared training sample. Provide this or both file-based training
+            arguments.
+        train_sample_file
+            Path to a methylation table used to prepare the training sample.
+        train_sample_name
+            Sample identifier paired with ``train_sample_file``.
+        train_chroms
+            Optional chromosomes used when fitting the pathway.
+        max_cpg_per_chrom
+            Optional cap on CpGs retained per chromosome during training.
+        state_assignment_method
+            Method used to assign biological states from emission features.
+        out_dir
+            Directory for fitted artifacts, segment outputs, and plots.
+        random_state
+            Random seed used by trainable components.
+        cluster_space
+            Feature space used for KMeans clustering, such as ``"pca"``.
+        n_pca
+            Number of PCA components retained when PCA clustering is used.
+        hmm_type
+            HMM backend to construct. Defaults depend on sample resolution.
+        hmm_params
+            Optional backend-specific HMM configuration mapping.
+        min_region_length
+            Minimum genomic length in base pairs for retained regions.
+        min_region_cpgs
+            Minimum CpG count required for retained regions.
+        merge_gap_bp
+            Maximum gap in base pairs for merging adjacent same-state regions.
+        merge_with_intermediate
+            If ``True``, allow nearby compatible regions to merge across
+            intermediate-state intervals.
+        merge_with_intermediate_gap_bp
+            Maximum intermediate-state gap in base pairs permitted for that
+            merge operation.
+        hmm_observation_mode
+            Representation passed to the HMM, such as discrete states or
+            continuous emissions.
+        """
         self.window_specs = window_specs
         self.n_states = n_states
         self.int_low_cutoff = int_low_cutoff
