@@ -11,6 +11,7 @@ docs/tutorials/generated/
 docs/readme.md
 docs/troubleshooting.md
 docs/quickstart.png
+docs/_static/logo.png
 data/archive.tar.gz
 data/*
 docs/_build/*

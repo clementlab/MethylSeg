@@ -7,11 +7,13 @@ from re import MULTILINE, compile as re_compile
 
 PACKAGE_ROOT = Path(__file__).resolve().parents[1]
 DOCS_ROOT = Path(__file__).resolve().parent
+STATIC_ROOT = DOCS_ROOT / "_static"
 GENERATED_ROOT = DOCS_ROOT / "_generated"
 GENERATED_TUTORIALS = DOCS_ROOT / "tutorials" / "generated"
 STAGED_README = DOCS_ROOT / "readme.md"
 STAGED_TROUBLESHOOTING = DOCS_ROOT / "troubleshooting.md"
 README_IMAGE = "quickstart.png"
+README_LOGO = "logo.png"
 REPOSITORY_URL = "https://github.com/clementlab/MethylSeg"
 if str(PACKAGE_ROOT) not in sys.path:
     sys.path.insert(0, str(PACKAGE_ROOT))
@@ -116,9 +118,12 @@ def _stage_readme() -> None:
         "(examples/run_full_pipeline.ipynb)",
         "(tutorials/generated/02_run_full_pipeline.html)",
     )
+    readme = readme.replace(f"({README_LOGO})", f"(_static/{README_LOGO})")
     readme = readme.replace("(LICENSE.md)", f"({REPOSITORY_URL}/blob/main/LICENSE)")
     _write(STAGED_README, readme)
     _write(STAGED_TROUBLESHOOTING, (PACKAGE_ROOT / "TROUBLESHOOTING.md").read_text())
+    STATIC_ROOT.mkdir(parents=True, exist_ok=True)
+    copy2(PACKAGE_ROOT / README_LOGO, STATIC_ROOT / README_LOGO)
     copy2(PACKAGE_ROOT / README_IMAGE, DOCS_ROOT / README_IMAGE)
 
 
