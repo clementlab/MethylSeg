@@ -1,6 +1,6 @@
 # MethylSeg
 
-![logo](logo.png)
+![logo](https://raw.githubusercontent.com/clementlab/MethylSeg/main/logo.png)
 
 MethylSeg is a Python toolkit for identifying methylation domains from
 whole-genome bisulfite sequencing (WGBS) and microarray methylation data. It
@@ -147,7 +147,7 @@ fig = pathway.plot_labels(
 )
 ```
 
-![quickstart output](quickstart.png)
+![quickstart output](https://raw.githubusercontent.com/clementlab/MethylSeg/main/quickstart.png)
 
 `run_pathway(sample_info=sample_info, chroms=["chr1"])` performs fitting,
 segmentation, cleaning, and summary-file writing in one call.

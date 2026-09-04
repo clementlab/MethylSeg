@@ -15,6 +15,7 @@ STAGED_TROUBLESHOOTING = DOCS_ROOT / "troubleshooting.md"
 README_IMAGE = "quickstart.png"
 README_LOGO = "logo.png"
 REPOSITORY_URL = "https://github.com/clementlab/MethylSeg"
+README_ASSET_URL = "https://raw.githubusercontent.com/clementlab/MethylSeg/main"
 if str(PACKAGE_ROOT) not in sys.path:
     sys.path.insert(0, str(PACKAGE_ROOT))
 
@@ -120,7 +121,12 @@ def _stage_readme() -> None:
         "(examples/run_full_pipeline.ipynb)",
         "(tutorials/generated/02_run_full_pipeline.html)",
     )
-    readme = readme.replace(f"({README_LOGO})", f"(_static/{README_LOGO})")
+    readme = readme.replace(
+        f"({README_ASSET_URL}/{README_LOGO})", f"(_static/{README_LOGO})"
+    )
+    readme = readme.replace(
+        f"({README_ASSET_URL}/{README_IMAGE})", f"({README_IMAGE})"
+    )
     readme = readme.replace("(LICENSE.md)", f"({REPOSITORY_URL}/blob/main/LICENSE)")
     _write(STAGED_README, readme)
     _write(STAGED_TROUBLESHOOTING, (PACKAGE_ROOT / "TROUBLESHOOTING.md").read_text())
