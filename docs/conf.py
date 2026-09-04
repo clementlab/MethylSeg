@@ -101,6 +101,8 @@ def _manual_rst_pages() -> list[str]:
     return [
         "readme",
         "methylseg_methodology",
+        "methylome_segmentation",
+        "plotting",
         "tutorials",
         "api",
         "troubleshooting",

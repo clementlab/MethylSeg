@@ -114,24 +114,21 @@ from methylseg.helper_classes import DATA_DIR
 
 reference_dir = DATA_DIR / "reference_files"
 
-
-
-#TCGA/HM450K: replace these with your own sample name and count table
-sample_name = "TCGA-BD-A3EP-01A"
-sample_file = reference_dir / "TCGA-BD-A3EP-01A_450k.tsv.gz"
-resolution = "450k"
-
-# WGBS alternative:
+# WGBS: replace these with your own sample name and count table.
 # sample_name = "WGBS_colon-primary-tumor_1"
 # sample_file = reference_dir / "WGBS_colon-primary-tumor_1_wgbs.tsv.gz"
 # resolution = "wgbs"
+
+# TCGA/HM450K alternative:
+sample_name = "TCGA-BD-A3EP-01A"
+sample_file = reference_dir / "TCGA-BD-A3EP-01A_450k.tsv.gz"
+resolution = "450k"
 
 sample_info, removed_df = MethylSegPathway.prepare_sample_info(
     sample_name=sample_name,
     sample_file=sample_file,
     resolution=resolution,
     remove_low_coverage_like_cpgs=True,
-    # min_coverage=10,
 )
 
 pathway = MethylSegPathway(
@@ -139,9 +136,7 @@ pathway = MethylSegPathway(
     out_dir=Path("out/quickstart") / sample_name,
 )
 
-pathway.fit_pathway()
-
-regions = pathway.generate_regions(sample_info=sample_info)
+pathway.run_pathway()
 
 fig = pathway.plot_labels(
     sample_info=sample_info,
