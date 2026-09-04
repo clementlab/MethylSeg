@@ -1,5 +1,7 @@
 # MethylSeg
 
+![logo](logo.png)
+
 MethylSeg is a Python toolkit for identifying methylation domains from
 whole-genome bisulfite sequencing (WGBS) and microarray methylation data. It
 supports data preparation, methylation-state model training, genome
@@ -157,30 +159,49 @@ segmentation, cleaning, and summary-file writing in one call.
 
 ## Input formats
 
-MethylSeg accepts tab-delimited `.tsv` and `.tsv.gz` files. Genomic coordinates
-must use 0-based, half-open
-coordinates, and chromosome names must be consistent throughout the input.
+MethylSeg accepts tab-delimited `.tsv` and `.tsv.gz` files containing DNA methylation measurements. Genomic coordinates must use the 0-based, half-open coordinate system, and chromosome names must be consistent throughout each file.
 
-WGBS input supplies methylated-read counts and total coverage; beta values are
-calculated internally.
+Two BED-like input formats are supported.
+
+### Beta-value format
+
+This format can be used for either WGBS or microarray data. It contains four required columns:
+
+1. chromosome;
+2. CpG start position;
+3. CpG end position; and
+4. methylation beta value.
+
+For microarray data, an optional fifth column containing the probe identifier may be included. Probe identifiers are retained as metadata.
+
+| CpG_chrm | CpG_beg | CpG_end | beta | probe      |
+| -------- | ------: | ------: | ---: | ---------- |
+| chr1     |   15864 |   15866 |  0.0 | cg13869341 |
+| chr1     |   29406 |   29408 |  0.0 | cg12045430 |
+| chr1     |   29424 |   29426 |  0.0 | cg20826792 |
+
+
+### WGBS count format
+
+This format contains five required columns:
+
+1. chromosome;
+2. CpG start position;
+3. CpG end position;
+4. methylated read count; and
+5. total read coverage.
+
+MethylSeg calculates the beta value internally as: 
+$
+\mathrm{beta} = \frac{\mathrm{methylated\ reads}}{\mathrm{total\ coverage}}.
+$
 
 | CpG_chrm | CpG_beg | CpG_end | meth | coverage |
-| --- | --- | --- | --- | --- |
-| chr1 | 10468 | 10470 | 14 | 15 |
-| chr1 | 10470 | 10472 | 10 | 10 |
-| chr1 | 10483 | 10485 | 23 | 28 |
+| -------- | ------: | ------: | ---: | -------: |
+| chr1     |   10468 |   10470 |   14 |       15 |
+| chr1     |   10470 |   10472 |   10 |       10 |
+| chr1     |   10483 |   10485 |   23 |       28 |
 
-TCGA/HM450K input supplies beta values directly. The optional `probe` column is
-kept as metadata.
-
-| CpG_chrm | CpG_beg | CpG_end | beta | probe |
-| --- | --- | --- | --- | --- |
-| chr1 | 15864 | 15866 | 0.0 | cg13869341 |
-| chr1 | 29406 | 29408 | 0.0 | cg12045430 |
-| chr1 | 29424 | 29426 | 0.0 | cg20826792 |
-
-The full inputs used below are installed at `data/reference_files/` by
-`methylseg download_data_files`.
 
 ## Outputs
 
