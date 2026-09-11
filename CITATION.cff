@@ -2,6 +2,7 @@ cff-version: 1.2.0
 message: "If you use MethylSeg, please cite this software."
 title: "MethylSeg"
 type: software
+version: "0.1.8"
 abstract: >-
   MethylSeg is a context-aware methylome segmentation method for identifying
   partially methylated domains in whole-genome bisulfite sequencing and

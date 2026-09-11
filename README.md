@@ -255,8 +255,13 @@ The BED files themselves are tab-delimited and do not contain a header.
 
 ## Citation
 
-A manuscript describing MethylSeg is in preparation. Citation information will
-be added when it becomes available.
+If you use MethylSeg, please cite the software using the
+[CITATION.cff](https://github.com/clementlab/MethylSeg/blob/main/CITATION.cff)
+metadata. On GitHub, select **Cite this repository** to copy the citation in APA
+or BibTeX format.
+
+A manuscript describing MethylSeg is in preparation. Its citation will be added
+when available.
 
 ## Planned support
 
