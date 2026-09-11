@@ -1,0 +1,17 @@
+cff-version: 1.2.0
+message: "If you use MethylSeg, please cite this software."
+title: "MethylSeg"
+type: software
+abstract: >-
+  MethylSeg is a context-aware methylome segmentation method for identifying
+  partially methylated domains in whole-genome bisulfite sequencing and
+  methylation microarray data.
+authors:
+  - family-names: "Tye"
+    given-names: "Jacob"
+    orcid: "https://orcid.org/0009-0000-6883-9572"
+  - family-names: "Clement"
+    given-names: "Kendell"
+    orcid: "https://orcid.org/0000-0003-3808-0811"
+repository-code: "https://github.com/clementlab/MethylSeg"
+url: "https://github.com/clementlab/MethylSeg"
