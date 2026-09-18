@@ -12,6 +12,7 @@ GENERATED_ROOT = DOCS_ROOT / "_generated"
 GENERATED_TUTORIALS = DOCS_ROOT / "tutorials" / "generated"
 STAGED_README = DOCS_ROOT / "readme.md"
 STAGED_TROUBLESHOOTING = DOCS_ROOT / "troubleshooting.md"
+STAGED_ROADMAP = DOCS_ROOT / "roadmap.md"
 README_IMAGE = "quickstart.png"
 README_LOGO = "logo.png"
 REPOSITORY_URL = "https://github.com/clementlab/MethylSeg"
@@ -107,15 +108,21 @@ def _manual_rst_pages() -> list[str]:
         "tutorials",
         "api",
         "troubleshooting",
+        "roadmap",
     ]
 
 
 def _stage_readme() -> None:
-    """Copy the README while retargeting links that are relative to the repo."""
+    """Copy the README while retargeting repository links for Sphinx."""
     readme = (PACKAGE_ROOT / "README.md").read_text()
     readme = _convert_github_alerts(readme)
     readme = readme.replace(
-        "(TROUBLESHOOTING.md)", "(troubleshooting.md)"
+        f"({REPOSITORY_URL}/blob/main/TROUBLESHOOTING.md)",
+        "(troubleshooting.md)",
+    )
+    readme = readme.replace(
+        f"({REPOSITORY_URL}/blob/main/ROADMAP.md)",
+        "(roadmap.md)",
     )
     readme = readme.replace(
         "(examples/run_full_pipeline.ipynb)",
@@ -130,6 +137,7 @@ def _stage_readme() -> None:
     readme = readme.replace("(LICENSE.md)", f"({REPOSITORY_URL}/blob/main/LICENSE)")
     _write(STAGED_README, readme)
     _write(STAGED_TROUBLESHOOTING, (PACKAGE_ROOT / "TROUBLESHOOTING.md").read_text())
+    _write(STAGED_ROADMAP, (PACKAGE_ROOT / "ROADMAP.md").read_text())
     STATIC_ROOT.mkdir(parents=True, exist_ok=True)
     copy2(PACKAGE_ROOT / README_LOGO, STATIC_ROOT / README_LOGO)
     copy2(PACKAGE_ROOT / README_IMAGE, DOCS_ROOT / README_IMAGE)

@@ -25,7 +25,8 @@ values were observed during testing:
 
 > [!NOTE]
 > Numba has known compatibility issues on ARM-based systems. See the
-> [Troubleshooting guide](TROUBLESHOOTING.md) for installation guidance.
+> [Troubleshooting guide](https://github.com/clementlab/MethylSeg/blob/main/TROUBLESHOOTING.md)
+> for installation guidance.
 
 ## Installation
 
@@ -43,8 +44,6 @@ or install the current version from GitHub:
 ```bash
 python -m pip install "git+https://github.com/clementlab/MethylSeg.git"
 ```
-
-
 
 ## Reference files
 
@@ -265,7 +264,7 @@ when available.
 
 ## Planned support
 
-- [ ] Add defaults for HM27 and EPIC microarray formats
+See [ROADMAP.md](https://github.com/clementlab/MethylSeg/blob/main/ROADMAP.md)
 
 ## Reporting issues
 
