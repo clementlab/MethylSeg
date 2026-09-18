@@ -1,6 +1,7 @@
 """Window-based emission feature engineering and KMeans state assignment."""
 
 from enum import Enum
+from pathlib import Path
 import textwrap
 import warnings
 
@@ -2556,11 +2557,18 @@ class MethylStateAssigner:
         show_plots: bool = True,
         state_colors: dict | None = None,
         state_cutoffs: dict | None = None,
+        save_plots: bool | None = None,
+        save_pdf: bool = False,
     ):
         """Plot training-emission histograms stratified by KMeans state.
 
         ``state_cutoffs`` optionally controls the biological-state display
         labels; it does not change the KMeans assignments.
+
+        When ``save_plots`` is omitted, the legacy behavior is preserved:
+        plots are saved as PNG only when ``show_plots`` is false. Set
+        ``save_plots=True`` to save while displaying and ``save_pdf=True`` to
+        add same-stem PDF companions.
         """
         if not hasattr(self, "model"):
             raise ValueError("No trained model found. Please train a model first.")
@@ -2623,8 +2631,13 @@ class MethylStateAssigner:
             ax.set_title(f"Distribution of {emission} by KMeans State")
             ax.legend()
             fig.tight_layout()
+            should_save = (not show_plots) if save_plots is None else save_plots
+            if should_save and self.out_dir is not None:
+                output_path = Path(self.out_dir) / f"feature_distribution_{emission}.png"
+                output_path.parent.mkdir(parents=True, exist_ok=True)
+                fig.savefig(output_path)
+                if save_pdf:
+                    fig.savefig(output_path.with_suffix(".pdf"))
             if show_plots:
                 plt.show()
-            elif self.out_dir is not None:
-                fig.savefig(f"{self.out_dir}/feature_distribution_{emission}.png")
             plt.close(fig)

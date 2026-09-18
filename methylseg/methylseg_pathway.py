@@ -83,6 +83,7 @@ class MethylSegPathway:
         resolution: str = "auto",
         min_coverage: int = 10,
         remove_low_coverage_like_cpgs: bool = False,
+        low_coverage_like_beta_values: set[float] | None = None,
     ) -> tuple[SampleInfo, pd.DataFrame]:
         """
         Prepare a methylation file into the package's canonical sample schema.
@@ -112,6 +113,7 @@ class MethylSegPathway:
             resolution=resolution,
             min_coverage=min_coverage,
             remove_low_coverage_like_cpgs=remove_low_coverage_like_cpgs,
+            low_coverage_like_beta_values=low_coverage_like_beta_values,
         ).prepare()
 
     @staticmethod
