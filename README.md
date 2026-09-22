@@ -2,6 +2,8 @@
 
 ![logo](https://raw.githubusercontent.com/clementlab/MethylSeg/main/logo.png)
 
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.22904886.svg)](https://doi.org/10.5281/zenodo.22904886)
+
 MethylSeg is a Python toolkit for identifying methylation domains from
 whole-genome bisulfite sequencing (WGBS) and microarray methylation data. It
 supports data preparation, methylation-state model training, genome
@@ -25,17 +27,15 @@ values were observed during testing:
 
 > [!NOTE]
 > Numba has known compatibility issues on ARM-based systems. See the
-> [Troubleshooting guide](TROUBLESHOOTING.md) for installation guidance.
+> [Troubleshooting guide](https://github.com/clementlab/MethylSeg/blob/main/TROUBLESHOOTING.md)
+> for installation guidance.
 
 ## Installation
 
-Install from TestPyPI
+Install from PyPI
 
 ```bash
-python -m pip install \
-  --index-url https://test.pypi.org/simple/ \
-  --extra-index-url https://pypi.org/simple/ \
-  methylseg
+python -m pip install methylseg
 ```
 
 or install the current version from GitHub:
@@ -43,8 +43,6 @@ or install the current version from GitHub:
 ```bash
 python -m pip install "git+https://github.com/clementlab/MethylSeg.git"
 ```
-
-
 
 ## Reference files
 
@@ -255,12 +253,17 @@ The BED files themselves are tab-delimited and do not contain a header.
 
 ## Citation
 
-A manuscript describing MethylSeg is in preparation. Citation information will
-be added when it becomes available.
+If you use MethylSeg, please cite the software using the
+[CITATION.cff](https://github.com/clementlab/MethylSeg/blob/main/CITATION.cff)
+metadata. On GitHub, select **Cite this repository** to copy the citation in APA
+or BibTeX format.
+
+A manuscript describing MethylSeg is in preparation. Its citation will be added
+when available.
 
 ## Planned support
 
-- [ ] Add defaults for HM27 and EPIC microarray formats
+See [ROADMAP.md](https://github.com/clementlab/MethylSeg/blob/main/ROADMAP.md)
 
 ## Reporting issues
 

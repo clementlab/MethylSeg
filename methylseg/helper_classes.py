@@ -174,6 +174,7 @@ class MethylDataPrep:
         resolution="auto",
         min_coverage=10,
         remove_low_coverage_like_cpgs=False,
+        low_coverage_like_beta_values=None,
         chunk_size=1_000_000,
         retain_removed_rows=True,
     ):
@@ -195,6 +196,8 @@ class MethylDataPrep:
             If ``True``, remove CpGs with beta values commonly produced by very
             low coverage counts, such as 0.0, 0.25, 0.33, 0.5, 0.66/0.67,
             0.75, and 1.0.
+        low_coverage_like_beta_values
+            A set of beta values that are indicative of low coverage.
         chunk_size
             Number of rows to read at a time when processing large files.
         retain_removed_rows
@@ -207,6 +210,8 @@ class MethylDataPrep:
         self.resolution = resolution
         self.min_coverage = min_coverage
         self.remove_low_coverage_like_cpgs = remove_low_coverage_like_cpgs
+        if low_coverage_like_beta_values is not None:
+            self.LOW_COVERAGE_LIKE_BETA_VALUES = frozenset(low_coverage_like_beta_values)
         self.chunk_size = chunk_size
         self.retain_removed_rows = retain_removed_rows
 
