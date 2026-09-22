@@ -32,13 +32,10 @@ values were observed during testing:
 
 ## Installation
 
-Install from TestPyPI
+Install from PyPI
 
 ```bash
-python -m pip install \
-  --index-url https://test.pypi.org/simple/ \
-  --extra-index-url https://pypi.org/simple/ \
-  methylseg
+python -m pip install methylseg
 ```
 
 or install the current version from GitHub:
