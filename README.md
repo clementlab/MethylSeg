@@ -2,7 +2,7 @@
 
 ![logo](https://raw.githubusercontent.com/clementlab/MethylSeg/main/logo.png)
 
-[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.22904886.svg)](https://doi.org/10.5281/zenodo.22904886)
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.22904886.svg)](https://doi.org/10.5281/zenodo.22904886) [![PyPI Downloads](https://static.pepy.tech/personalized-badge/methylseg?period=total&units=INTERNATIONAL_SYSTEM&left_color=BLACK&right_color=GREEN&left_text=downloads)](https://pepy.tech/projects/methylseg)
 
 MethylSeg is a Python toolkit for identifying methylation domains from
 whole-genome bisulfite sequencing (WGBS) and microarray methylation data. It
