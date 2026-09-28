@@ -75,7 +75,7 @@ Reload VS Code and select **Jupyter Kernel → Python (MethylSeg ARM64)**. The c
 
 ### CT-HMM smoothing warnings with microarray data
 
-Occasionally (around 10% of tested samples) microarray sample may emit a nonfatal warning such as:
+Occasionally (around 10% of tested samples) microarray samples may emit a nonfatal warning such as:
 
 ```text
 WARNING: failure to converge. delta=nan
