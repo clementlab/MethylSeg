@@ -73,4 +73,35 @@ For example:
 
 Reload VS Code and select **Jupyter Kernel → Python (MethylSeg ARM64)**. The custom kernel appears under Jupyter kernels rather than under Python environments.
 
+### CT-HMM smoothing warnings with microarray data
+
+Occasionally (around 10% of tested samples) microarray sample may emit a nonfatal warning such as:
+
+```text
+WARNING: failure to converge. delta=nan
+```
+
+This is a CT-HMM fitting/smoothing warning, not a segmentation warning. It occurs while MethylSeg estimates the continuous-time transition behavior between CpGs. Segmentation continues afterward and can still write region outputs.
+
+To address these warnings, users can adjust CT-HMM fitting parameters such as the initial holding time, convergence tolerance, or iteration limit.
+
+```python
+from methylseg import HMMType, MethylSegPathway
+
+pathway = MethylSegPathway(
+    train_sample_info=sample_info,
+    out_dir="methylseg_output",
+    hmm_type=HMMType.CT,
+    hmm_params={
+        "n_emissions": 4,
+        "holding_time_guess": 1_500_000,
+        "algorithm": "forward-backward",
+        "max_iter": 100,
+        "tol": 1e-3,
+    },
+)
+
+pathway.run_pathway()
+```
+
 
