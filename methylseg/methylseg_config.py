@@ -1086,3 +1086,26 @@ class MethylSegConfig:
         inst._loaded_config = cfg
 
         return inst
+
+    def build_pathway_for_sample(
+        self,
+        sample_info: SampleInfo,
+        out_dir: str | Path,
+        *,
+        load_learned: bool = False,
+    ):
+        """Build this configuration for a specific multisample worker input.
+
+        Serialized configurations retain their original training sample. This
+        helper preserves all configured parameters but replaces that sample
+        with the manifest sample before fitting or applying the pathway.
+        """
+        pathway = self.build_pathway(load_learned=load_learned)
+        pathway.train_sample_info = sample_info
+        pathway.train_sample_name = str(sample_info.sample_id)
+        pathway.train_sample_file = None
+        pathway.assigner.train_sample_info = sample_info
+        pathway.assigner.train_sample = str(sample_info.sample_id)
+        pathway.segmentor.default_sample_info = sample_info
+        pathway.set_out_dir(out_dir)
+        return pathway

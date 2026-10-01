@@ -1520,6 +1520,7 @@ class MethylSegPathway:
         sample_info: SampleInfo | None = None,
         chroms: Optional[List[str]] = None,
         min_probes: int = 3,
+        fit: bool = True,
         force_optimize_rules: bool = False,
         force_resegment: bool = False,
         clean_regions: bool = True,
@@ -1537,6 +1538,10 @@ class MethylSegPathway:
             Optional chromosome subset to process.
         min_probes
             Minimum probes required per raw contiguous region.
+        fit
+            If ``True``, fit the pathway on its configured training sample
+            before segmentation. Set to ``False`` when applying a pathway
+            restored with learned model artifacts.
         force_optimize_rules
             If ``True``, rerun rule optimization before segmentation.
         force_resegment
@@ -1553,9 +1558,10 @@ class MethylSegPathway:
             Paths to the written summary BED files.
         """
         sample_info = self._resolve_sample_info(sample_info=sample_info)
-        if verbose:
-            print("Fitting pathway...")
-        self.fit_pathway(force_optimize_rules=force_optimize_rules)
+        if fit:
+            if verbose:
+                print("Fitting pathway...")
+            self.fit_pathway(force_optimize_rules=force_optimize_rules)
         if verbose:
             print("Generating regions ...")
         return self.run_on_all_chroms(
