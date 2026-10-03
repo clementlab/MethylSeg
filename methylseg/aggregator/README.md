@@ -114,7 +114,7 @@ Load the resolution configs from YAML so worker processes and Slurm jobs can
 reconstruct them reproducibly:
 
 ```python
-from methylseg import MethylSegConfig
+from methylseg import MethylSegConfig, MethylationStates
 from methylseg.aggregator import AggregationLauncher, LocalLauncherConfig
 
 launcher_config = LocalLauncherConfig(
@@ -125,6 +125,7 @@ launcher_config = LocalLauncherConfig(
         "wgbs": MethylSegConfig.from_yaml("configs/wgbs.yaml"),
     },
     n_cpus=4,
+    region_type=MethylationStates.PMD,
 )
 aggregation_result = AggregationLauncher(
     launcher_config,
@@ -135,3 +136,5 @@ For Slurm, use `ClusterLauncherConfig` with the same launcher inputs plus
 `partition`, `account`, `cpus_per_task`, `mem`, `time`, and optional
 `python_executable`, `environment_setup`, or `pythonpath`. The aggregator is
 constructed only after the launcher has written its completed task manifests.
+Python configuration objects require a `MethylationStates` member; YAML and
+launch-spec state names are converted to that enum while they are read.

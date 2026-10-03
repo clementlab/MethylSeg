@@ -35,7 +35,7 @@ class AggregatorConfig:
         output_root,
         *,
         cohort_name: str | None = None,
-        region_type: MethylationStates | str | None = None,
+        region_type: MethylationStates | None = None,
         use_cleaned_regions: bool = True,
         chrom: str | None = None,
         chrom_sizes_path: str | Path | None = None,
@@ -44,7 +44,11 @@ class AggregatorConfig:
         self.input_manifest = Path(input_manifest).expanduser().resolve()
         self.output_root = Path(output_root).expanduser().resolve()
         self.cohort_name = cohort_name
-        self.region_type = self._coerce_region_type(region_type)
+        if region_type is not None and not isinstance(region_type, MethylationStates):
+            raise TypeError(
+                "region_type must be a MethylationStates member or None."
+            )
+        self.region_type = region_type
         self.use_cleaned_regions = bool(use_cleaned_regions)
         self.chrom = None if chrom is None else str(chrom)
         self.chrom_sizes_path = (
@@ -53,27 +57,6 @@ class AggregatorConfig:
             else Path(chrom_sizes_path).expanduser().resolve()
         )
         self.force_recreate = bool(force_recreate)
-
-    @staticmethod
-    def _coerce_region_type(
-        region_type: MethylationStates | str | None,
-    ) -> MethylationStates | None:
-        """Normalize a biological state name to its canonical enum member."""
-        if region_type is None:
-            return None
-        if isinstance(region_type, MethylationStates):
-            return region_type
-        if isinstance(region_type, str):
-            try:
-                return MethylationStates.from_string(region_type)
-            except ValueError as error:
-                raise ValueError(
-                    f"Unknown aggregation region type: {region_type!r}."
-                ) from error
-        raise TypeError(
-            "region_type must be a MethylationStates member, a state name, or None."
-        )
-
 
 class MethylSegAggregator:
     """Aggregate state-specific per-sample MethylSeg BED tracks."""

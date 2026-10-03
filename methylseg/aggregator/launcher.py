@@ -15,7 +15,7 @@ import pandas as pd
 import yaml
 from tqdm.auto import tqdm
 
-from ..helper_classes import SampleInfo
+from ..helper_classes import MethylationStates, SampleInfo
 from ..methylseg_config import MethylSegConfig
 from ..methylseg_pathway import MethylSegPathway
 from .aggregator import (
@@ -53,7 +53,7 @@ class LauncherConfig:
         output_root,
         methylseg_configs_by_resolution=None,
         cohort_name: str | None = None,
-        region_type: str | None = None,
+        region_type: MethylationStates | None = None,
         use_cleaned_regions: bool = True,
         chrom: str | None = None,
         chrom_sizes_path: str | Path | None = None,
@@ -63,6 +63,10 @@ class LauncherConfig:
         self.input_manifest = Path(input_manifest).expanduser().resolve()
         self.output_root = Path(output_root).expanduser().resolve()
         self.cohort_name = cohort_name
+        if region_type is not None and not isinstance(region_type, MethylationStates):
+            raise TypeError(
+                "region_type must be a MethylationStates member or None."
+            )
         self.region_type = region_type
         self.use_cleaned_regions = bool(use_cleaned_regions)
         self.chrom = None if chrom is None else str(chrom)
@@ -237,7 +241,7 @@ class AggregationLauncher:
             output_root=_path_from(raw, "output_root", base),
             methylseg_configs_by_resolution=resolution_configs,
             cohort_name=raw.get("cohort_name"),
-            region_type=raw.get("region_type"),
+            region_type=_region_type_from_serialized(raw.get("region_type"), "YAML"),
             use_cleaned_regions=raw.get("use_cleaned_regions", True),
             chrom=raw.get("chrom"),
             chrom_sizes_path=_optional_path_from(raw, "chrom_sizes_path", base),
@@ -261,7 +265,9 @@ class AggregationLauncher:
                 input_manifest=spec["input_manifest"],
                 output_root=spec["output_root"],
                 cohort_name=spec.get("cohort_name"),
-                region_type=spec.get("region_type"),
+                region_type=_region_type_from_serialized(
+                    spec.get("region_type"), "launch spec"
+                ),
                 use_cleaned_regions=spec.get("use_cleaned_regions", True),
                 chrom=spec.get("chrom"),
                 chrom_sizes_path=spec.get("chrom_sizes_path"),
@@ -312,7 +318,9 @@ class AggregationLauncher:
             "input_manifest": str(config.input_manifest),
             "output_root": str(config.output_root),
             "cohort_name": config.cohort_name,
-            "region_type": config.region_type,
+            "region_type": (
+                None if config.region_type is None else config.region_type.name
+            ),
             "use_cleaned_regions": config.use_cleaned_regions,
             "chrom": config.chrom,
             "chrom_sizes_path": (
@@ -422,6 +430,18 @@ class AggregationLauncher:
         if missing:
             raise RuntimeError(f"Missing Slurm task result files: {missing}")
         return self._finalize([json.loads(Path(task["result_path"]).read_text()) for task in tasks])
+
+
+def _region_type_from_serialized(value, source: str) -> MethylationStates | None:
+    """Deserialize an enum name at a YAML or JSON boundary."""
+    if value is None:
+        return None
+    if not isinstance(value, str):
+        raise TypeError(f"region_type in {source} must be a state name or null.")
+    try:
+        return MethylationStates.from_string(value)
+    except ValueError as error:
+        raise ValueError(f"Unknown region_type in {source}: {value!r}.") from error
 
 
 def _path_from(raw, key, base):
