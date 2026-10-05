@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from collections import defaultdict
 from enum import Enum
+import math
 from pathlib import Path
 
 import pandas as pd
@@ -205,6 +206,16 @@ class MethylSegAggregator:
             raise ValueError(f"Float {name} must be between 0 and 1.")
         return cutoff * sample_count
 
+    @staticmethod
+    def _direct_cutoff(cutoff: int | float, name: str) -> float:
+        """Validate a cutoff expressed directly in a signal file's value scale."""
+        if isinstance(cutoff, bool) or not isinstance(cutoff, (int, float)):
+            raise TypeError(f"{name} must be a non-negative numeric value.")
+        cutoff = float(cutoff)
+        if not math.isfinite(cutoff) or cutoff < 0:
+            raise ValueError(f"{name} must be a finite non-negative value.")
+        return cutoff
+
     def _signal_rows(
         self, manifest: pd.DataFrame, chrom_sizes: dict[str, int] | None
     ) -> list[dict]:
@@ -260,8 +271,8 @@ class MethylSegAggregator:
                     )
         return signal_rows
 
+    @staticmethod
     def _select_signal_rows(
-        self,
         signal_rows: list[dict],
         aggregation_mode: AggregationMode,
         minimum: float,
@@ -282,28 +293,56 @@ class MethylSegAggregator:
 
     @classmethod
     def _read_signal_rows(cls, signal_path: Path) -> list[dict]:
-        """Read a cached count signal bedGraph for region selection."""
+        """Read and validate a headerless four-column signal bedGraph."""
+        signal_path = Path(signal_path).expanduser()
+        if not signal_path.is_file():
+            raise FileNotFoundError(f"Signal file does not exist: {signal_path}")
         try:
             signal_frame = pd.read_csv(
                 signal_path,
                 sep="\t",
                 header=None,
-                names=cls.SIGNAL_COLUMNS,
             )
         except pd.errors.EmptyDataError:
             return []
         if signal_frame.empty:
             return []
+        if signal_frame.shape[1] != len(cls.SIGNAL_COLUMNS):
+            raise ValueError(
+                "Signal file must be a headerless tab-delimited bedGraph with "
+                "exactly four columns: chrom, start, end, signal. "
+                f"Found {signal_frame.shape[1]} columns in {signal_path}."
+            )
+        signal_frame.columns = cls.SIGNAL_COLUMNS
         signal_frame["chrom"] = signal_frame["chrom"].astype(str)
-        for column in ("cpg_start", "cpg_end", "signal"):
-            signal_frame[column] = pd.to_numeric(
-                signal_frame[column], errors="raise"
-            ).astype(int)
+        for column in ("cpg_start", "cpg_end"):
+            signal_frame[column] = pd.to_numeric(signal_frame[column], errors="raise")
+            if signal_frame[column].isna().any() or (~signal_frame[column].map(
+                float
+            ).map(math.isfinite)).any() or (
+                signal_frame[column] % 1 != 0
+            ).any():
+                raise ValueError(
+                    f"Signal file has non-integer {column} coordinates: {signal_path}"
+                )
+            signal_frame[column] = signal_frame[column].astype(int)
+        signal_frame["signal"] = pd.to_numeric(
+            signal_frame["signal"], errors="raise"
+        )
+        if signal_frame["signal"].isna().any() or (
+            ~signal_frame["signal"].map(float).map(math.isfinite)
+        ).any():
+            raise ValueError(f"Signal file has non-finite signal values: {signal_path}")
+        signal_frame["signal"] = signal_frame["signal"].astype(float)
+        if (signal_frame["cpg_start"] < 0).any():
+            raise ValueError(f"Signal file has negative start coordinates: {signal_path}")
         if (signal_frame["cpg_end"] <= signal_frame["cpg_start"]).any():
-            raise ValueError(f"Cached signal has invalid interval bounds: {signal_path}")
+            raise ValueError(f"Signal file has invalid interval bounds: {signal_path}")
         if (signal_frame["signal"] < 0).any():
-            raise ValueError(f"Cached signal has negative counts: {signal_path}")
-        return signal_frame.to_dict("records")
+            raise ValueError(f"Signal file has negative signal values: {signal_path}")
+        return signal_frame.sort_values(
+            ["chrom", "cpg_start", "cpg_end"], kind="stable"
+        ).to_dict("records")
 
     @staticmethod
     def _merge_selected_rows(selected_rows: list[dict]) -> pd.DataFrame:
@@ -321,6 +360,35 @@ class MethylSegAggregator:
                     {"chrom": row["chrom"], "start": row["cpg_start"], "end": row["cpg_end"]}
                 )
         return pd.DataFrame(merged_rows, columns=["chrom", "start", "end"])
+
+    @staticmethod
+    def collect_regions(
+        signal_file: str | Path,
+        aggregation_mode: AggregationMode | str = AggregationMode.COMMON,
+        peak_min_cutoff: int | float = 0.75,
+        peak_max_cutoff: int | float = 0.25,
+    ) -> pd.DataFrame:
+        """Select and merge BED3 regions from a four-column signal bedGraph.
+
+        ``signal_file`` must be a headerless, tab-delimited file containing
+        ``chrom``, ``start``, ``end``, and a non-negative numeric signal value.
+        Cutoffs are compared directly with those signal values.  The returned
+        frame has BED3 columns ``chrom``, ``start``, and ``end``.
+        """
+        aggregation_mode = AggregationMode(aggregation_mode)
+        if aggregation_mode is AggregationMode.SIGNAL_ONLY:
+            raise ValueError("signal_only does not select aggregate regions.")
+        minimum = MethylSegAggregator._direct_cutoff(
+            peak_min_cutoff, "peak_min_cutoff"
+        )
+        maximum = MethylSegAggregator._direct_cutoff(
+            peak_max_cutoff, "peak_max_cutoff"
+        )
+        signal_rows = MethylSegAggregator._read_signal_rows(Path(signal_file))
+        selected_rows = MethylSegAggregator._select_signal_rows(
+            signal_rows, aggregation_mode, minimum, maximum
+        )
+        return MethylSegAggregator._merge_selected_rows(selected_rows)
 
     def aggregate(
         self,
@@ -401,14 +469,14 @@ class MethylSegAggregator:
 
         if aggregation_mode is AggregationMode.SIGNAL_ONLY:
             return None, signal_path, normalized_signal_path, metadata_path
-        selected_rows = self._select_signal_rows(
-            signal_rows, aggregation_mode, minimum, maximum
+        regions = self.collect_regions(
+            signal_path, aggregation_mode, minimum, maximum
         )
         aggregate_path = self.config.output_root / (
             f"{stem}.{aggregation_mode.value}.bed"
         )
         if self.config.force_recreate or not aggregate_path.is_file():
-            self._merge_selected_rows(selected_rows).to_csv(
+            regions.to_csv(
                 aggregate_path, sep="\t", header=False, index=False
             )
         return aggregate_path, signal_path, normalized_signal_path, metadata_path
