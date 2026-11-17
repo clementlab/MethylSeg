@@ -361,8 +361,10 @@ def _run_sample_task(task):
             pathway.set_out_dir(task["output_dir"])
             fit = False
         elif task["methylseg_config"] is None:
-            pathway = MethylSegPathway(train_sample_info=sample_info, out_dir=task["output_dir"])
-            fit = True
+            raise ValueError(
+                "A MethylSeg configuration with an explicit pathway.genome_build "
+                "is required when no fitted model is supplied."
+            )
         else:
             pathway = MethylSegConfig.from_yaml(task["methylseg_config"]).build_pathway_for_sample(
                 sample_info, task["output_dir"], load_learned=task["reuse_learned"]
@@ -996,7 +998,7 @@ class AggregationLauncher:
                                   retry_array_count=retry_count, attempt=attempt + 1, outcome="retry_submitted")
             self._wait_for_job(retry_id)
             spec = _read_spec(spec_path)
-            incomplete = self._recovery_incomplete_tasks(spec, [task["task_index"] for task in pending])
+            incomplete = self._recovery_incomplete_tasks(spec, original_pending)
             if incomplete:
                 report = self._recovery_report(
                     spec_path, array_job_id=str(array_job_id), retry_job_id=retry_id,
