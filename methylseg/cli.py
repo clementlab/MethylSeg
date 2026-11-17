@@ -34,6 +34,12 @@ def main():
     worker_parser.add_argument("--array-count", type=int)
     finalizer_parser = subparsers.add_parser("aggregate-finalize", help=argparse.SUPPRESS)
     finalizer_parser.add_argument("--launch-spec", required=True)
+    recovery_parser = subparsers.add_parser("aggregate-recover", help=argparse.SUPPRESS)
+    recovery_parser.add_argument("--launch-spec", required=True)
+    recovery_parser.add_argument("--array-job-id", required=True)
+    recovery_parser.add_argument("--array-count", required=True, type=int)
+    fit_parser = subparsers.add_parser("aggregate-fit-cohort-model", help=argparse.SUPPRESS)
+    fit_parser.add_argument("--launch-spec", required=True)
 
     args = parser.parse_args()
 
@@ -54,5 +60,17 @@ def main():
     elif args.command == "aggregate-finalize":
         from .aggregator import AggregationLauncher
         print(AggregationLauncher.from_launch_spec(args.launch_spec).finalize_from_spec(args.launch_spec))
+    elif args.command == "aggregate-recover":
+        from .aggregator import AggregationLauncher
+        print(AggregationLauncher.from_launch_spec(args.launch_spec).recover_from_spec(
+            args.launch_spec, args.array_job_id, args.array_count
+        ))
+    elif args.command == "aggregate-fit-cohort-model":
+        from .aggregator import AggregationLauncher
+        print(AggregationLauncher.from_launch_spec(args.launch_spec).fit_cohort_model_from_spec(args.launch_spec))
     else:
         parser.print_help()
+
+
+if __name__ == "__main__":
+    main()

@@ -1,6 +1,7 @@
 """Public package exports for the reusable methylseg workflow."""
 
 from .helper_classes import (
+    DefinitionMethod,
     MethylStateAssignmentMethod,
     MethylationStates,
     MethylDataPrep,
@@ -21,6 +22,7 @@ from .utils import get_biological_state_colors, get_cluster_colors
 
 __all__ = [
     "CTMethylSegHMM",
+    "DefinitionMethod",
     "MethylDataPrep",
     "MethylSegConfig",
     "MethylSegHMM",

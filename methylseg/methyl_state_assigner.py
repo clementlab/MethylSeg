@@ -12,7 +12,7 @@ import matplotlib.colors as mcolors
 from matplotlib.lines import Line2D
 import numpy as np
 import pandas as pd
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, List, Optional, Sequence, Tuple
 
 from sklearn.cluster import KMeans
 from sklearn.decomposition import PCA
@@ -20,6 +20,7 @@ from sklearn.impute import SimpleImputer
 from sklearn.metrics import (
     davies_bouldin_score,
     silhouette_score,
+    silhouette_samples,
 )
 from sklearn.preprocessing import StandardScaler
 import umap
@@ -507,6 +508,126 @@ class MethylStateAssigner:
             pass
 
         return metrics
+
+    def get_state_scores(self) -> pd.DataFrame:
+        """Return lazily calculated per-state KMeans distinctness scores.
+
+        The returned table summarizes mean silhouette values on a deterministic,
+        state-stratified sample of the fitted training emissions.  It is computed
+        only on the first call, then retained as an assigner artifact so later
+        calls do not repeat the pairwise-distance calculation.
+
+        Returns
+        -------
+        pandas.DataFrame
+            One row per observed biological state with ``state``,
+            ``mean_silhouette``, ``n_observations``, and
+            ``nearest_competing_state`` columns.
+
+        Raises
+        ------
+        ValueError
+            If the fitted training emissions and labels needed for the lazy
+            calculation are unavailable, or fewer than two states are present.
+        """
+        cached_scores = getattr(self, "_state_scores", None)
+        if isinstance(cached_scores, pd.DataFrame):
+            return cached_scores.copy(deep=True)
+
+        emission_df = getattr(self, "train_emission_df", None)
+        labels = getattr(self, "train_labels", None)
+        if not isinstance(emission_df, pd.DataFrame) or labels is None:
+            raise ValueError(
+                "State scores require saved training emissions and labels. "
+                "Refit the model, or load a learned artifact that includes its "
+                "training artifacts."
+            )
+
+        labels_numeric = self._normalize_plot_labels(
+            labels=labels,
+            expected_length=len(emission_df),
+        )
+        unique_labels = np.unique(labels_numeric)
+        if len(unique_labels) < 2 or len(emission_df) < 2:
+            raise ValueError(
+                "State scores require at least two observed KMeans states."
+            )
+
+        sample_indices = self._sample_state_score_indices(labels_numeric)
+        sampled_input = self._get_kmeans_metric_input(emission_df.iloc[sample_indices])
+        sampled_labels = labels_numeric[sample_indices]
+        sampled_unique_labels = np.unique(sampled_labels)
+        if len(sampled_unique_labels) < 2 or len(sampled_unique_labels) >= len(
+            sampled_labels
+        ):
+            raise ValueError(
+                "State-score sampling requires at least two states with more "
+                "than one CpG each."
+            )
+        if any(
+            (sampled_labels == state_value).sum() < 2
+            for state_value in sampled_unique_labels
+        ):
+            raise ValueError(
+                "State-score sampling requires at least two CpGs in every "
+                "observed state."
+            )
+
+        samples = silhouette_samples(sampled_input, sampled_labels)
+        rows = []
+        state_centroids = {
+            state_value: sampled_input[sampled_labels == state_value].mean(axis=0)
+            for state_value in sampled_unique_labels
+        }
+        for state_value in sampled_unique_labels:
+            state_mask = sampled_labels == state_value
+            competing_states = [
+                candidate
+                for candidate in sampled_unique_labels
+                if candidate != state_value
+            ]
+            nearest_state_value = min(
+                competing_states,
+                key=lambda candidate: float(
+                    np.linalg.norm(
+                        state_centroids[state_value] - state_centroids[candidate]
+                    )
+                ),
+            )
+            rows.append(
+                {
+                    "state": MethylationStates(int(state_value)).name,
+                    "mean_silhouette": float(samples[state_mask].mean()),
+                    "n_observations": int((labels_numeric == state_value).sum()),
+                    "nearest_competing_state": MethylationStates(
+                        int(nearest_state_value)
+                    ).name,
+                }
+            )
+
+        self._state_scores = pd.DataFrame(rows).sort_values(
+            "state",
+            key=lambda values: values.map(
+                {state.name: state.value for state in MethylationStates}
+            ),
+        ).reset_index(drop=True)
+        return self._state_scores.copy(deep=True)
+
+    def _sample_state_score_indices(self, labels: np.ndarray) -> np.ndarray:
+        """Select a deterministic, bounded number of rows from each state."""
+        max_rows_per_state = 2_500
+        rng = np.random.default_rng(self.random_state)
+        selected = []
+        for state_value in np.unique(labels):
+            state_indices = np.flatnonzero(labels == state_value)
+            if len(state_indices) > max_rows_per_state:
+                state_indices = rng.choice(
+                    state_indices,
+                    size=max_rows_per_state,
+                    replace=False,
+                )
+            selected.append(state_indices)
+        return np.sort(np.concatenate(selected))
 
     def _fit_plot_pca(
         self,
@@ -2399,8 +2520,63 @@ class MethylStateAssigner:
         self.model = model
         self.train_pca_scores = pca_scores
         self.train_labels = labels
+        self._state_scores = None
 
         return model, meth_data, emission_df, pca_scores, labels
+
+    def train_kmeans_for_samples(
+        self,
+        sample_infos: Sequence[SampleInfo],
+        train_chroms: Optional[List[str]] = None,
+        windows_to_use: Optional[List[str]] = None,
+        feature_cols: Optional[List[str]] = None,
+        max_cpg_per_chrom: Optional[int] = 50_000,
+    ):
+        """Fit one KMeans model from pooled, per-sample training emissions.
+
+        Each sample is prepared and capped independently before its rows are
+        pooled.  ``source_sample_id`` is attached only to the methylation-side
+        provenance table, never to the numerical emission features.
+        """
+        sample_infos = list(sample_infos)
+        if not sample_infos:
+            raise ValueError("Multisample training requires at least one sample.")
+        sample_ids = [str(sample.sample_id) for sample in sample_infos]
+        if len(sample_ids) != len(set(sample_ids)):
+            raise ValueError("Multisample training sample IDs must be unique.")
+
+        meth_frames = []
+        emission_frames = []
+        summary_frames = []
+        for index, sample_info in enumerate(sample_infos):
+            meth_data, emission_df, summary_df = self._prepare_training_data_for_kmeans(
+                sample_info=sample_info,
+                train_chroms=train_chroms,
+                windows_to_use=windows_to_use,
+                max_cpg_per_chrom=max_cpg_per_chrom,
+                sampling_random_state=self.random_state + index,
+            )
+            meth_frames.append(meth_data.assign(source_sample_id=sample_info.sample_id))
+            emission_frames.append(emission_df)
+            summary_frames.append(summary_df.assign(source_sample_id=sample_info.sample_id))
+
+        self.train_sample = "cohort_" + "_".join(sample_ids)
+        self.train_sample_info = sample_infos[0]
+        self.train_chroms, _ = self._resolve_train_chroms(
+            sample_info=sample_infos[0], train_chroms=train_chroms
+        )
+        self.max_cpg_per_chrom = max_cpg_per_chrom
+        self.train_meth = pd.concat(meth_frames, ignore_index=True)
+        self.train_emission_df = pd.concat(emission_frames, ignore_index=True)
+        self.training_summary_df = pd.concat(summary_frames, ignore_index=True)
+        model, pca_scores, labels = self.fit_kmeans_on_emissions(
+            emission_df=self.train_emission_df, feature_cols=feature_cols
+        )
+        self.model = model
+        self.train_pca_scores = pca_scores
+        self.train_labels = labels
+        self._state_scores = None
+        return model, self.train_meth, self.train_emission_df, pca_scores, labels
 
     def apply_kmeans_to_sample(
         self,

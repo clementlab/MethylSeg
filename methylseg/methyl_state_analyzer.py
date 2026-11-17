@@ -1,7 +1,10 @@
 """Utilities for analyzing, comparing, and tuning methylation state assignments."""
 
 from enum import Enum
+from io import BytesIO
+from pathlib import Path
 
+from graphviz import Source
 from matplotlib import pyplot as plt
 import numpy as np
 import pandas as pd
@@ -17,6 +20,8 @@ from sklearn.metrics import (
     precision_score,
     recall_score,
 )
+from sklearn.tree import DecisionTreeClassifier
+from sklearn.tree import _tree
 from tqdm import tqdm
 import seaborn as sns
 
@@ -432,6 +437,419 @@ class MethylStateAnalyzer:
             meth_emissions, **self.state_cutoffs
         )
         return states_by_rules
+
+    def fit_complex_definition(
+        self,
+        max_depth: int | None = 4,
+        min_samples_leaf: float | int | None = None,
+        random_state: int | None = 42,
+        min_leaf_fraction: float | None = None,
+        max_prune_loss: float | None = None,
+    ) -> dict:
+        """Fit a compact raw-feature threshold surrogate for KMeans states."""
+        if not hasattr(self.assigner, "model"):
+            raise ValueError("Complex definitions require a fitted KMeans model.")
+        model = self.assigner.model
+        if max_depth is not None and (
+            not isinstance(max_depth, int)
+            or isinstance(max_depth, bool)
+            or max_depth < 1
+        ):
+            raise ValueError("complex_definition_max_depth must be a positive integer.")
+        if min_samples_leaf is None:
+            min_samples_leaf = 1 if max_depth is None else 0.01
+        if isinstance(min_samples_leaf, bool) or not isinstance(min_samples_leaf, (int, float)):
+            raise ValueError("complex_definition_min_samples_leaf must be an int or float.")
+        if isinstance(min_samples_leaf, int) and min_samples_leaf < 1:
+            raise ValueError("Integer complex_definition_min_samples_leaf must be at least 1.")
+        if isinstance(min_samples_leaf, float) and not 0 < min_samples_leaf <= 0.5:
+            raise ValueError("Float complex_definition_min_samples_leaf must be in (0, 0.5].")
+        if (min_leaf_fraction is None) != (max_prune_loss is None):
+            raise ValueError(
+                "complex_definition_min_leaf_fraction and "
+                "complex_definition_max_prune_loss must be supplied together."
+            )
+        if min_leaf_fraction is not None:
+            if not isinstance(min_leaf_fraction, (int, float)) or isinstance(min_leaf_fraction, bool) or not 0 < min_leaf_fraction <= 0.5:
+                raise ValueError("complex_definition_min_leaf_fraction must be in (0, 0.5].")
+            if not isinstance(max_prune_loss, (int, float)) or isinstance(max_prune_loss, bool) or not 0 <= max_prune_loss <= 1:
+                raise ValueError("complex_definition_max_prune_loss must be in [0, 1].")
+
+        feature_names = list(model.feature_cols)
+        emissions = self.assigner.train_emission_df
+        missing = [name for name in feature_names if name not in emissions.columns]
+        if not feature_names or missing:
+            raise ValueError(
+                f"Training emissions are missing complex-rule features: {missing}"
+            )
+        values = emissions[feature_names].apply(pd.to_numeric, errors="raise")
+        if not np.isfinite(values.to_numpy(dtype=float)).all():
+            raise ValueError("Complex definitions require finite raw emission features.")
+        _, _, _, relabeled = self.assigner.apply_kmeans_to_emissions(emissions)
+        target = np.asarray(
+            [value.value if isinstance(value, Enum) else int(value) for value in relabeled],
+            dtype=int,
+        )
+        tree = DecisionTreeClassifier(
+            max_depth=max_depth,
+            min_samples_leaf=min_samples_leaf,
+            random_state=random_state,
+        ).fit(values, target)
+        same_state_pruned = self._prune_same_state_subtrees(tree)
+        small_leaf_pruned, prune_loss = self._prune_small_leaf_subtrees(
+            tree,
+            values,
+            target,
+            min_leaf_fraction=min_leaf_fraction,
+            max_prune_loss=max_prune_loss,
+        )
+        predicted = tree.predict(values).astype(int)
+        labels = [state.value for state in MethylationStates]
+        report = classification_report(
+            target, predicted, labels=labels, output_dict=True, zero_division=0
+        )
+        self.complex_definition_tree = tree
+        self.complex_definition = {
+            "kind": "feature_threshold_tree",
+            "feature_names": feature_names,
+            "max_depth": None if max_depth is None else int(max_depth),
+            "min_samples_leaf": min_samples_leaf,
+            "pruning": {
+                "same_state_pruned_nodes": same_state_pruned,
+                "min_leaf_fraction": min_leaf_fraction,
+                "max_prune_loss": max_prune_loss,
+                "small_leaf_pruned_nodes": small_leaf_pruned,
+                "training_loss_increase": prune_loss,
+            },
+            "metrics": {
+                "biological_state_concordance": float(accuracy_score(target, predicted)),
+                "per_state": {
+                    MethylationStates(label).name: {
+                        "support": int(report[str(label)]["support"]),
+                        "precision": float(report[str(label)]["precision"]),
+                        "recall": float(report[str(label)]["recall"]),
+                        "f1": float(report[str(label)]["f1-score"]),
+                    }
+                    for label in labels if str(label) in report
+                },
+            },
+        }
+        self.complex_definition["leaves"] = self.get_complex_definition_table().to_dict("records")
+        return self.complex_definition
+
+    @staticmethod
+    def _collapse_tree_node(tree, node_id: int) -> None:
+        """Convert an internal sklearn tree node into a leaf in place."""
+        tree.children_left[node_id] = _tree.TREE_LEAF
+        tree.children_right[node_id] = _tree.TREE_LEAF
+        tree.feature[node_id] = _tree.TREE_UNDEFINED
+        tree.threshold[node_id] = _tree.TREE_UNDEFINED
+
+    def _prune_same_state_subtrees(self, classifier: DecisionTreeClassifier) -> int:
+        """Losslessly collapse any subtree whose descendant leaves share a state."""
+        tree = classifier.tree_
+        classes = classifier.classes_
+        pruned = 0
+
+        def visit(node_id: int) -> int:
+            nonlocal pruned
+            left, right = tree.children_left[node_id], tree.children_right[node_id]
+            if left == _tree.TREE_LEAF:
+                return int(classes[int(np.argmax(tree.value[node_id][0]))])
+            left_state, right_state = visit(left), visit(right)
+            if left_state == right_state:
+                self._collapse_tree_node(tree, node_id)
+                pruned += 1
+                return left_state
+            return int(classes[int(np.argmax(tree.value[node_id][0]))])
+
+        visit(0)
+        return pruned
+
+    def _prune_small_leaf_subtrees(
+        self,
+        classifier: DecisionTreeClassifier,
+        values: pd.DataFrame,
+        target: np.ndarray,
+        *,
+        min_leaf_fraction: float | None,
+        max_prune_loss: float | None,
+    ) -> tuple[int, float]:
+        """Optionally collapse low-support children within a bounded loss budget."""
+        if min_leaf_fraction is None:
+            return 0, 0.0
+        tree = classifier.tree_
+        baseline_loss = 1.0 - accuracy_score(target, classifier.predict(values))
+        total_rows = len(target)
+        pruned = 0
+
+        def visit(node_id: int):
+            nonlocal pruned
+            left, right = tree.children_left[node_id], tree.children_right[node_id]
+            if left == _tree.TREE_LEAF:
+                return
+            visit(left)
+            visit(right)
+            left, right = tree.children_left[node_id], tree.children_right[node_id]
+            if left == _tree.TREE_LEAF or right == _tree.TREE_LEAF:
+                if min(tree.n_node_samples[left], tree.n_node_samples[right]) / total_rows >= min_leaf_fraction:
+                    return
+                saved = (
+                    tree.children_left[node_id], tree.children_right[node_id],
+                    tree.feature[node_id], tree.threshold[node_id],
+                )
+                self._collapse_tree_node(tree, node_id)
+                added_loss = (1.0 - accuracy_score(target, classifier.predict(values))) - baseline_loss
+                if added_loss <= max_prune_loss + 1e-12:
+                    pruned += 1
+                else:
+                    (
+                        tree.children_left[node_id], tree.children_right[node_id],
+                        tree.feature[node_id], tree.threshold[node_id],
+                    ) = saved
+
+        visit(0)
+        final_loss = 1.0 - accuracy_score(target, classifier.predict(values))
+        return pruned, float(final_loss - baseline_loss)
+
+    def _complex_feature_values(self, emissions: pd.DataFrame) -> pd.DataFrame:
+        if not hasattr(self, "complex_definition_tree"):
+            raise ValueError("Complex definition not fitted or loaded.")
+        features = self.complex_definition["feature_names"]
+        missing = [name for name in features if name not in emissions.columns]
+        if missing:
+            raise ValueError(f"Complex definition requires emission features: {missing}")
+        values = emissions[features].apply(pd.to_numeric, errors="raise")
+        if not np.isfinite(values.to_numpy(dtype=float)).all():
+            raise ValueError("Complex definition input features must be finite.")
+        return values
+
+    def get_complex_definition_table(self) -> pd.DataFrame:
+        """Return raw-feature paths, state labels, support, and purity by leaf."""
+        if not hasattr(self, "complex_definition_tree"):
+            raise ValueError("Complex definition not fitted or loaded.")
+        classifier = self.complex_definition_tree
+        tree = classifier.tree_
+        classes = classifier.classes_
+        features = self.complex_definition["feature_names"]
+        rows = []
+
+        def visit(node_id: int, conditions: list[str]):
+            left, right = tree.children_left[node_id], tree.children_right[node_id]
+            if left == right:
+                counts = tree.value[node_id][0]
+                state = int(classes[int(np.argmax(counts))])
+                rows.append({
+                    "leaf_id": int(node_id),
+                    "state": MethylationStates(state).name,
+                    "support": int(tree.n_node_samples[node_id]),
+                    "purity": float(np.max(counts) / np.sum(counts)),
+                    "conditions": " AND ".join(conditions) if conditions else "ALL CpGs",
+                    "state_counts": {
+                        MethylationStates(int(label)).name: int(count)
+                        for label, count in zip(classes, counts) if count
+                    },
+                })
+                return
+            feature, threshold = features[tree.feature[node_id]], tree.threshold[node_id]
+            visit(left, conditions + [f"{feature} <= {threshold:.6g}"])
+            visit(right, conditions + [f"{feature} > {threshold:.6g}"])
+
+        visit(0, [])
+        return pd.DataFrame(rows)
+
+    def define_states_by_complex_rules(
+        self,
+        sample_info: SampleInfo | None = None,
+        chrom=None,
+        sample_emissions: pd.DataFrame | None = None,
+    ) -> np.ndarray:
+        """Apply a fitted complex definition and return biological states."""
+        if not hasattr(self, "complex_definition"):
+            raise ValueError("Complex definition not fitted. Run fit_complex_definition first.")
+        if sample_emissions is None:
+            if sample_info is None:
+                raise ValueError("sample_info is required when sample_emissions is not supplied.")
+            _, sample_emissions = self.assigner.prepare_sample_for_clustering(
+                sample_info, chrom
+            )
+        raw = self.complex_definition_tree.predict(
+            self._complex_feature_values(sample_emissions)
+        ).astype(int)
+        return np.asarray(
+            [MethylationStates(label) for label in raw],
+            dtype=object,
+        )
+
+    def pretty_print_complex_definition(self, include_leaf_stats: bool = False) -> None:
+        """Print compact, factored direct-feature rules for each biological state.
+
+        Parameters
+        ----------
+        include_leaf_stats
+            If ``True``, annotate each terminal rule with its training support
+            and purity. Detailed leaf data is always available from
+            :meth:`get_complex_definition_table`.
+        """
+        table = self.get_complex_definition_table()
+        print("Complex definition (direct feature thresholds):")
+        for state in [member.name for member in MethylationStates]:
+            state_leaves = table.loc[table["state"].eq(state)]
+            if state_leaves.empty:
+                continue
+            # Build a prefix tree from this state's decision paths.  Rendering
+            # the trie factors conditions shared by all (or a subset of) leaves
+            # so users see each shared threshold once instead of in every DNF
+            # clause.
+            root = {"children": {}, "leaf": None}
+            for row in state_leaves.itertuples(index=False):
+                conditions = [] if row.conditions == "ALL CpGs" else row.conditions.split(" AND ")
+                node = root
+                for condition in conditions:
+                    node = node["children"].setdefault(
+                        condition,
+                        {"children": {}, "leaf": None},
+                    )
+                node["leaf"] = row
+
+            def render_branch(condition, node) -> str:
+                expression = condition
+                if node["children"]:
+                    expression += f" AND ({render_choices(node)})"
+                elif include_leaf_stats:
+                    leaf = node["leaf"]
+                    expression += f" [support={leaf.support}, purity={leaf.purity:.3f}]"
+                return expression
+
+            def render_choices(node) -> str:
+                children = list(node["children"].items())
+                if not children:
+                    leaf = node["leaf"]
+                    expression = "ALL CpGs"
+                    if include_leaf_stats:
+                        expression += f" [support={leaf.support}, purity={leaf.purity:.3f}]"
+                    return expression
+                if len(children) == 1:
+                    condition, child = children[0]
+                    return render_branch(condition, child)
+                return " OR ".join(
+                    f"({render_branch(condition, child)})"
+                    for condition, child in children
+                )
+
+            print(f"{state}: {render_choices(root)}")
+
+    def plot_complex_definition_tree(
+        self,
+        save_path: str | Path | None = None,
+        figsize: tuple[float, float] = (24, 12),
+        dpi: int = 150,
+        show: bool = True,
+    ):
+        """Render the direct feature-threshold complex definition as a tree.
+
+        Parameters
+        ----------
+        save_path
+            Optional PNG/PDF/SVG destination. Parent directories are created.
+        figsize, dpi
+            Matplotlib figure dimensions and raster resolution.
+        show
+            If ``True``, display the figure before returning it.
+
+        Returns
+        -------
+        tuple
+            The ``(figure, axes)`` containing the rendered decision tree.
+        """
+        if not hasattr(self, "complex_definition_tree"):
+            raise ValueError("Complex definition not fitted or loaded.")
+        if len(figsize) != 2 or any(value <= 0 for value in figsize):
+            raise ValueError("figsize must contain two positive values.")
+        if dpi <= 0:
+            raise ValueError("dpi must be positive.")
+
+        classifier = self.complex_definition_tree
+        class_names = [MethylationStates(int(label)).name for label in classifier.classes_]
+        return self._plot_complex_definition_tree_graphviz(
+            classifier=classifier,
+            class_names=class_names,
+            save_path=save_path,
+            figsize=figsize,
+            dpi=dpi,
+            show=show,
+        )
+
+    def _plot_complex_definition_tree_graphviz(
+        self,
+        *,
+        classifier: DecisionTreeClassifier,
+        class_names: list[str],
+        save_path: str | Path | None,
+        figsize: tuple[float, float],
+        dpi: int,
+        show: bool,
+    ):
+        """Render the fitted direct-rule tree in a compact Graphviz style."""
+        tree = classifier.tree_
+        feature_names = self.complex_definition["feature_names"]
+        state_colors = {
+            "LOW": "#f4a261",
+            "PMD": "#69db5a",
+            "INTERMEDIATE": "#74c0fc",
+            "HIGH": "#da4ee8",
+        }
+        dot_rows = [
+            "digraph complex_definition {",
+            'graph [ranksep=0.6, nodesep=0.25, pad=0.2, bgcolor="white", label="MethylSeg complex definition: direct feature thresholds", labelloc=t, fontsize=20];',
+            'node [shape=box, style="rounded,filled", fontname="Helvetica", fontsize=12, color="#555555"];',
+            'edge [fontname="Helvetica", fontsize=10, color="#555555"];',
+        ]
+
+        def add_node(node_id: int) -> None:
+            left = tree.children_left[node_id]
+            right = tree.children_right[node_id]
+            if left == _tree.TREE_LEAF:
+                values = tree.value[node_id][0]
+                state_index = int(np.argmax(values))
+                state = class_names[state_index]
+                purity = float(values[state_index] / values.sum()) if values.sum() else 0.0
+                label = (
+                    f"class = {state}\\n"
+                    f"support = {int(tree.n_node_samples[node_id]):,}\\n"
+                    f"purity = {purity:.3f}"
+                )
+                dot_rows.append(
+                    f'n{node_id} [label="{label}", fillcolor="{state_colors.get(state, "#eeeeee")}"];'
+                )
+                return
+            feature = feature_names[tree.feature[node_id]]
+            dot_rows.append(
+                f'n{node_id} [label="{feature} <= {tree.threshold[node_id]:.6g}", fillcolor="#ffffff"];'
+            )
+            add_node(left)
+            add_node(right)
+            dot_rows.append(f'n{node_id} -> n{left} [label="True"];')
+            dot_rows.append(f'n{node_id} -> n{right} [label="False"];')
+
+        add_node(0)
+        dot_rows.append("}")
+        image = plt.imread(
+            BytesIO(Source("\n".join(dot_rows) + "\n", format="png").pipe(format="png")),
+            format="png",
+        )
+        figure, axes = plt.subplots(figsize=figsize, dpi=dpi)
+        axes.imshow(image)
+        axes.axis("off")
+        axes.set_title("MethylSeg complex definition: direct feature thresholds")
+        figure.tight_layout()
+        if save_path is not None:
+            destination = Path(save_path)
+            destination.parent.mkdir(parents=True, exist_ok=True)
+            figure.savefig(destination, dpi=dpi, bbox_inches="tight")
+        if show:
+            plt.show()
+        return figure, axes
 
     def __set_from_config(self, state_cfg: dict | None):
         if state_cfg is not None:

@@ -92,6 +92,13 @@ class MethylStateAssignmentMethod(MethylEnum):
     AUTO = "auto"
 
 
+class DefinitionMethod(MethylEnum):
+    """Rule family used when state assignment is ``definition``."""
+
+    SIMPLE = "simple"
+    COMPLEX = "complex"
+
+
 class HMMType(MethylEnum):
     """Supported HMM model types for segmentation."""
 

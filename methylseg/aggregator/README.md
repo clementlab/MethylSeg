@@ -138,3 +138,12 @@ For Slurm, use `ClusterLauncherConfig` with the same launcher inputs plus
 constructed only after the launcher has written its completed task manifests.
 Python configuration objects require a `MethylationStates` member; YAML and
 launch-spec state names are converted to that enum while they are read.
+
+### Shared cohort model training
+
+Set `cohort_training_manifest` to a CSV with exactly
+`sample_id,meth_data_path,resolution` to fit one shared MethylSeg model before
+the target workers run. Every training sample must use the target resolution;
+each receives the configured `max_cpg_per_chrom` cap independently before the
+remaining emissions are pooled. This setting is mutually exclusive with
+`cohort_training_sample` and `cohort_training_model`.

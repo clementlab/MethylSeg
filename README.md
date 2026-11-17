@@ -280,3 +280,26 @@ When reporting a bug, please include:
 ## License
 
 MethylSeg is distributed under the [BSD 3-Clause License](LICENSE.md).
+
+## Regions across missing data
+
+`MethylSegPathway(max_cpg_gap_bp=10_000_000, ...)` splits raw regions when
+consecutive CpG starts on the same chromosome are more than 10 Mb apart.
+The previous region ends at the preceding CpG's end; the next starts at the
+next CpG's start. Cleaning preserves these boundaries through both merge stages.
+The setting does not change HMM fitting or per-CpG state labels.
+
+Set `max_cpg_gap_bp=None` to allow any CpG spacing, or use YAML:
+
+```yaml
+pathway:
+  max_cpg_gap_bp: null  # disable gap splitting; default is 10000000
+```
+
+Positive integers are measured in base pairs; an exact-threshold gap stays
+connected. Zero, negative values, booleans, and non-integers are rejected.
+Older YAML configurations use the 10 Mb default. Genomic exclusions continue
+to apply independently. When cleaning older region files that already span
+gaps, supply `probe_data` to reconstruct boundaries and per-piece statistics;
+region coordinates alone cannot reveal gaps inside an existing region.
+Existing output files and completion markers are not invalidated automatically.

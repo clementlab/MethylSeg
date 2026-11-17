@@ -18,3 +18,5 @@ data/*
 docs/_build/*
 dist/*
 methylseg.egg-info/*
+methylseg/data/*
+tests/*

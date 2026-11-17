@@ -1,7 +1,7 @@
 """Top-level workflow orchestration for preparing, training, segmenting, and exporting."""
 
 from pathlib import Path
-from typing import List, Optional
+from typing import List, Optional, Sequence
 
 import joblib
 import numpy as np
@@ -20,6 +20,7 @@ from .helper_classes import (
     FILES,
     KMeansMethylationModel,
     MethylDataPrep,
+    DefinitionMethod,
     MethylStateAssignmentMethod,
     MethylationStates,
     SampleInfo,
@@ -27,14 +28,26 @@ from .helper_classes import (
 )
 from .data_manager import download_data_files, is_lfs_pointer
 from .utils import resolve_region_overlay_df
+from .region_gaps import validate_max_cpg_gap_bp, missing_gap_masks
 
 
 class MethylSegPathway:
     """High-level API that coordinates preparation, training, and segmentation."""
 
+    @property
+    def max_cpg_gap_bp(self) -> int | None:
+        """Maximum consecutive CpG start spacing; None disables gap boundaries."""
+        return self._max_cpg_gap_bp
+
+    @max_cpg_gap_bp.setter
+    def max_cpg_gap_bp(self, value: int | None) -> None:
+        self._max_cpg_gap_bp = validate_max_cpg_gap_bp(value)
+        if hasattr(self, "segmentor"):
+            self.segmentor.max_cpg_gap_bp = self._max_cpg_gap_bp
+
     @classmethod
     def get_pretrained_model(
-        cls, out_dir, resolution="450k", download_if_missing=False
+        cls, out_dir, resolution="450k", download_if_missing=False, *, genome_build=None
     ):
         """
         Load a packaged pretrained pathway configuration.
@@ -48,6 +61,9 @@ class MethylSegPathway:
         download_if_missing
             If ``True``, download packaged model artifacts when the local files
             are missing or still Git LFS pointers.
+        genome_build
+            Explicit assembly override for a legacy bundle. Without an override,
+            the bundle must declare pathway.genome_build; no build is assumed.
 
         Returns
         -------
@@ -72,7 +88,7 @@ class MethylSegPathway:
                 raise FileNotFoundError(
                     "Pretrained model not found, if you would like to download it, set download_if_missing=True."
                 )
-        model = cls.from_yaml(pretrained_yaml)
+        model = cls.from_yaml(pretrained_yaml, genome_build=genome_build)
         model.set_out_dir(out_dir)
         return model
 
@@ -190,11 +206,17 @@ class MethylSegPathway:
         high_cutoff: float = 0.7,
         window_specs: list[tuple[int, str]] | None = None,
         train_sample_info: SampleInfo | None = None,
+        training_samples: Sequence[SampleInfo] | None = None,
         train_sample_file: str | None = None,
         train_sample_name: str | None = None,
         train_chroms: list[str] | None = None,
         max_cpg_per_chrom: int | None = 50_000,
         state_assignment_method: MethylStateAssignmentMethod = MethylStateAssignmentMethod.KMEANS,
+        definition_method: DefinitionMethod | str | None = None,
+        complex_definition_max_depth: int | None = 4,
+        complex_definition_min_samples_leaf: float | int | None = None,
+        complex_definition_min_leaf_fraction: float | None = None,
+        complex_definition_max_prune_loss: float | None = None,
         out_dir: str = ".",
         random_state: int = 42,
         # TODO: make cluster_space an enum
@@ -207,6 +229,11 @@ class MethylSegPathway:
         merge_gap_bp: int = 100_000,
         merge_with_intermediate: bool = True,
         merge_with_intermediate_gap_bp: int = 100_000,
+        exclude_centromeres: bool = True,
+        exclude_telomeres: bool = False,
+        *,
+        genome_build: str,
+        max_cpg_gap_bp: int | None = 10_000_000,
     ):
         """
         Initialize a complete methylation-state training and segmentation pathway.
@@ -225,8 +252,13 @@ class MethylSegPathway:
             Optional ``(window_size_bp, label)`` specifications for regional
             emission features. Defaults depend on sample resolution.
         train_sample_info
-            Prepared training sample. Provide this or both file-based training
-            arguments.
+            Legacy prepared training sample. It is normalized to a one-element
+            ``training_samples`` sequence.
+        training_samples
+            Ordered prepared samples used to fit one cohort model. This is
+            mutually exclusive with ``train_sample_info`` and file-based
+            training inputs. ``train_sample_info`` remains the first member as
+            a backward-compatible alias after construction.
         train_sample_file
             Path to a methylation table used to prepare the training sample.
         train_sample_name
@@ -237,6 +269,11 @@ class MethylSegPathway:
             Optional cap on CpGs retained per chromosome during training.
         state_assignment_method
             Method used to assign biological states from emission features.
+        definition_method, complex_definition_max_depth, complex_definition_min_samples_leaf,
+        complex_definition_min_leaf_fraction, complex_definition_max_prune_loss
+            Optional settings used only when ``state_assignment_method`` is
+            ``"definition"``. ``None`` selects the simple definition method;
+            complex-definition defaults are resolved only when requested.
         out_dir
             Directory for fitted artifacts, segment outputs, and plots.
         random_state
@@ -250,9 +287,12 @@ class MethylSegPathway:
         hmm_params
             Optional backend-specific HMM configuration mapping.
         min_region_length
-            Minimum genomic length in base pairs for retained regions.
+            Minimum genomic length in base pairs for retained regions after cleaning.
         min_region_cpgs
-            Minimum CpG count required for retained regions.
+            Minimum CpG count required for retained clean regions.
+        max_cpg_gap_bp
+            Maximum consecutive CpG start spacing in bases (default 10 Mb).
+            None allows regions to span any missing-data gap.
         merge_gap_bp
             Maximum gap in base pairs for merging adjacent same-state regions.
         merge_with_intermediate
@@ -261,29 +301,66 @@ class MethylSegPathway:
         merge_with_intermediate_gap_bp
             Maximum intermediate-state gap in base pairs permitted for that
             merge operation.
+        exclude_centromeres, exclude_telomeres
+            Remove packaged assembly-matched intervals from cleaned calls only.
+            Centromeres default on in v2; telomeres default off. Exclusions split
+            calls and are hard barriers to both cleaning merge stages.
+        genome_build
+            Required assembly of the input coordinates (hg38/GRCh38 or
+            hg19/GRCh37). Never inferred or defaulted, even if masking is off.
         """
+        from .genomic_exclusions import validate_genome_build
+        genome_build = validate_genome_build(genome_build)
+        self.max_cpg_gap_bp = max_cpg_gap_bp
         self.window_specs = window_specs
         self.n_states = n_states
         self.int_low_cutoff = int_low_cutoff
         self.int_high_cutoff = int_high_cutoff
         self.high_cutoff = high_cutoff
         self.min_region_length = min_region_length
-        if (
-            train_sample_info is None
-            and train_sample_file is not None
-            and train_sample_name is not None
+        file_training_supplied = (
+            train_sample_file is not None or train_sample_name is not None
+        )
+        if file_training_supplied and (
+            train_sample_file is None or train_sample_name is None
         ):
+            raise ValueError(
+                "train_sample_file and train_sample_name must be provided together."
+            )
+        sources = sum(
+            value is not None
+            for value in (training_samples, train_sample_info)
+        ) + int(file_training_supplied)
+        if sources != 1:
+            raise ValueError(
+                "Provide exactly one of training_samples, train_sample_info, or "
+                "train_sample_file with train_sample_name."
+            )
+        if training_samples is not None:
+            self.training_samples = tuple(training_samples)
+            if not self.training_samples:
+                raise ValueError("training_samples must contain at least one sample.")
+            if any(not isinstance(sample, SampleInfo) for sample in self.training_samples):
+                raise TypeError("training_samples must contain only SampleInfo objects.")
+            sample_ids = [sample.sample_id for sample in self.training_samples]
+            if len(sample_ids) != len(set(sample_ids)):
+                raise ValueError("training_samples sample IDs must be unique.")
+            resolutions = {sample.resolution for sample in self.training_samples}
+            if None in resolutions or len(resolutions) != 1:
+                raise ValueError(
+                    "training_samples must have one explicit shared resolution."
+                )
+            self.train_sample_info = self.training_samples[0]
+        elif file_training_supplied:
             self.train_sample_info, _ = self.prepare_sample_info(
                 sample_name=train_sample_name,
                 sample_file=train_sample_file,
                 resolution="auto",
             )
-        elif train_sample_info is not None:
-            self.train_sample_info = train_sample_info
+            self.training_samples = (self.train_sample_info,)
         else:
-            raise ValueError(
-                "Must provide either train_sample_info or train_sample_file and train_sample_name."
-            )
+            self.train_sample_info = train_sample_info
+            self.training_samples = (self.train_sample_info,)
         self.train_sample_file = (
             str(train_sample_file) if train_sample_file is not None else None
         )
@@ -292,6 +369,11 @@ class MethylSegPathway:
             if train_sample_name is not None
             else str(self.train_sample_info.sample_id)
         )
+        if len(self.training_samples) > 1:
+            self.multisample_training = {
+                "sample_ids": [sample.sample_id for sample in self.training_samples],
+                "resolution": self.training_samples[0].resolution,
+            }
         if self.window_specs is None:
             if self.train_sample_info.resolution == "wgbs":
                 self.window_specs = [
@@ -342,10 +424,26 @@ class MethylSegPathway:
         self.state_assignment_method = MethylStateAssignmentMethod(
             state_assignment_method
         )
+        self.definition_method = (
+            None
+            if definition_method is None
+            else (
+                DefinitionMethod(definition_method)
+                if self.state_assignment_method == MethylStateAssignmentMethod.DEFINITION
+                else definition_method
+            )
+        )
+        self.complex_definition_max_depth = complex_definition_max_depth
+        self.complex_definition_min_samples_leaf = complex_definition_min_samples_leaf
+        self.complex_definition_min_leaf_fraction = complex_definition_min_leaf_fraction
+        self.complex_definition_max_prune_loss = complex_definition_max_prune_loss
         self.min_region_cpgs = int(min_region_cpgs)
         self.merge_gap_bp = int(merge_gap_bp)
         self.merge_with_intermediate = bool(merge_with_intermediate)
         self.merge_with_intermediate_gap_bp = int(merge_with_intermediate_gap_bp)
+        self.exclude_centromeres = bool(exclude_centromeres)
+        self.exclude_telomeres = bool(exclude_telomeres)
+        self.genome_build = str(genome_build)
         
         self._init_hmm()
 
@@ -371,7 +469,9 @@ class MethylSegPathway:
         self.segmentor = MethylSegmentor(
             analyzer=self.analyzer,
             hmm_model=self.hmm_model,
+            max_cpg_gap_bp=self.max_cpg_gap_bp,
             state_assignment_method=self.state_assignment_method,
+            definition_method=self.definition_method,
             out_dir=out_dir,
             random_state=self.random_state,
         )
@@ -590,33 +690,81 @@ class MethylSegPathway:
         force_optimize_rules
             If ``True``, rerun rule optimization even when KMeans labeling is the
             active state-assignment method.
+        Returns
+        -------
+        dict
+            Fitted training artifacts. ``rule_optimization`` is present when
+            rule cutoffs were optimized and contains the cutoff mapping,
+            metrics, labels, and search history.
         """
-        model, train_meth, train_emissions, train_pca, train_labels = (
-            self.assigner.train_kmeans_for_sample(
+        if self.training_samples is None:
+            raise ValueError(
+                "This restored cohort model has no training_samples inputs. "
+                "Refit through the cohort training manifest."
+            )
+        if len(self.training_samples) == 1:
+            train_result = self.assigner.train_kmeans_for_sample(
                 sample_info=self.train_sample_info,
                 train_chroms=self.train_chroms,
                 windows_to_use=None,
                 max_cpg_per_chrom=self.max_cpg_per_chrom,
             )
+        else:
+            train_result = self.assigner.train_kmeans_for_samples(
+                self.training_samples,
+                train_chroms=self.train_chroms,
+                windows_to_use=None,
+                max_cpg_per_chrom=self.max_cpg_per_chrom,
+            )
+        model, train_meth, train_emissions, train_pca, train_labels = train_result
+        result = {
+            "model": model,
+            "train_meth": train_meth,
+            "train_emissions": train_emissions,
+            "train_pca_scores": train_pca,
+            "train_labels": train_labels,
+        }
+        resolved_definition_method = (
+            DefinitionMethod.SIMPLE
+            if getattr(self, "definition_method", None) is None
+            else self.definition_method
         )
         if (
+            self.state_assignment_method == MethylStateAssignmentMethod.DEFINITION
+            and resolved_definition_method == DefinitionMethod.COMPLEX
+        ):
+            artifact = self.analyzer.fit_complex_definition(
+                max_depth=self.complex_definition_max_depth,
+                min_samples_leaf=self.complex_definition_min_samples_leaf,
+                random_state=self.random_state,
+                min_leaf_fraction=self.complex_definition_min_leaf_fraction,
+                max_prune_loss=self.complex_definition_max_prune_loss,
+            )
+            result["complex_definition"] = artifact
+        elif (
             self.state_assignment_method.value
             != MethylStateAssignmentMethod.KMEANS.value
             or force_optimize_rules
         ):
-            self.analyzer.optimize_rule_params_random()
+            cutoffs, metrics, labels, history = self.analyzer.optimize_rule_params_random()
+            result["rule_optimization"] = {
+                "cutoffs": cutoffs,
+                "metrics": metrics,
+                "labels": labels,
+                "history": history,
+            }
+        return result
 
     def generate_regions(
         self,
         sample_info: SampleInfo | None = None,
         chrom: str = "chr1",
-        min_probes: int = 3,
         sample_name: str | None = None,
         sample_file: str | None = None,
         force_resegment: bool = False,
     ) -> pd.DataFrame:
         """
-        Segment one chromosome and return its length-filtered regions.
+        Segment one chromosome and return its raw contiguous HMM-state regions.
 
         Parameters
         ----------
@@ -625,9 +773,6 @@ class MethylSegPathway:
             training sample or resolves ``sample_name``/``sample_file``.
         chrom
             Chromosome to segment.
-        min_probes
-            Minimum number of probes required per raw contiguous region before
-            downstream length filtering.
         sample_name, sample_file
             Alternate inputs used to prepare ``sample_info`` on the fly.
         force_resegment
@@ -636,8 +781,7 @@ class MethylSegPathway:
         Returns
         -------
         pandas.DataFrame
-            Region table for the requested chromosome after applying
-            ``min_region_length`` filtering. BED files are also written to
+            Region table for the requested chromosome. BED files are also written to
             ``out_dir`` as a side effect.
         """
         sample_info = self._resolve_sample_info(
@@ -649,15 +793,10 @@ class MethylSegPathway:
             sample_info=sample_info, chrom=chrom, force_resegment=force_resegment
         )
         regions_df = self.segmentor.create_regions(
-            state_col="hmm_state_readable", region_min_probes=min_probes
+            state_col="hmm_state_readable", region_min_probes=1
         )
         bed_path = f"{self.out_dir}/segments_{chrom}_{sample_info.sample_id}.bed"
         self.segmentor.regions_to_bed(bed_path, separate_beds_by_state=True)
-        regions_df = regions_df.copy()
-        regions_df["length"] = regions_df["end"] - regions_df["start"]
-        regions_df = regions_df.loc[
-            regions_df["length"] > self.min_region_length
-        ].copy()
         return regions_df
 
     @staticmethod
@@ -781,7 +920,8 @@ class MethylSegPathway:
             same_chrom = str(record["CpG_chrm"]) == str(current["CpG_chrm"])
             current_end = int(current["end"])
             record_start = int(record["start"])
-            if same_chrom and (record_start - current_end) <= int(gap_bp):
+            same_block = record.get("exclusion_block", 0) == current.get("exclusion_block", 0)
+            if same_chrom and same_block and (record_start - current_end) <= int(gap_bp):
                 current["end"] = max(current_end, int(record["end"]))
                 current["beta_weighted_sum"] = float(
                     current["beta_weighted_sum"]
@@ -864,6 +1004,7 @@ class MethylSegPathway:
 
             first_row = block_rows[0]
             record = {
+                "exclusion_block": getattr(first_row, "exclusion_block", 0),
                 "CpG_chrm": str(first_row.CpG_chrm),
                 "start": int(first_row.start),
                 "end": int(first_row.end),
@@ -902,6 +1043,8 @@ class MethylSegPathway:
 
         mergeable_states = (state, MethylationStates.INTERMEDIATE)
         for row in chrom_rows:
+            if block_rows and getattr(row, "exclusion_block", 0) != getattr(block_rows[-1], "exclusion_block", 0):
+                flush_block()
             if row.state in mergeable_states:
                 if block_rows:
                     gap_bp = int(row.start) - int(block_rows[-1].end)
@@ -980,6 +1123,10 @@ class MethylSegPathway:
         merge_with_intermediate: bool | None = None,
         merge_with_intermediate_gap_bp: int | None = None,
         generate_summary_files: bool = True,
+        exclude_centromeres: bool | None = None,
+        exclude_telomeres: bool | None = None,
+        genome_build: str | None = None,
+        probe_data: pd.DataFrame | None = None,
     ) -> tuple[dict[MethylationStates, Path], Path]:
         """
         Build cleaned region tracks from the raw segmentation and write them to disk.
@@ -1022,6 +1169,13 @@ class MethylSegPathway:
             Maximum gap allowed when a state merges through ``Intermediate``.
         generate_summary_files
             When ``chrom`` is ``None``, also build combined cleaned summary files.
+        exclude_centromeres, exclude_telomeres, genome_build
+            Override pathway exclusion defaults for this cleaning pass. Splitting
+            happens before merging and before minimum-length/probe filtering.
+        probe_data
+            Original sample CpG table, required to recalculate mean beta and probe
+            counts in split fragments. Never apportioned by genomic length. When
+            omitted, the matching sample's cached segmentation tables are used.
 
         Returns
         -------
@@ -1128,6 +1282,36 @@ class MethylSegPathway:
         clean_df = clean_df.sort_values(["CpG_chrm", "start", "end"]).reset_index(
             drop=True
         )
+        # Split BEFORE either merging stage. Block identities survive both the
+        # intermediate-expansion and ordinary distance-merge passes; even a huge
+        # merge distance must never reconnect opposite sides of an exclusion.
+        from .genomic_exclusions import load_exclusions, split_regions
+        masks = load_exclusions(
+            genome_build=getattr(self, "genome_build", None) if genome_build is None else genome_build,
+            exclude_centromeres=getattr(self, "exclude_centromeres", True) if exclude_centromeres is None else exclude_centromeres,
+            exclude_telomeres=getattr(self, "exclude_telomeres", False) if exclude_telomeres is None else exclude_telomeres,
+        )
+        if probe_data is None:
+            segmentor = getattr(self, "segmentor", None)
+            cached = getattr(segmentor, "segment_results", {}).get(resolved_sample_id, {})
+            tables = [entry['meth_data'] for entry in cached.values() if 'meth_data' in entry]
+            if tables:
+                probe_data = pd.concat(tables, ignore_index=True)
+        threshold = getattr(self, "max_cpg_gap_bp", 10_000_000)
+        for chrom_name, intervals in missing_gap_masks(probe_data, threshold).items():
+            masks.setdefault(chrom_name, []).extend(intervals)
+        clean_df = split_regions(clean_df, masks, probe_data=probe_data)
+        if threshold is not None:
+            # Raw native tables retain exact gap boundaries even without probes.
+            # Loaded BED tables can reconstruct them from probe_data above.
+            gap_blocks = clean_df.get("gap_block", pd.Series(0, index=clean_df.index))
+            # Also keep obviously separated external region tables apart when
+            # their original probe coordinates are unavailable.
+            previous_end = clean_df.groupby("CpG_chrm", sort=False)["end"].shift()
+            external_blocks = (clean_df["start"] - previous_end > threshold).cumsum()
+            clean_df["exclusion_block"] = list(zip(
+                clean_df["exclusion_block"], gap_blocks, external_blocks
+            ))
 
         # Decide which chromosomes need outputs. In chromosome-scoped mode we still
         # emit empty files even if the selected chromosome has no rows after filtering.
@@ -1178,6 +1362,7 @@ class MethylSegPathway:
                     continue
                 raw_records_by_state[row.state].append(
                     {
+                        "exclusion_block": getattr(row, "exclusion_block", 0),
                         "CpG_chrm": str(row.CpG_chrm),
                         "start": int(row.start),
                         "end": int(row.end),
@@ -1412,7 +1597,7 @@ class MethylSegPathway:
         self,
         sample_info: SampleInfo | None = None,
         chroms: Optional[List[str]] = None,
-        min_probes: int = 5,
+        min_probes: int | None = None,
         force_resegment: bool = False,
         clean_regions: bool = True,
     ) -> list[str]:
@@ -1427,13 +1612,15 @@ class MethylSegPathway:
         chroms
             Optional chromosome subset. When omitted, uses every chromosome
             present in the sample.
-        min_probes
-            Minimum probes required per raw contiguous region.
         force_resegment
             If ``True``, ignore cached HMM results and rerun segmentation.
         clean_regions
             If ``True``, run cleaned-region postprocessing and emit cleaned
             summary files alongside raw summaries.
+        min_probes
+            Optional minimum CpG count retained for a cleaned region after
+            merging. Retained for backward compatibility; raw regions are
+            unfiltered.
 
         Returns
         -------
@@ -1463,7 +1650,7 @@ class MethylSegPathway:
             )
             regions_df = self.segmentor.create_regions(
                 state_col="hmm_state_readable",
-                region_min_probes=min_probes,
+                region_min_probes=1,
             )
             self._write_regions_by_chrom_and_state(
                 regions_df=regions_df,
@@ -1477,6 +1664,8 @@ class MethylSegPathway:
                     sample_id=filtered_sample_info.sample_id,
                     chrom=None,
                     generate_summary_files=False,
+                    min_cpgs=min_probes,
+                    probe_data=filtered_sample_info.meth_data,
                 )
             return self._write_summary_files(
                 raw_regions_df=regions_df,
@@ -1491,7 +1680,6 @@ class MethylSegPathway:
                 self.generate_regions(
                     sample_info=filtered_sample_info,
                     chrom=chrom,
-                    min_probes=min_probes,
                     force_resegment=force_resegment,
                 )
             )
@@ -1507,6 +1695,8 @@ class MethylSegPathway:
                 sample_id=filtered_sample_info.sample_id,
                 chrom=None,
                 generate_summary_files=False,
+                min_cpgs=min_probes,
+                probe_data=filtered_sample_info.meth_data,
             )
         return self._write_summary_files(
             raw_regions_df=combined_regions_df,
@@ -1519,7 +1709,7 @@ class MethylSegPathway:
         self,
         sample_info: SampleInfo | None = None,
         chroms: Optional[List[str]] = None,
-        min_probes: int = 3,
+        min_probes: int | None = None,
         fit: bool = True,
         force_optimize_rules: bool = False,
         force_resegment: bool = False,
@@ -1537,7 +1727,7 @@ class MethylSegPathway:
         chroms
             Optional chromosome subset to process.
         min_probes
-            Minimum probes required per raw contiguous region.
+            Minimum CpG count retained for a cleaned region after merging.
         fit
             If ``True``, fit the pathway on its configured training sample
             before segmentation. Set to ``False`` when applying a pathway
@@ -1949,7 +2139,7 @@ class MethylSegPathway:
         config.to_yaml(yaml_path)
 
     @classmethod
-    def from_yaml(cls, yaml_path: str, load_learned: bool = True):
+    def from_yaml(cls, yaml_path: str, load_learned: bool = True, *, genome_build: str | None = None):
         """
         Reconstruct MethylSegPathway from YAML file.
 
@@ -1960,12 +2150,19 @@ class MethylSegPathway:
         load_learned
             If ``True``, restore persisted learned models and cached artifacts
             referenced by the YAML.
+        genome_build
+            Explicit assembly override, required for legacy YAMLs without
+            pathway.genome_build. Otherwise the YAML must declare its assembly.
 
         Returns
         -------
         MethylSegPathway
             Reconstructed pathway configured from the YAML bundle.
         """
-        return MethylSegConfig.from_yaml(yaml_path).build_pathway(
+        config = MethylSegConfig.from_yaml(yaml_path)
+        if genome_build is not None:
+            from .genomic_exclusions import validate_genome_build
+            config.config.setdefault('pathway', {})['genome_build'] = validate_genome_build(genome_build)
+        return config.build_pathway(
             load_learned=load_learned,
         )

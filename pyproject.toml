@@ -10,6 +10,7 @@ readme = "README.md"
 requires-python = ">=3.10"
 dependencies = [
   "cthmm>=0.0.3",
+  "graphviz>=0.20",
   "hmmlearn>=0.3.3",
   "joblib>=1.5",
   "matplotlib>=3.8",
@@ -51,6 +52,9 @@ include-package-data = true
 
 [tool.setuptools.packages.find]
 include = ["methylseg*"]
+
+[tool.setuptools.package-data]
+methylseg = ["data/genomic_exclusions/*.bed", "data/genomic_exclusions/*.json", "data/genomic_exclusions/*.md", "data/genomic_exclusions/*.tsv"]
 
 [project.scripts]
 methylseg = "methylseg.cli:main"

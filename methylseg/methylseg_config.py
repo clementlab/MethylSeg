@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from enum import Enum
 from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Sequence
 
 import joblib
 import numpy as np
@@ -12,6 +12,7 @@ import pandas as pd
 import yaml
 
 from .helper_classes import (
+    DefinitionMethod,
     MethylStateAssignmentMethod,
     MethylationStates,
     SampleInfo,
@@ -352,6 +353,8 @@ class MethylSegConfig:
             written during serialization.
         """
 
+        from .genomic_exclusions import validate_genome_build
+        genome_build = validate_genome_build(getattr(inst, "genome_build", None))
         base_dir = Path(out_dir or inst.out_dir or ".").resolve()
         base_dir.mkdir(parents=True, exist_ok=True)
 
@@ -371,7 +374,13 @@ class MethylSegConfig:
             "n_pca": getattr(inst, "n_pca", None),
             "min_region_length": getattr(inst, "min_region_length", None),
             "min_region_cpgs": getattr(inst, "min_region_cpgs", None),
+            "max_cpg_gap_bp": getattr(inst, "max_cpg_gap_bp", 10_000_000),
             "merge_gap_bp": getattr(inst, "merge_gap_bp", None),
+            "merge_with_intermediate": getattr(inst, "merge_with_intermediate", True),
+            "merge_with_intermediate_gap_bp": getattr(inst, "merge_with_intermediate_gap_bp", 100_000),
+            "exclude_centromeres": getattr(inst, "exclude_centromeres", True),
+            "exclude_telomeres": getattr(inst, "exclude_telomeres", False),
+            "genome_build": genome_build,
         }
 
         cfg["state_assigner"] = {
@@ -436,6 +445,27 @@ class MethylSegConfig:
 
         cfg["segmenter"] = {
             "state_assignment_method": state_assignment_method,
+            "definition_method": (
+                None
+                if getattr(inst, "definition_method", None) is None
+                else getattr(
+                    getattr(inst, "definition_method"),
+                    "value",
+                    getattr(inst, "definition_method"),
+                )
+            ),
+            "complex_definition_max_depth": getattr(
+                inst, "complex_definition_max_depth", None
+            ),
+            "complex_definition_min_samples_leaf": getattr(
+                inst, "complex_definition_min_samples_leaf", None
+            ),
+            "complex_definition_min_leaf_fraction": getattr(
+                inst, "complex_definition_min_leaf_fraction", None
+            ),
+            "complex_definition_max_prune_loss": getattr(
+                inst, "complex_definition_max_prune_loss", None
+            ),
             "out_dir": ".",
         }
 
@@ -487,6 +517,13 @@ class MethylSegConfig:
             "name": getattr(inst, "train_sample_name", None),
             "file": getattr(inst, "train_sample_file", None),
         }
+
+        multisample_training = getattr(inst, "multisample_training", None)
+        if multisample_training is not None:
+            cfg["multisample_training"] = {
+                "sample_ids": list(multisample_training["sample_ids"]),
+                "resolution": multisample_training["resolution"],
+            }
 
         models_saved = {}
 
@@ -555,6 +592,21 @@ class MethylSegConfig:
             models_saved["n_pca"] = getattr(model, "n_pca", None)
 
         cfg["models"] = models_saved
+
+        if (
+            include_learned
+            and state_assignment_method == MethylStateAssignmentMethod.DEFINITION.value
+            and getattr(getattr(inst, "definition_method", None), "value", None)
+            == DefinitionMethod.COMPLEX.value
+            and hasattr(inst.analyzer, "complex_definition")
+            and hasattr(inst.analyzer, "complex_definition_tree")
+        ):
+            tree_path = model_dir / "complex_definition_tree.joblib"
+            joblib.dump(inst.analyzer.complex_definition_tree, tree_path)
+            cfg["complex_definition"] = {
+                **inst.analyzer.complex_definition,
+                "tree_path": cls._relativize_artifact_path(base_dir, tree_path),
+            }
 
         #
         # TRAINING ARTIFACTS
@@ -635,6 +687,15 @@ class MethylSegConfig:
                     pca_scores_path,
                 )
 
+            state_scores = getattr(inst.assigner, "_state_scores", None)
+            if isinstance(state_scores, pd.DataFrame):
+                state_scores_path = training_dir / "state_scores.feather"
+                MethylSegConfig._write_feather_table(state_scores, state_scores_path)
+                training_cfg["state_scores"] = cls._relativize_artifact_path(
+                    base_dir,
+                    state_scores_path,
+                )
+
             if training_cfg:
                 cfg["training_artifacts"] = training_cfg
 
@@ -706,7 +767,13 @@ class MethylSegConfig:
 
         return config
 
-    def build_pathway(self, load_learned: bool = True):
+    def build_pathway(
+        self,
+        load_learned: bool = True,
+        *,
+        train_sample_info: SampleInfo | None = None,
+        training_samples: Sequence[SampleInfo] | None = None,
+    ):
         """
         Reconstruct a ``MethylSegPathway`` from the serialized config.
 
@@ -716,6 +783,14 @@ class MethylSegConfig:
             If ``True``, attempt to restore saved training artifacts, learned
             KMeans preprocessing components, and persisted tables referenced by
             the config.
+        train_sample_info
+            Optional sample to use while constructing the pathway. This lets
+            per-sample launchers use a parameter-only configuration without a
+            serialized training sample.
+        training_samples
+            Optional ordered cohort used while constructing a shared model.
+            This is passed directly to ``MethylSegPathway`` and is mutually
+            exclusive with ``train_sample_info``.
 
         Returns
         -------
@@ -741,6 +816,10 @@ class MethylSegConfig:
             raise ValueError("Serialized methylseg config must be a YAML mapping.")
 
         pathway_cfg = cfg.get("pathway", {})
+        if not isinstance(pathway_cfg, dict):
+            raise ValueError("pathway must be a mapping with an explicit genome_build")
+        from .genomic_exclusions import validate_genome_build
+        genome_build = validate_genome_build(pathway_cfg.get("genome_build"))
         state_assigner_cfg = cfg.get("state_assigner", {})
         hmm_cfg = cfg.get("hmm", {})
         segmenter_cfg = cfg.get("segmenter", {})
@@ -804,6 +883,31 @@ class MethylSegConfig:
             "state_assignment_method",
             MethylStateAssignmentMethod.DEFINITION.value,
         )
+        removed_complex_keys = {
+            "definition_n_pca",
+            "expanded_definitions",
+            "min_weight_threshold",
+        }.intersection(segmenter_cfg)
+        if removed_complex_keys:
+            raise ValueError(
+                "PCA complex-definition settings were removed: "
+                f"{sorted(removed_complex_keys)}. Refit with direct feature-threshold "
+                "complex definitions using complex_definition_max_depth and "
+                "complex_definition_min_samples_leaf."
+            )
+        definition_method = segmenter_cfg.get("definition_method")
+        complex_definition_max_depth = segmenter_cfg.get(
+            "complex_definition_max_depth", 4
+        )
+        complex_definition_min_samples_leaf = segmenter_cfg.get(
+            "complex_definition_min_samples_leaf"
+        )
+        complex_definition_min_leaf_fraction = segmenter_cfg.get(
+            "complex_definition_min_leaf_fraction"
+        )
+        complex_definition_max_prune_loss = segmenter_cfg.get(
+            "complex_definition_max_prune_loss"
+        )
 
         yaml_dir = (
             self.source_path.parent
@@ -841,9 +945,20 @@ class MethylSegConfig:
         # TRAIN SAMPLE
         #
 
-        train_sample_info = None
-
-        if "train_sample_info" in cfg:
+        if train_sample_info is not None and training_samples is not None:
+            raise ValueError(
+                "train_sample_info and training_samples are mutually exclusive."
+            )
+        supplied_training_samples = training_samples is not None
+        if supplied_training_samples:
+            training_samples = tuple(training_samples)
+            if not training_samples:
+                raise ValueError("training_samples must contain at least one sample.")
+        if (
+            not supplied_training_samples
+            and train_sample_info is None
+            and "train_sample_info" in cfg
+        ):
 
             sample_cfg = cfg["train_sample_info"]
 
@@ -869,13 +984,21 @@ class MethylSegConfig:
                 meth_data=meth_df,
             )
 
-        else:
+        elif not supplied_training_samples and train_sample_info is None:
             raise ValueError("Serialized config is missing " "'train_sample_info'.")
 
         train_sample_cfg = cfg.get("train_sample", {})
 
-        train_sample_name = train_sample_cfg.get("name")
-        train_sample_file = train_sample_cfg.get("file")
+        train_sample_name = (
+            None
+            if train_sample_info is not None or supplied_training_samples
+            else train_sample_cfg.get("name")
+        )
+        train_sample_file = (
+            None
+            if train_sample_info is not None or supplied_training_samples
+            else train_sample_cfg.get("file")
+        )
 
         #
         # BUILD INSTANCE
@@ -887,7 +1010,8 @@ class MethylSegConfig:
             int_high_cutoff=int_high_cutoff,
             high_cutoff=high_cutoff,
             window_specs=window_specs,
-            train_sample_info=train_sample_info,
+            train_sample_info=(None if supplied_training_samples else train_sample_info),
+            training_samples=training_samples,
             train_sample_file=train_sample_file,
             train_sample_name=train_sample_name,
             train_chroms=train_chroms,
@@ -900,8 +1024,19 @@ class MethylSegConfig:
             hmm_params=loaded_hmm_params,
             min_region_length=min_region_length,
             min_region_cpgs=min_region_cpgs,
+            max_cpg_gap_bp=pathway_cfg.get("max_cpg_gap_bp", 10_000_000),
             merge_gap_bp=merge_gap_bp,
+            merge_with_intermediate=pathway_cfg.get("merge_with_intermediate", True),
+            merge_with_intermediate_gap_bp=pathway_cfg.get("merge_with_intermediate_gap_bp", 100_000),
+            exclude_centromeres=pathway_cfg.get("exclude_centromeres", True),
+            exclude_telomeres=pathway_cfg.get("exclude_telomeres", False),
+            genome_build=genome_build,
             state_assignment_method=state_assignment_method,
+            definition_method=definition_method,
+            complex_definition_max_depth=complex_definition_max_depth,
+            complex_definition_min_samples_leaf=complex_definition_min_samples_leaf,
+            complex_definition_min_leaf_fraction=complex_definition_min_leaf_fraction,
+            complex_definition_max_prune_loss=complex_definition_max_prune_loss,
         )
 
         #
@@ -1066,12 +1201,46 @@ class MethylSegConfig:
                     allow_pickle=False,
                 )
 
+            state_scores_path_raw = training_cfg.get("state_scores")
+            if state_scores_path_raw is not None:
+                state_scores_path = self._resolve_artifact_path(
+                    yaml_dir,
+                    state_scores_path_raw,
+                    field_name="training_artifacts.state_scores",
+                )
+                inst.assigner._state_scores = pd.read_feather(state_scores_path)
+
         #
         # RESTORE STATE
         #
 
         inst.assigner.train_sample_info = inst.train_sample_info
         inst.assigner.train_sample = inst.train_sample_name
+
+        multisample_training = cfg.get("multisample_training")
+        if multisample_training is not None:
+            if not isinstance(multisample_training, dict):
+                raise ValueError("multisample_training must be a dictionary.")
+            sample_ids = multisample_training.get("sample_ids")
+            resolution = multisample_training.get("resolution")
+            if (
+                not isinstance(sample_ids, list)
+                or not sample_ids
+                or any(not isinstance(sample_id, str) or not sample_id for sample_id in sample_ids)
+                or not isinstance(resolution, str)
+                or not resolution
+            ):
+                raise ValueError(
+                    "multisample_training requires non-empty sample_ids and resolution."
+                )
+            inst.multisample_training = {
+                "sample_ids": list(sample_ids),
+                "resolution": resolution,
+            }
+            # The serialized first sample is a compatibility anchor for model
+            # loading and segmentation, not a replacement for the full cohort.
+            # A caller must supply the manifest again to refit this model.
+            inst.training_samples = None
 
         if "state_cutoffs" in cfg:
 
@@ -1082,6 +1251,40 @@ class MethylSegConfig:
             inst.analyzer.cutoffs_set_manually = bool(
                 cfg.get("state_cutoffs_set_manually", False)
             )
+
+        if "complex_definition" in cfg:
+            if inst.state_assignment_method != MethylStateAssignmentMethod.DEFINITION:
+                raise ValueError(
+                    "complex_definition is only valid with definition state assignment."
+                )
+            if inst.definition_method not in (DefinitionMethod.COMPLEX,):
+                raise ValueError(
+                    "complex_definition requires segmenter.definition_method='complex'."
+                )
+            complex_definition = cfg["complex_definition"]
+            if not isinstance(complex_definition, dict):
+                raise ValueError("complex_definition must be a dictionary.")
+            if complex_definition.get("kind") != "feature_threshold_tree":
+                raise ValueError(
+                    "PCA complex-definition artifacts are no longer supported; refit "
+                    "with direct feature-threshold complex definitions."
+                )
+            if not load_learned:
+                raise ValueError(
+                    "Complex definition loading requires load_learned=True to load its tree."
+                )
+            tree_path = complex_definition.get("tree_path")
+            if not tree_path:
+                raise ValueError("complex_definition is missing its tree_path artifact.")
+            inst.analyzer.complex_definition_tree = joblib.load(
+                self._resolve_artifact_path(
+                    yaml_dir, tree_path, field_name="complex_definition.tree_path"
+                )
+            )
+            inst.analyzer.complex_definition = {
+                key: value for key, value in complex_definition.items()
+                if key != "tree_path"
+            }
 
         inst._loaded_config = cfg
 
@@ -1096,16 +1299,27 @@ class MethylSegConfig:
     ):
         """Build this configuration for a specific multisample worker input.
 
-        Serialized configurations retain their original training sample. This
-        helper preserves all configured parameters but replaces that sample
-        with the manifest sample before fitting or applying the pathway.
+        This helper preserves all configured parameters while constructing the
+        pathway directly with the manifest sample as its training sample.
         """
-        pathway = self.build_pathway(load_learned=load_learned)
-        pathway.train_sample_info = sample_info
-        pathway.train_sample_name = str(sample_info.sample_id)
-        pathway.train_sample_file = None
-        pathway.assigner.train_sample_info = sample_info
-        pathway.assigner.train_sample = str(sample_info.sample_id)
-        pathway.segmentor.default_sample_info = sample_info
+        pathway = self.build_pathway(
+            load_learned=load_learned,
+            train_sample_info=sample_info,
+        )
+        pathway.set_out_dir(out_dir)
+        return pathway
+
+    def build_pathway_for_samples(
+        self,
+        training_samples: Sequence[SampleInfo],
+        out_dir: str | Path,
+        *,
+        load_learned: bool = False,
+    ):
+        """Build this configuration around one constructor-owned cohort."""
+        pathway = self.build_pathway(
+            load_learned=load_learned,
+            training_samples=training_samples,
+        )
         pathway.set_out_dir(out_dir)
         return pathway

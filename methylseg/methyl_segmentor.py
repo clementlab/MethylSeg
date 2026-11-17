@@ -12,11 +12,13 @@ from .utils import (
     resolve_overlay_plot_args,
 )
 from .helper_classes import (
+    DefinitionMethod,
     MethylStateAssignmentMethod,
     MethylationStates,
     SampleInfo,
 )
 from .methylseg_hmm import MethylSegHMM
+from .region_gaps import validate_max_cpg_gap_bp
 from .methyl_state_analyzer import MethylStateAnalyzer
 
 
@@ -32,8 +34,10 @@ class MethylSegmentor:
         analyzer: MethylStateAnalyzer,
         hmm_model: MethylSegHMM,
         state_assignment_method: MethylStateAssignmentMethod = MethylStateAssignmentMethod.DEFINITION,
+        definition_method: DefinitionMethod | str | None = None,
         out_dir=".",
         random_state: int = 42,
+        max_cpg_gap_bp: int | None = 10_000_000,
     ):
         """
         Initialize the segmentor with state-assignment and HMM backends.
@@ -46,15 +50,30 @@ class MethylSegmentor:
             Configured HMM backend used to smooth state observations.
         state_assignment_method
             Strategy used to obtain state labels before segmentation.
+        definition_method
+            Optional rule family when ``state_assignment_method`` is
+            ``definition``. ``None`` resolves to the legacy simple rules.
         out_dir
             Directory for segmentation artifacts and plot outputs.
         random_state
             Random seed used by stochastic segmentation operations.
+        max_cpg_gap_bp
+            Maximum consecutive CpG start spacing in bases; None disables splitting.
         """
+        self.max_cpg_gap_bp = validate_max_cpg_gap_bp(max_cpg_gap_bp)
         self.analyzer = analyzer
         self.hmm_model = hmm_model
         self.state_assignment_method = MethylStateAssignmentMethod(
             state_assignment_method
+        )
+        self.definition_method = (
+            None
+            if definition_method is None
+            else (
+                DefinitionMethod(definition_method)
+                if self.state_assignment_method == MethylStateAssignmentMethod.DEFINITION
+                else definition_method
+            )
         )
         self.out_dir = out_dir
         self.random_state = random_state
@@ -196,11 +215,18 @@ class MethylSegmentor:
             self.state_assignment_method.value
             == MethylStateAssignmentMethod.DEFINITION.value
         ):
-            states = self.analyzer.define_states_by_rules(
-                sample_info=sample_info,
-                chrom=chrom,
-                sample_emissions=emissions_df,
-            )
+            if self.definition_method in (None, DefinitionMethod.SIMPLE):
+                states = self.analyzer.define_states_by_rules(
+                    sample_info=sample_info,
+                    chrom=chrom,
+                    sample_emissions=emissions_df,
+                )
+            else:
+                states = self.analyzer.define_states_by_complex_rules(
+                    sample_info=sample_info,
+                    chrom=chrom,
+                    sample_emissions=emissions_df,
+                )
         elif (
             self.state_assignment_method.value
             == MethylStateAssignmentMethod.KMEANS.value
@@ -310,7 +336,11 @@ class MethylSegmentor:
 
     def create_regions(self, state_col="hmm_state_readable", region_min_probes=1):
         """
-        Create regions (start, end) for contiguous segments of the same state.
+        Create same-state regions, splitting gaps above ``max_cpg_gap_bp``.
+
+        Gap distances use consecutive CpG starts in chromosome/coordinate order.
+        A gap equal to the threshold stays connected; None disables gap splitting.
+        ``gap_block`` preserves hard boundaries through subsequent cleaning.
 
         Parameters
         ----------
@@ -323,13 +353,16 @@ class MethylSegmentor:
         Returns
         -------
         regions_df : DataFrame
-            Columns: 'CpG_chrm', 'start', 'end', state_col
+            Columns: CpG_chrm, start, end, avg_beta, probe_count, state, gap_block
         """
 
         for col in ["CpG_chrm", "CpG_beg", "CpG_end", state_col]:
             if col not in self.meth_data.columns:
                 raise ValueError(f"Column {col} not found in meth_data.")
 
+        threshold = validate_max_cpg_gap_bp(self.max_cpg_gap_bp)
+        previous_beg = None
+        gap_block = 0
         regions = []
         current_chrom = None
         current_state = None
@@ -338,14 +371,21 @@ class MethylSegmentor:
         current_meth_sum = 0
         current_probe_count = 0
 
-        for idx, row in self.meth_data.iterrows():
+        ordered_data = self.meth_data.sort_values(
+            ["CpG_chrm", "CpG_beg", "CpG_end"], kind="stable"
+        )
+        for idx, row in ordered_data.iterrows():
             chrom = row["CpG_chrm"]
             state = row[state_col]
             beg = row["CpG_beg"]
             end = row["CpG_end"]
             beta_val = float(row["beta"])
 
-            if (chrom != current_chrom) or (state != current_state):
+            gap_break = (
+                chrom == current_chrom and previous_beg is not None
+                and threshold is not None and beg - previous_beg > threshold
+            )
+            if (chrom != current_chrom) or (state != current_state) or gap_break:
                 # Save previous region
                 if (
                     current_chrom is not None
@@ -359,8 +399,11 @@ class MethylSegmentor:
                             "avg_beta": current_meth_sum / current_probe_count,
                             "probe_count": current_probe_count,
                             "state": current_state,
+                            "gap_block": gap_block,
                         }
                     )
+                if gap_break:
+                    gap_block += 1
                 # Start new region
                 current_chrom = chrom
                 current_state = state
@@ -373,6 +416,7 @@ class MethylSegmentor:
                 region_end = end
                 current_meth_sum += beta_val
                 current_probe_count += 1
+            previous_beg = beg
         # Save last region
         if current_chrom is not None and current_probe_count >= region_min_probes:
             regions.append(
@@ -383,11 +427,12 @@ class MethylSegmentor:
                     "avg_beta": current_meth_sum / current_probe_count,
                     "probe_count": current_probe_count,
                     "state": current_state,
+                    "gap_block": gap_block,
                 }
             )
         regions_df = pd.DataFrame(
             regions,
-            columns=["CpG_chrm", "start", "end", "avg_beta", "probe_count", "state"],
+            columns=["CpG_chrm", "start", "end", "avg_beta", "probe_count", "state", "gap_block"],
         )
         self.regions_df = regions_df
         return regions_df
